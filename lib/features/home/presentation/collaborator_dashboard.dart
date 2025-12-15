@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:startlink/features/home/presentation/profile_screen.dart';
 import 'package:startlink/features/home/presentation/widgets/role_aware_navigation_bar.dart';
+import 'package:startlink/features/profile/presentation/profile_screen.dart';
 
 class CollaboratorDashboard extends StatefulWidget {
   const CollaboratorDashboard({super.key});
@@ -61,7 +61,9 @@ class CollaboratorHome extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 filled: true,
-                fillColor: Theme.of(context).colorScheme.surfaceVariant,
+                fillColor: Theme.of(
+                  context,
+                ).colorScheme.surfaceContainerHighest,
               ),
             ),
             const SizedBox(height: 24),

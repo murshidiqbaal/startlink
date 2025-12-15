@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:startlink/features/home/presentation/profile_screen.dart';
 import 'package:startlink/features/home/presentation/widgets/role_aware_navigation_bar.dart';
+import 'package:startlink/features/profile/presentation/profile_screen.dart';
 
 class MentorDashboard extends StatefulWidget {
   const MentorDashboard({super.key});
@@ -101,7 +101,7 @@ class MentorHome extends StatelessWidget {
               height: 150,
               width: double.infinity,
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceVariant,
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Center(

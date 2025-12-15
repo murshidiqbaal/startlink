@@ -6,6 +6,7 @@ import 'package:startlink/features/home/presentation/widgets/idea_card.dart';
 import 'package:startlink/features/home/presentation/widgets/role_aware_navigation_bar.dart';
 import 'package:startlink/features/home/presentation/widgets/stats_card.dart';
 import 'package:startlink/features/idea/presentation/bloc/idea_bloc.dart';
+import 'package:startlink/features/idea/presentation/idea_post_screen.dart';
 import 'package:startlink/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:startlink/features/profile/presentation/edit_profile_screen.dart';
 // It seems I overwrote profile_screen.dart which was imported here. Is it compatible?
@@ -196,12 +197,21 @@ class InnovatorHome extends StatelessWidget {
                               if (profileState is ProfileLoaded) {
                                 if (profileState.profile.profileCompletion >=
                                     70) {
-                                  // Navigate to Post Idea (Placeholder for now)
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Navigate to Post Idea'),
+                                  // Navigate to Post Idea
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const IdeaPostScreen(),
                                     ),
-                                  );
+                                  ).then((result) {
+                                    // If result is true (idea posted), refresh the list
+                                    if (result == true) {
+                                      context.read<IdeaBloc>().add(
+                                        RefreshIdeas(),
+                                      );
+                                    }
+                                  });
                                 } else {
                                   // Show Gate Modal
                                   showModalBottomSheet(
@@ -372,7 +382,19 @@ class InnovatorHome extends StatelessWidget {
                             views: 0, // Future: Backend
                             applications: 0, // Future: Backend
                             onTap: () {},
-                            onEdit: () {},
+                            onEdit: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      IdeaPostScreen(idea: idea),
+                                ),
+                              ).then((result) {
+                                if (result == true) {
+                                  context.read<IdeaBloc>().add(RefreshIdeas());
+                                }
+                              });
+                            },
                           );
                         }, childCount: state.ideas.length),
                       ),

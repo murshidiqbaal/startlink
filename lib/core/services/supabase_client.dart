@@ -7,6 +7,7 @@ class SupabaseService {
     await Supabase.initialize(
       url: Env.supabaseUrl,
       anonKey: Env.supabaseAnonKey,
+      debug: true,
     );
   }
 

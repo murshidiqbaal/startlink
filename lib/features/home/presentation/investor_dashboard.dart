@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:startlink/features/home/presentation/profile_screen.dart';
 import 'package:startlink/features/home/presentation/widgets/role_aware_navigation_bar.dart';
+import 'package:startlink/features/profile/presentation/profile_screen.dart';
 
 class InvestorDashboard extends StatefulWidget {
   const InvestorDashboard({super.key});
@@ -158,7 +158,7 @@ class InvestorHome extends StatelessWidget {
   Widget _buildFilterChip(BuildContext context, String label) {
     return Chip(
       label: Text(label),
-      backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
       side: BorderSide.none,
     );
   }

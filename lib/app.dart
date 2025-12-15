@@ -6,11 +6,18 @@ import 'package:startlink/features/auth/bloc/role_bloc.dart';
 import 'package:startlink/features/auth/data/auth_remote_source.dart';
 import 'package:startlink/features/auth/data/repository/auth_repository_impl.dart';
 import 'package:startlink/features/auth/domain/repository/auth_repository.dart';
+import 'package:startlink/features/auth/presentation/auth_deep_link_handler.dart';
 import 'package:startlink/features/auth/presentation/login_screen.dart';
 import 'package:startlink/features/home/presentation/collaborator_dashboard.dart';
 import 'package:startlink/features/home/presentation/innovator_dashboard.dart';
 import 'package:startlink/features/home/presentation/investor_dashboard.dart';
 import 'package:startlink/features/home/presentation/mentor_dashboard.dart';
+import 'package:startlink/features/idea/data/repositories/idea_repository_impl.dart';
+import 'package:startlink/features/idea/domain/repositories/idea_repository.dart';
+import 'package:startlink/features/idea/presentation/bloc/idea_bloc.dart';
+import 'package:startlink/features/profile/data/repositories/profile_repository_impl.dart';
+import 'package:startlink/features/profile/domain/repositories/profile_repository.dart';
+import 'package:startlink/features/profile/presentation/bloc/profile_bloc.dart';
 
 class App extends StatelessWidget {
   const App({super.key});
@@ -27,6 +34,12 @@ class App extends StatelessWidget {
             remoteDataSource: context.read<AuthRemoteDataSource>(),
           ),
         ),
+        RepositoryProvider<IdeaRepository>(
+          create: (context) => IdeaRepositoryImpl(),
+        ),
+        RepositoryProvider<ProfileRepository>(
+          create: (context) => ProfileRepositoryImpl(),
+        ),
       ],
       child: MultiBlocProvider(
         providers: [
@@ -39,6 +52,16 @@ class App extends StatelessWidget {
             create: (context) =>
                 RoleBloc(authRepository: context.read<AuthRepository>())
                   ..add(RoleStarted()),
+          ),
+          BlocProvider(
+            create: (context) =>
+                IdeaBloc(ideaRepository: context.read<IdeaRepository>())
+                  ..add(FetchIdeas()),
+          ),
+          BlocProvider(
+            create: (context) => ProfileBloc(
+              profileRepository: context.read<ProfileRepository>(),
+            )..add(FetchProfile()),
           ),
         ],
         child: const AppView(),
@@ -56,7 +79,7 @@ class AppView extends StatelessWidget {
       title: 'StartLink',
       theme: AppTheme.darkTheme,
       debugShowCheckedModeBanner: false,
-      home: const AuthGate(),
+      home: const AuthDeepLinkHandler(child: AuthGate()),
     );
   }
 }

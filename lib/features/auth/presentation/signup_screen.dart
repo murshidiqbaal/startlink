@@ -115,7 +115,11 @@ class _SignupScreenState extends State<SignupScreen>
                       behavior: SnackBarBehavior.floating,
                     ),
                   );
-                  Navigator.of(context).pushReplacementNamed('/home');
+                  Navigator.of(context).pop(); // Return to Login Screen
+                } else if (state is AuthAuthenticated) {
+                  Navigator.of(
+                    context,
+                  ).pop(); // Close signup screen if auto-logged in
                 }
               },
               builder: (context, state) {
