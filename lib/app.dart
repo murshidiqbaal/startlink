@@ -8,6 +8,10 @@ import 'package:startlink/features/auth/data/repository/auth_repository_impl.dar
 import 'package:startlink/features/auth/domain/repository/auth_repository.dart';
 import 'package:startlink/features/auth/presentation/auth_deep_link_handler.dart';
 import 'package:startlink/features/auth/presentation/login_screen.dart';
+import 'package:startlink/features/auth/presentation/role_selection_screen.dart';
+import 'package:startlink/features/collaboration/data/repositories/collaboration_repository_impl.dart';
+import 'package:startlink/features/collaboration/domain/repositories/collaboration_repository.dart';
+import 'package:startlink/features/collaboration/presentation/bloc/collaboration_bloc.dart';
 import 'package:startlink/features/home/presentation/collaborator_dashboard.dart';
 import 'package:startlink/features/home/presentation/innovator_dashboard.dart';
 import 'package:startlink/features/home/presentation/investor_dashboard.dart';
@@ -40,28 +44,36 @@ class App extends StatelessWidget {
         RepositoryProvider<ProfileRepository>(
           create: (context) => ProfileRepositoryImpl(),
         ),
+        RepositoryProvider<CollaborationRepository>(
+          create: (context) => CollaborationRepositoryImpl(),
+        ),
       ],
       child: MultiBlocProvider(
         providers: [
-          BlocProvider(
+          BlocProvider<AuthBloc>(
             create: (context) =>
                 AuthBloc(authRepository: context.read<AuthRepository>())
                   ..add(AuthStarted()),
           ),
-          BlocProvider(
+          BlocProvider<RoleBloc>(
             create: (context) =>
                 RoleBloc(authRepository: context.read<AuthRepository>())
                   ..add(RoleStarted()),
           ),
-          BlocProvider(
+          BlocProvider<IdeaBloc>(
             create: (context) =>
                 IdeaBloc(ideaRepository: context.read<IdeaRepository>())
                   ..add(FetchIdeas()),
           ),
-          BlocProvider(
+          BlocProvider<ProfileBloc>(
             create: (context) => ProfileBloc(
               profileRepository: context.read<ProfileRepository>(),
             )..add(FetchProfile()),
+          ),
+          BlocProvider<CollaborationBloc>(
+            create: (context) => CollaborationBloc(
+              repository: context.read<CollaborationRepository>(),
+            ),
           ),
         ],
         child: const AppView(),
@@ -99,16 +111,20 @@ class AuthGate extends StatelessWidget {
           // Listen to RoleBloc for the specific dashboard
           return BlocBuilder<RoleBloc, RoleState>(
             builder: (context, roleState) {
-              return AnimatedSwitcher(
-                duration: const Duration(milliseconds: 500),
-                transitionBuilder: (child, animation) {
-                  return FadeTransition(opacity: animation, child: child);
-                },
-                child: KeyedSubtree(
-                  key: ValueKey(roleState.activeRole),
-                  child: _buildDashboard(roleState.activeRole),
-                ),
-              );
+              if (roleState.activeRole.isNotEmpty) {
+                return AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 500),
+                  transitionBuilder: (child, animation) {
+                    return FadeTransition(opacity: animation, child: child);
+                  },
+                  child: KeyedSubtree(
+                    key: ValueKey(roleState.activeRole),
+                    child: _buildDashboard(roleState.activeRole),
+                  ),
+                );
+              } else {
+                return const RoleSelectionScreen();
+              }
             },
           );
         } else {
@@ -129,7 +145,7 @@ class AuthGate extends StatelessWidget {
       case 'Mentor':
         return const MentorDashboard();
       default:
-        return const InnovatorDashboard();
+        return const InnovatorDashboard(); // Default or RoleScreen
     }
   }
 }

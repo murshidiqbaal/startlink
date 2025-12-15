@@ -43,4 +43,29 @@ class ProfileRepositoryImpl implements ProfileRepository {
           profile.toJson()..['id'] = userId,
         ); // Upsert to create if missing
   }
+
+  @override
+  Future<String?> uploadAvatar(dynamic imageFile) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception('User not logged in');
+
+    try {
+      final fileExt = imageFile.path.split('.').last;
+      final fileName = '$userId/${DateTime.now().toIso8601String()}.$fileExt';
+      final filePath = fileName;
+
+      await _supabase.storage
+          .from('avatars')
+          .upload(
+            filePath,
+            imageFile,
+            fileOptions: const FileOptions(cacheControl: '3600', upsert: false),
+          );
+
+      final imageUrl = _supabase.storage.from('avatars').getPublicUrl(filePath);
+      return imageUrl;
+    } catch (e) {
+      throw Exception('Failed to upload avatar: $e');
+    }
+  }
 }

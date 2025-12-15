@@ -9,6 +9,7 @@ class IdeaCard extends StatelessWidget {
   final int applications;
   final VoidCallback? onTap;
   final VoidCallback? onEdit;
+  final VoidCallback? onApply;
 
   const IdeaCard({
     super.key,
@@ -20,6 +21,7 @@ class IdeaCard extends StatelessWidget {
     required this.applications,
     this.onTap,
     this.onEdit,
+    this.onApply,
   });
 
   Color _getStatusColor(BuildContext context, String status) {
@@ -76,24 +78,40 @@ class IdeaCard extends StatelessWidget {
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
                     ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
+                  if (onApply != null)
+                    FilledButton(
+                      onPressed: onApply,
+                      style: FilledButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        textStyle: const TextStyle(fontSize: 12),
+                      ),
+                      child: const Text('Apply'),
                     ),
-                    decoration: BoxDecoration(
-                      color: _getStatusColor(context, status).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      status,
-                      style: TextStyle(
-                        color: _getStatusColor(context, status),
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
+                  if (onApply == null &&
+                      onEdit ==
+                          null) // Status badge only if no primary action or customized
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _getStatusColor(
+                          context,
+                          status,
+                        ).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        status,
+                        style: TextStyle(
+                          color: _getStatusColor(context, status),
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
-                  ),
                 ],
               ),
               const SizedBox(height: 8),
@@ -149,16 +167,17 @@ class IdeaCard extends StatelessWidget {
                     '$applications Applied',
                   ),
                   const Spacer(),
-                  IconButton(
-                    icon: Icon(
-                      Icons.edit_outlined,
-                      size: 18,
-                      color: Theme.of(context).colorScheme.primary,
+                  if (onEdit != null)
+                    IconButton(
+                      icon: Icon(
+                        Icons.edit_outlined,
+                        size: 18,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      onPressed: onEdit,
                     ),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    onPressed: onEdit,
-                  ),
                 ],
               ),
             ],

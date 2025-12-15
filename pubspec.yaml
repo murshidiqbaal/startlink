@@ -41,6 +41,8 @@ dependencies:
   hive_flutter: ^1.1.0
   google_fonts: ^6.1.0
   shimmer: ^3.0.0
+  image_picker: ^1.2.1
+  timeago: ^3.6.1
 
 dev_dependencies:
   flutter_test:

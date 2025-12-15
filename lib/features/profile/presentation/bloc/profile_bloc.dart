@@ -20,6 +20,13 @@ class UpdateProfile extends ProfileEvent {
   List<Object> get props => [profile];
 }
 
+class UploadAvatar extends ProfileEvent {
+  final dynamic imageFile; // File or XFile
+  const UploadAvatar(this.imageFile);
+  @override
+  List<Object> get props => [imageFile];
+}
+
 // States
 abstract class ProfileState extends Equatable {
   const ProfileState();
@@ -53,6 +60,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       super(ProfileInitial()) {
     on<FetchProfile>(_onFetchProfile);
     on<UpdateProfile>(_onUpdateProfile);
+    on<UploadAvatar>(_onUploadAvatar);
   }
 
   Future<void> _onFetchProfile(
@@ -89,6 +97,40 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       emit(ProfileLoaded(updatedProfile));
     } catch (e) {
       emit(ProfileError(e.toString()));
+    }
+  }
+
+  Future<void> _onUploadAvatar(
+    UploadAvatar event,
+    Emitter<ProfileState> emit,
+  ) async {
+    final currentState = state;
+    if (currentState is ProfileLoaded) {
+      emit(ProfileLoading());
+      try {
+        final imageUrl = await _profileRepository.uploadAvatar(event.imageFile);
+        if (imageUrl != null) {
+          final updatedProfile = currentState.profile.copyWith(
+            avatarUrl: imageUrl,
+          );
+          // Calculate new completion score as avatar might be the missing piece
+          final completionScore = ProfileCompletionCalculator.calculate(
+            updatedProfile,
+          );
+          final finalProfile = updatedProfile.copyWith(
+            profileCompletion: completionScore,
+          );
+
+          await _profileRepository.updateProfile(finalProfile);
+          emit(ProfileLoaded(finalProfile));
+        } else {
+          emit(
+            ProfileLoaded(currentState.profile),
+          ); // Revert if upload failed (or check internal error logic)
+        }
+      } catch (e) {
+        emit(ProfileError(e.toString()));
+      }
     }
   }
 }

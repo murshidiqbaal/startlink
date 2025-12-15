@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:startlink/features/collaboration/presentation/pages/collaboration_screen.dart';
 import 'package:startlink/features/home/presentation/widgets/empty_state.dart';
 import 'package:startlink/features/home/presentation/widgets/idea_card.dart';
 import 'package:startlink/features/home/presentation/widgets/role_aware_navigation_bar.dart';
@@ -21,7 +22,11 @@ class InnovatorDashboard extends StatefulWidget {
 class _InnovatorDashboardState extends State<InnovatorDashboard> {
   int _selectedIndex = 0;
 
-  final List<Widget> _pages = [const InnovatorHome(), const ProfileScreen()];
+  final List<Widget> _pages = [
+    const InnovatorHome(),
+    const CollaborationScreen(), // Added CollaborationScreen
+    const ProfileScreen(),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -39,6 +44,11 @@ class _InnovatorDashboardState extends State<InnovatorDashboard> {
             icon: Icon(Icons.home_outlined),
             selectedIcon: Icon(Icons.home),
             label: 'Home',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.work_history_outlined),
+            selectedIcon: Icon(Icons.work_history),
+            label: 'Requests',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline),
