@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:startlink/features/collaboration/domain/entities/collaboration.dart';
 import 'package:startlink/features/collaboration/presentation/bloc/collaboration_bloc.dart';
+import 'package:startlink/features/profile/presentation/profile_screen.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 class ApplicantCard extends StatelessWidget {
@@ -16,8 +17,6 @@ class ApplicantCard extends StatelessWidget {
         status: status,
       ),
     );
-    // Refresh strictly handled by Bloc listener or parent logic,
-    // but here we just dispatch.
   }
 
   @override
@@ -33,35 +32,63 @@ class ApplicantCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                CircleAvatar(
-                  backgroundImage: collaboration.collaboratorAvatarUrl != null
-                      ? NetworkImage(collaboration.collaboratorAvatarUrl!)
-                      : null,
-                  child: collaboration.collaboratorAvatarUrl == null
-                      ? Text(collaboration.collaboratorName?[0] ?? 'C')
-                      : null,
-                ),
-                const SizedBox(width: 12),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        collaboration.collaboratorName ?? 'Unknown',
-                        style: theme.textTheme.titleMedium,
-                      ),
-                      if (collaboration.collaboratorHeadline != null)
-                        Text(
-                          collaboration.collaboratorHeadline!,
-                          style: theme.textTheme.bodySmall,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                  child: GestureDetector(
+                    onTap: () {
+                      if (collaboration.collaboratorId.isNotEmpty) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ProfileScreen(
+                              userId: collaboration.collaboratorId,
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          backgroundImage:
+                              collaboration.collaboratorAvatarUrl != null
+                              ? NetworkImage(
+                                  collaboration.collaboratorAvatarUrl!,
+                                )
+                              : null,
+                          child: collaboration.collaboratorAvatarUrl == null
+                              ? Text(collaboration.collaboratorName?[0] ?? 'C')
+                              : null,
                         ),
-                    ],
+                        const SizedBox(width: 12),
+                        Flexible(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                collaboration.collaboratorName ?? 'Unknown',
+                                style: theme.textTheme.titleMedium,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              if (collaboration.collaboratorHeadline != null)
+                                Text(
+                                  collaboration.collaboratorHeadline!,
+                                  style: theme.textTheme.bodySmall,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
+                const SizedBox(width: 8),
                 Chip(
-                  label: Text(collaboration.roleApplied),
+                  label: Text(
+                    collaboration.roleApplied,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                   backgroundColor: theme.colorScheme.primaryContainer,
                 ),
               ],

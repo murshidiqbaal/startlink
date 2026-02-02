@@ -53,9 +53,21 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     try {
       await _authRepository.login(event.email, event.password);
     } on sb.AuthException catch (e) {
-      emit(AuthError(message: e.message));
+      // Check for specific error indicating email confirmation is required
+      if (e.message.toLowerCase().contains('email not confirmed')) {
+        emit(
+          const AuthError(
+            message:
+                'Please confirm your email before logging in. Check your inbox.',
+          ),
+        );
+      } else {
+        emit(AuthError(message: e.message));
+      }
     } catch (e) {
-      emit(const AuthError(message: 'An unexpected error occurred'));
+      emit(
+        const AuthError(message: 'An unexpected error occurred during login'),
+      );
     }
   }
 
@@ -65,16 +77,24 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(AuthLoading());
     try {
-      await _authRepository.signup(
+      final response = await _authRepository.signup(
         event.email,
         event.password,
         role: event.role,
       );
-      emit(AuthSignedUp());
+
+      // If session is null, it typically means 'Enable Email Confirmations' is ON in Supabase
+      // and the user must verify their email before logging in.
+      if (response.session == null) {
+        emit(AuthSignedUp());
+      }
+      // If session is NOT null, the stream listener will trigger AuthStarted -> AuthAuthenticated automatically.
     } on sb.AuthException catch (e) {
       emit(AuthError(message: e.message));
     } catch (e) {
-      emit(const AuthError(message: 'An unexpected error occurred'));
+      emit(
+        const AuthError(message: 'An unexpected error occurred during signup'),
+      );
     }
   }
 

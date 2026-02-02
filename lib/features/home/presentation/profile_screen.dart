@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:startlink/core/constants/user_role.dart';
 
 import '../../auth/bloc/auth_bloc.dart';
 import '../../auth/bloc/role_bloc.dart';
@@ -157,7 +158,9 @@ class ProfileScreen extends StatelessWidget {
                 TextButton(
                   onPressed: () {
                     // Update RoleBloc to trigger Dashboard switch and backend sync
-                    context.read<RoleBloc>().add(RoleChanged(selectedRole));
+                    context.read<RoleBloc>().add(
+                      RoleChanged(UserRole.fromString(selectedRole)),
+                    );
                     Navigator.pop(context);
                   },
                   child: const Text('Update'),

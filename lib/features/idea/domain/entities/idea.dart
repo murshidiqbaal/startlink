@@ -15,6 +15,8 @@ class Idea {
   final String targetMarket;
   final String currentStage; // Idea, Prototype, MVP, Scaling
   final bool isPublic;
+  final int viewCount;
+  final int applicationCount;
 
   const Idea({
     required this.id,
@@ -27,10 +29,36 @@ class Idea {
     this.isPublic = true,
     this.tags = const [],
     this.status = 'Draft',
+    this.viewCount = 0,
+    this.applicationCount = 0,
     this.aiQualityScore,
     this.aiSummary,
     this.aiSuggestedCollaborators,
+    this.isVerified = false,
   });
+
+  final bool isVerified;
+
+  Idea copyWithVerification(bool isVerified) {
+    return Idea(
+      id: id,
+      title: title,
+      description: description,
+      ownerId: ownerId,
+      problemStatement: problemStatement,
+      targetMarket: targetMarket,
+      currentStage: currentStage,
+      isPublic: isPublic,
+      tags: tags,
+      status: status,
+      viewCount: viewCount,
+      applicationCount: applicationCount,
+      aiQualityScore: aiQualityScore,
+      aiSummary: aiSummary,
+      aiSuggestedCollaborators: aiSuggestedCollaborators,
+      isVerified: isVerified,
+    );
+  }
 
   factory Idea.fromJson(Map<String, dynamic> json) {
     return Idea(
@@ -44,6 +72,8 @@ class Idea {
       isPublic: json['visibility'] == 'public',
       tags: List<String>.from(json['tags'] ?? []),
       status: json['status'] ?? 'Draft',
+      viewCount: json['view_count'] ?? 0,
+      applicationCount: json['application_count'] ?? 0,
       aiQualityScore: json['ai_quality_score']?.toDouble(),
       aiSummary: json['ai_summary'],
       aiSuggestedCollaborators: json['ai_suggested_collaborators'] != null

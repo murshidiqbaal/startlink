@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:startlink/core/services/supabase_client.dart';
 import 'package:startlink/features/idea/data/models/idea_model.dart';
 import 'package:startlink/features/idea/domain/entities/idea.dart';
@@ -31,7 +32,39 @@ class IdeaRepositoryImpl implements IdeaRepository {
   }
 
   @override
-  Future<void> createIdea(Idea idea) async {
+  Future<List<Idea>> fetchPublishedIdeas() async {
+    try {
+      final response = await _supabase
+          .from('ideas')
+          .select()
+          .eq('status', 'Published')
+          .eq('is_active', true)
+          .order('boost_score', ascending: false) // Boosted ideas first
+          .order('created_at', ascending: false);
+
+      return (response as List).map((e) => IdeaModel.fromJson(e)).toList();
+    } catch (e) {
+      throw Exception('Failed to fetch published ideas: $e');
+    }
+  }
+
+  @override
+  Future<List<Idea>> fetchAllPublicIdeas() async {
+    try {
+      final response = await _supabase
+          .from('ideas')
+          .select()
+          .eq('visibility', 'Public')
+          .order('created_at', ascending: false);
+
+      return (response as List).map((e) => IdeaModel.fromJson(e)).toList();
+    } catch (e) {
+      throw Exception('Failed to fetch public ideas: $e');
+    }
+  }
+
+  @override
+  Future<String> createIdea(Idea idea) async {
     try {
       final userId = _supabase.auth.currentUser?.id;
       if (userId == null) {
@@ -57,6 +90,8 @@ class IdeaRepositoryImpl implements IdeaRepository {
         isPublic: idea.isPublic,
         tags: idea.tags,
         status: idea.status,
+        viewCount: idea.viewCount,
+        applicationCount: idea.applicationCount,
         aiQualityScore: idea.aiQualityScore,
       );
 
@@ -68,7 +103,12 @@ class IdeaRepositoryImpl implements IdeaRepository {
         json.remove('id'); // Remove ID so DB generates it
       }
 
-      await _supabase.from('ideas').insert(json);
+      final response = await _supabase
+          .from('ideas')
+          .insert(json)
+          .select()
+          .single();
+      return response['id'] as String;
     } catch (e) {
       throw Exception('Failed to create idea: $e');
     }
@@ -93,6 +133,8 @@ class IdeaRepositoryImpl implements IdeaRepository {
         isPublic: idea.isPublic,
         tags: idea.tags,
         status: idea.status,
+        viewCount: idea.viewCount,
+        applicationCount: idea.applicationCount,
         aiQualityScore: idea.aiQualityScore,
       );
 
@@ -109,6 +151,19 @@ class IdeaRepositoryImpl implements IdeaRepository {
           .eq('owner_id', userId); // Extra safety
     } catch (e) {
       throw Exception('Failed to update idea: $e');
+    }
+  }
+
+  @override
+  Future<void> incrementViewCount(String ideaId) async {
+    try {
+      await _supabase.rpc(
+        'increment_view_count',
+        params: {'idea_uuid': ideaId},
+      );
+    } catch (e) {
+      // Fail silently for analytics like this or log
+      debugPrint('Failed to increment view count: $e');
     }
   }
 }

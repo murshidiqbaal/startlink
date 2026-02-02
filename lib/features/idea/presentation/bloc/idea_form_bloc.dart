@@ -1,7 +1,9 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:startlink/features/idea/data/repositories/idea_activity_repository_impl.dart';
 import 'package:startlink/features/idea/domain/entities/idea.dart';
 import 'package:startlink/features/idea/domain/repositories/idea_repository.dart';
+import 'package:startlink/features/idea/domain/services/idea_activity_logger.dart';
 
 part 'idea_form_event.dart';
 part 'idea_form_state.dart';
@@ -130,7 +132,9 @@ class IdeaFormBloc extends Bloc<IdeaFormEvent, IdeaFormState> {
       if (state.isEditing) {
         await _ideaRepository.updateIdea(idea);
       } else {
-        await _ideaRepository.createIdea(idea);
+        final newId = await _ideaRepository.createIdea(idea);
+        final logger = IdeaActivityLogger(IdeaActivityRepositoryImpl());
+        await logger.logIdeaCreated(newId, idea.title);
       }
 
       emit(state.copyWith(status: IdeaFormStatus.success, isDraft: true));
@@ -176,7 +180,10 @@ class IdeaFormBloc extends Bloc<IdeaFormEvent, IdeaFormState> {
       if (state.isEditing) {
         await _ideaRepository.updateIdea(idea);
       } else {
-        await _ideaRepository.createIdea(idea);
+        final newId = await _ideaRepository.createIdea(idea);
+        final logger = IdeaActivityLogger(IdeaActivityRepositoryImpl());
+        await logger.logIdeaCreated(newId, idea.title);
+        await logger.logIdeaPublished(newId);
       }
 
       emit(state.copyWith(status: IdeaFormStatus.success, isDraft: false));

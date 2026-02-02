@@ -12,6 +12,8 @@ abstract class IdeaEvent extends Equatable {
 
 class FetchIdeas extends IdeaEvent {}
 
+class FetchPublicIdeas extends IdeaEvent {}
+
 class RefreshIdeas extends IdeaEvent {}
 
 // States
@@ -47,6 +49,7 @@ class IdeaBloc extends Bloc<IdeaEvent, IdeaState> {
     : _ideaRepository = ideaRepository,
       super(IdeaInitial()) {
     on<FetchIdeas>(_onFetchIdeas);
+    on<FetchPublicIdeas>(_onFetchPublicIdeas);
     on<RefreshIdeas>(_onRefreshIdeas);
   }
 
@@ -54,6 +57,19 @@ class IdeaBloc extends Bloc<IdeaEvent, IdeaState> {
     emit(IdeaLoading());
     try {
       final ideas = await _ideaRepository.fetchMyIdeas();
+      emit(IdeaLoaded(ideas));
+    } catch (e) {
+      emit(IdeaError(e.toString()));
+    }
+  }
+
+  Future<void> _onFetchPublicIdeas(
+    FetchPublicIdeas event,
+    Emitter<IdeaState> emit,
+  ) async {
+    emit(IdeaLoading());
+    try {
+      final ideas = await _ideaRepository.fetchAllPublicIdeas();
       emit(IdeaLoaded(ideas));
     } catch (e) {
       emit(IdeaError(e.toString()));

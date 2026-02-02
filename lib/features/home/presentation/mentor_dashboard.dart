@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:startlink/features/home/presentation/bloc/mentor_home_bloc.dart';
+import 'package:startlink/features/home/presentation/widgets/idea_card.dart';
 import 'package:startlink/features/home/presentation/widgets/role_aware_navigation_bar.dart';
-import 'package:startlink/features/profile/presentation/profile_screen.dart';
+import 'package:startlink/features/idea/domain/repositories/idea_repository.dart';
+import 'package:startlink/features/profile/presentation/mentor_profile_screen.dart';
 
 class MentorDashboard extends StatefulWidget {
   const MentorDashboard({super.key});
@@ -12,7 +16,7 @@ class MentorDashboard extends StatefulWidget {
 class _MentorDashboardState extends State<MentorDashboard> {
   int _selectedIndex = 0;
 
-  final List<Widget> _pages = [const MentorHome(), const ProfileScreen()];
+  final List<Widget> _pages = [const MentorHome(), const MentorProfileScreen()];
 
   @override
   Widget build(BuildContext context) {
@@ -47,141 +51,70 @@ class MentorHome extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Mentor Panel'),
-        automaticallyImplyLeading: false,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Mentorship Requests',
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            _buildRequestCard(
-              context,
-              'Sarah Connor',
-              'Needs guidance on AI ethics.',
-              'Pending',
-            ),
-            _buildRequestCard(
-              context,
-              'John Doe',
-              'Startup scaling advice.',
-              'Pending',
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Scheduled Sessions',
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            _buildSessionCard(
-              context,
-              'Code Review with Alex',
-              'Today, 4:00 PM',
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Mentee Progress',
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            Container(
-              height: 150,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Center(
-                child: Text(
-                  'Progress Chart Placeholder',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+    return BlocProvider(
+      create: (context) =>
+          MentorHomeBloc(ideaRepository: context.read<IdeaRepository>())
+            ..add(FetchMentorFeed()),
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Mentor Panel'),
+          automaticallyImplyLeading: false,
+          actions: [
+            IconButton(onPressed: () {}, icon: const Icon(Icons.notifications)),
+          ],
+        ),
+        body: BlocBuilder<MentorHomeBloc, MentorHomeState>(
+          builder: (context, state) {
+            if (state is MentorHomeLoading) {
+              return const Center(child: CircularProgressIndicator());
+            } else if (state is MentorHomeLoaded) {
+              if (state.ideas.isEmpty) {
+                return const Center(
+                  child: Text('No ideas ready for mentorship yet.'),
+                );
+              }
+              return RefreshIndicator(
+                onRefresh: () async {
+                  context.read<MentorHomeBloc>().add(FetchMentorFeed());
+                },
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: state.ideas
+                      .where((i) => i.status == 'Published')
+                      .length,
+                  itemBuilder: (context, index) {
+                    final idea = state.ideas
+                        .where((i) => i.status == 'Published')
+                        .toList()[index];
+                    return IdeaCard(
+                      title: idea.title,
+                      description: idea.description,
+                      status: idea.status,
+                      skills: idea.tags, // assuming tags are skills for now
+                      views: idea.viewCount,
+                      applications: idea.applicationCount,
+                      aiQualityScore: idea.aiQualityScore?.toInt(),
+                      isVerified: idea.isVerified,
+                      onTap: () {
+                        // Navigate to detail
+                      },
+                      onApply: () {
+                        // "Offer Mentorship" logic
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Mentorship request sent!'),
+                          ),
+                        );
+                      },
+                    );
+                  },
                 ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRequestCard(
-    BuildContext context,
-    String name,
-    String reason,
-    String status,
-  ) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: ListTile(
-        leading: const CircleAvatar(child: Icon(Icons.person)),
-        title: Text(name),
-        subtitle: Text(reason),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.check, color: Colors.green),
-              onPressed: () {},
-            ),
-            IconButton(
-              icon: Icon(
-                Icons.close,
-                color: Theme.of(context).colorScheme.error,
-              ),
-              onPressed: () {},
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSessionCard(BuildContext context, String title, String time) {
-    return Card(
-      color: Theme.of(context).colorScheme.tertiaryContainer,
-      margin: const EdgeInsets.only(bottom: 12),
-      child: ListTile(
-        leading: Icon(
-          Icons.calendar_today,
-          color: Theme.of(context).colorScheme.onTertiaryContainer,
-        ),
-        title: Text(
-          title,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.onTertiaryContainer,
-          ),
-        ),
-        subtitle: Text(
-          time,
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onTertiaryContainer,
-          ),
-        ),
-        trailing: OutlinedButton(
-          onPressed: () {},
-          style: OutlinedButton.styleFrom(
-            foregroundColor: Theme.of(context).colorScheme.onTertiaryContainer,
-            side: BorderSide(
-              color: Theme.of(context).colorScheme.onTertiaryContainer,
-            ),
-          ),
-          child: const Text('Join'),
+              );
+            } else if (state is MentorHomeError) {
+              return Center(child: Text(state.message));
+            }
+            return const SizedBox.shrink();
+          },
         ),
       ),
     );

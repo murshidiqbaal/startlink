@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:startlink/core/presentation/widgets/startlink_glass_card.dart';
+import 'package:startlink/core/theme/app_theme.dart';
 
 class IdeaCard extends StatelessWidget {
   final String title;
@@ -10,6 +12,8 @@ class IdeaCard extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onEdit;
   final VoidCallback? onApply;
+  final int? aiQualityScore;
+  final bool isVerified;
 
   const IdeaCard({
     super.key,
@@ -22,166 +26,202 @@ class IdeaCard extends StatelessWidget {
     this.onTap,
     this.onEdit,
     this.onApply,
+    this.aiQualityScore,
+    this.isVerified = false,
   });
 
   Color _getStatusColor(BuildContext context, String status) {
+    final customColors = Theme.of(context).extension<StartLinkColors>();
     switch (status.toLowerCase()) {
       case 'open':
-        return Colors.green;
+        return customColors?.signalEmerald ?? Colors.green;
       case 'in review':
-        return Colors.orange;
+        return customColors?.signalAmber ?? Colors.orange;
       case 'closed':
-        return Colors.red;
+        return customColors?.signalRose ?? Colors.red;
       default:
-        return Theme.of(context).colorScheme.primary;
+        return AppColors.brandPurple;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 0,
-      color: Theme.of(context).colorScheme.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: Theme.of(context).colorScheme.outline.withOpacity(0.1),
-        ),
-      ),
-      child: InkWell(
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: StartLinkGlassCard(
         onTap: onTap,
-        onLongPress: onEdit,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          title,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                      if (isVerified) ...[
+                        const SizedBox(width: 6),
+                        const Icon(
+                          Icons.verified,
+                          size: 16,
+                          color: AppColors.brandBlue,
+                        ),
+                      ],
+                    ],
                   ),
-                  if (onEdit != null)
-                    IconButton(
-                      icon: const Icon(Icons.edit, size: 20),
-                      onPressed: onEdit,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
+                ),
+                if (onEdit != null)
+                  IconButton(
+                    icon: Icon(
+                      Icons.edit,
+                      size: 18,
+                      color: AppColors.textSecondary.withValues(alpha: 0.8),
                     ),
-                  if (onApply != null)
-                    FilledButton(
-                      onPressed: onApply,
-                      style: FilledButton.styleFrom(
-                        visualDensity: VisualDensity.compact,
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        textStyle: const TextStyle(fontSize: 12),
-                      ),
-                      child: const Text('Apply'),
+                    onPressed: onEdit,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                if (onApply != null)
+                  FilledButton(
+                    onPressed: onApply,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.brandPurple,
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      textStyle: theme.textTheme.labelSmall,
                     ),
-                  if (onApply == null &&
-                      onEdit ==
-                          null) // Status badge only if no primary action or customized
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
+                    child: const Text('Apply'),
+                  ),
+                if (onApply == null && onEdit == null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _getStatusColor(
+                        context,
+                        status,
+                      ).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
                         color: _getStatusColor(
                           context,
                           status,
-                        ).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        status,
-                        style: TextStyle(
-                          color: _getStatusColor(context, status),
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        ).withValues(alpha: 0.3),
+                        width: 1,
                       ),
                     ),
-                ],
+                    child: Text(
+                      status,
+                      style: TextStyle(
+                        color: _getStatusColor(context, status),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              description,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: AppColors.textSecondary,
+                height: 1.5,
               ),
-              const SizedBox(height: 8),
-              Text(
-                description,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withOpacity(0.7),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: skills.take(3).map((skill) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.05),
+                    ),
+                  ),
+                  child: Text(
+                    skill,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textPrimary.withValues(alpha: 0.9),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 20),
+            Divider(height: 1, color: Colors.white.withValues(alpha: 0.05)),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                _buildStat(context, Icons.remove_red_eye_outlined, '$views'),
+                const SizedBox(width: 20),
+                _buildStat(
+                  context,
+                  Icons.people_outline,
+                  '$applications Applied',
                 ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 4,
-                children: skills.take(3).map((skill) {
-                  return Container(
+                if (aiQualityScore != null) ...[
+                  const Spacer(),
+                  Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 8,
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                      gradient: AppColors.startLinkGradient,
                       borderRadius: BorderRadius.circular(6),
                     ),
-                    child: Text(
-                      skill,
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.auto_awesome,
+                          size: 12,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '$aiQualityScore',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
                     ),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 16),
-              Divider(
-                height: 1,
-                color: Theme.of(context).colorScheme.outline.withOpacity(0.1),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  _buildStat(context, Icons.remove_red_eye_outlined, '$views'),
-                  const SizedBox(width: 16),
-                  _buildStat(
-                    context,
-                    Icons.people_outline,
-                    '$applications Applied',
                   ),
-                  const Spacer(),
-                  if (onEdit != null)
-                    IconButton(
-                      icon: Icon(
-                        Icons.edit_outlined,
-                        size: 18,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      onPressed: onEdit,
-                    ),
                 ],
-              ),
-            ],
-          ),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -190,16 +230,13 @@ class IdeaCard extends StatelessWidget {
   Widget _buildStat(BuildContext context, IconData icon, String text) {
     return Row(
       children: [
-        Icon(
-          icon,
-          size: 14,
-          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-        ),
-        const SizedBox(width: 4),
+        Icon(icon, size: 14, color: AppColors.textSecondary),
+        const SizedBox(width: 6),
         Text(
           text,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+            color: AppColors.textSecondary,
+            fontWeight: FontWeight.w500,
           ),
         ),
       ],

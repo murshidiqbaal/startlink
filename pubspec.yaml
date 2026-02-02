@@ -36,6 +36,8 @@ dependencies:
   cupertino_icons: ^1.0.8
   supabase_flutter: ^2.8.0
   flutter_bloc: ^8.1.6
+  bloc: ^8.1.0
+  intl: ^0.19.0
   equatable: ^2.0.5
   curved_navigation_bar: ^1.0.6
   hive_flutter: ^1.1.0
@@ -43,6 +45,9 @@ dependencies:
   shimmer: ^3.0.0
   image_picker: ^1.2.1
   timeago: ^3.6.1
+  stream_transform: ^2.1.0
+  uuid: ^4.5.1
+  deno_postgres_interop: ^0.0.4
 
 dev_dependencies:
   flutter_test:

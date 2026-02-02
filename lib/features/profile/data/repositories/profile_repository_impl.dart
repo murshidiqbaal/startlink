@@ -1,5 +1,13 @@
 import 'package:startlink/core/services/supabase_client.dart';
+import 'package:startlink/features/profile/data/models/innovator_profile_model.dart';
+import 'package:startlink/features/profile/data/models/investor_profile_model.dart';
+import 'package:startlink/features/profile/data/models/mentor_profile_model.dart';
 import 'package:startlink/features/profile/data/models/profile_model.dart';
+import 'package:startlink/features/profile/data/models/user_profile_model.dart';
+import 'package:startlink/features/profile/domain/entities/innovator_profile.dart';
+import 'package:startlink/features/profile/domain/entities/investor_profile.dart';
+import 'package:startlink/features/profile/domain/entities/mentor_profile.dart';
+import 'package:startlink/features/profile/domain/entities/user_profile.dart';
 import 'package:startlink/features/profile/domain/repositories/profile_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -67,5 +75,100 @@ class ProfileRepositoryImpl implements ProfileRepository {
     } catch (e) {
       throw Exception('Failed to upload avatar: $e');
     }
+  }
+
+  @override
+  Future<ProfileModel?> getProfileById(String userId) async {
+    try {
+      final response = await _supabase
+          .from('profiles')
+          .select()
+          .eq('id', userId)
+          .single();
+
+      return ProfileModel.fromJson(response);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  @override
+  Future<UserProfile?> getUserProfile(String userId) async {
+    try {
+      final response = await _supabase
+          .from('profiles')
+          .select()
+          .eq('id', userId)
+          .single();
+      return UserProfileModel.fromJson(response);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  @override
+  Future<InnovatorProfile?> getInnovatorProfile(String profileId) async {
+    try {
+      final response = await _supabase
+          .from('innovator_profiles')
+          .select()
+          .eq('profile_id', profileId)
+          .single();
+      return InnovatorProfileModel.fromJson(response);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  @override
+  Future<MentorProfile?> getMentorProfile(String profileId) async {
+    try {
+      final response = await _supabase
+          .from('mentor_profiles')
+          .select()
+          .eq('profile_id', profileId)
+          .single();
+      return MentorProfileModel.fromJson(response);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  @override
+  Future<InvestorProfile?> getInvestorProfile(String profileId) async {
+    try {
+      final response = await _supabase
+          .from('investor_profiles')
+          .select()
+          .eq('profile_id', profileId)
+          .single();
+      return InvestorProfileModel.fromJson(response);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  @override
+  Future<void> updateInnovatorProfile(InnovatorProfile profile) async {
+    final model = profile is InnovatorProfileModel
+        ? profile
+        : InnovatorProfileModel.fromEntity(profile);
+    await _supabase.from('innovator_profiles').upsert(model.toJson());
+  }
+
+  @override
+  Future<void> updateMentorProfile(MentorProfile profile) async {
+    final model = profile is MentorProfileModel
+        ? profile
+        : MentorProfileModel.fromEntity(profile);
+    await _supabase.from('mentor_profiles').upsert(model.toJson());
+  }
+
+  @override
+  Future<void> updateInvestorProfile(InvestorProfile profile) async {
+    final model = profile is InvestorProfileModel
+        ? profile
+        : InvestorProfileModel.fromEntity(profile);
+    await _supabase.from('investor_profiles').upsert(model.toJson());
   }
 }

@@ -12,7 +12,10 @@ class IdeaModel extends Idea {
     super.isPublic,
     super.tags,
     super.status,
+    super.viewCount,
+    super.applicationCount,
     super.aiQualityScore,
+    super.isVerified,
   });
 
   factory IdeaModel.fromJson(Map<String, dynamic> json) {
@@ -27,9 +30,13 @@ class IdeaModel extends Idea {
       isPublic: json['visibility'] == 'Public', // Capitalized
       tags: json['tags'] != null ? List<String>.from(json['tags']) : [],
       status: json['status'] ?? 'Draft',
+      viewCount: json['view_count'] ?? 0,
+      applicationCount: json['application_count'] ?? 0,
       aiQualityScore: json['ai_quality_score'] != null
           ? (json['ai_quality_score'] as num).toDouble()
           : null,
+      // Logic for reading verified status from joined profile would go here.
+      // e.g. isVerified: json['profiles']?['user_verifications'] != null ? ...
     );
   }
 

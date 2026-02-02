@@ -72,7 +72,9 @@ class CollaborationRepositoryImpl implements CollaborationRepository {
 
     final response = await _supabase
         .from('idea_collaborations')
-        .select('*, profiles(full_name, avatar_url, headline)')
+        .select(
+          '*, profiles!idea_collaborations_collaborator_id_fkey(full_name, avatar_url, headline)',
+        )
         .eq('idea_id', ideaId)
         .order('applied_at', ascending: false); // Newest first
 
@@ -108,7 +110,7 @@ class CollaborationRepositoryImpl implements CollaborationRepository {
     final response = await _supabase
         .from('idea_collaborations')
         .select(
-          '*, ideas(title), profiles(full_name, avatar_url, headline)',
+          '*, ideas(title), profiles!idea_collaborations_collaborator_id_fkey(full_name, avatar_url, headline)',
         ) // Join ideas to get title, join profiles to get applicant info
         .eq('innovator_id', user.id)
         .order('applied_at', ascending: false);

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/services/supabase_client.dart';
@@ -72,7 +73,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       } catch (e) {
         // Fail silently or log, but don't block metadata update if profile entry is missing
         // (though it shouldn't be if triggers worked)
-        print('Error updating profiles table: $e');
+        debugPrint('Error updating profiles table: $e');
       }
     }
 

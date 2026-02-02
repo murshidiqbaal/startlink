@@ -5,6 +5,7 @@ import 'package:startlink/features/collaboration/presentation/widgets/apply_coll
 import 'package:startlink/features/home/presentation/widgets/idea_card.dart';
 import 'package:startlink/features/home/presentation/widgets/role_aware_navigation_bar.dart';
 import 'package:startlink/features/idea/presentation/bloc/idea_bloc.dart';
+import 'package:startlink/features/idea/presentation/pages/idea_detail_screen.dart';
 import 'package:startlink/features/profile/presentation/profile_screen.dart';
 
 class CollaboratorDashboard extends StatefulWidget {
@@ -58,7 +59,7 @@ class _CollaboratorHomeState extends State<CollaboratorHome> {
   void initState() {
     super.initState();
     // Ensure we have fresh data
-    context.read<IdeaBloc>().add(FetchIdeas());
+    context.read<IdeaBloc>().add(FetchPublicIdeas());
   }
 
   @override
@@ -78,27 +79,40 @@ class _CollaboratorHomeState extends State<CollaboratorHome> {
                 child: Text('No ideas found to collaborate on.'),
               );
             }
-            return ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: state.ideas.length,
-              itemBuilder: (context, index) {
-                final idea = state.ideas[index];
-                return IdeaCard(
-                  title: idea.title,
-                  description: idea.description,
-                  status: idea.status,
-                  skills: idea.tags,
-                  views: 120, // Placeholder
-                  applications: 5, // Placeholder
-                  onApply: () {
-                    showDialog(
-                      context: context,
-                      builder: (context) =>
-                          ApplyCollaborationDialog(idea: idea),
-                    );
-                  },
-                );
+            return RefreshIndicator(
+              onRefresh: () async {
+                context.read<IdeaBloc>().add(FetchPublicIdeas());
               },
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: state.ideas.length,
+                itemBuilder: (context, index) {
+                  final idea = state.ideas[index];
+                  return IdeaCard(
+                    title: idea.title,
+                    description: idea.description,
+                    status: idea.status,
+                    skills: idea.tags,
+                    views: 120, // Placeholder
+                    applications: 5, // Placeholder
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => IdeaDetailScreen(idea: idea),
+                        ),
+                      );
+                    },
+                    onApply: () {
+                      showDialog(
+                        context: context,
+                        builder: (context) =>
+                            ApplyCollaborationDialog(idea: idea),
+                      );
+                    },
+                  );
+                },
+              ),
             );
           } else if (state is IdeaError) {
             return Center(child: Text('Error: ${state.message}'));

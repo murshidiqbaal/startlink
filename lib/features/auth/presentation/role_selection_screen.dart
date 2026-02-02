@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:startlink/core/constants/user_role.dart';
 import 'package:startlink/features/auth/bloc/role_bloc.dart';
 
 class RoleSelectionScreen extends StatelessWidget {
@@ -38,7 +39,7 @@ class RoleSelectionScreen extends StatelessWidget {
           textStyle: const TextStyle(fontSize: 18),
         ),
         onPressed: () {
-          context.read<RoleBloc>().add(RoleChanged(role));
+          context.read<RoleBloc>().add(RoleChanged(UserRole.fromString(role)));
         },
       ),
     );

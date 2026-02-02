@@ -13,6 +13,13 @@ abstract class ProfileEvent extends Equatable {
 
 class FetchProfile extends ProfileEvent {}
 
+class FetchProfileById extends ProfileEvent {
+  final String userId;
+  const FetchProfileById(this.userId);
+  @override
+  List<Object> get props => [userId];
+}
+
 class UpdateProfile extends ProfileEvent {
   final ProfileModel profile;
   const UpdateProfile(this.profile);
@@ -59,6 +66,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     : _profileRepository = profileRepository,
       super(ProfileInitial()) {
     on<FetchProfile>(_onFetchProfile);
+    on<FetchProfileById>(_onFetchProfileById);
     on<UpdateProfile>(_onUpdateProfile);
     on<UploadAvatar>(_onUploadAvatar);
   }
@@ -74,6 +82,23 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
         emit(ProfileLoaded(profile));
       } else {
         emit(const ProfileError("User not logged in"));
+      }
+    } catch (e) {
+      emit(ProfileError(e.toString()));
+    }
+  }
+
+  Future<void> _onFetchProfileById(
+    FetchProfileById event,
+    Emitter<ProfileState> emit,
+  ) async {
+    emit(ProfileLoading());
+    try {
+      final profile = await _profileRepository.getProfileById(event.userId);
+      if (profile != null) {
+        emit(ProfileLoaded(profile));
+      } else {
+        emit(const ProfileError("Profile not found"));
       }
     } catch (e) {
       emit(ProfileError(e.toString()));
