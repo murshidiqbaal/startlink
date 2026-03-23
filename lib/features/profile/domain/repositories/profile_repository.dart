@@ -1,24 +1,38 @@
+import 'dart:io';
 import 'package:startlink/features/profile/data/models/profile_model.dart';
+import 'package:startlink/features/profile/domain/entities/collaborator_profile.dart';
 import 'package:startlink/features/profile/domain/entities/innovator_profile.dart';
 import 'package:startlink/features/profile/domain/entities/investor_profile.dart';
 import 'package:startlink/features/profile/domain/entities/mentor_profile.dart';
-import 'package:startlink/features/profile/domain/entities/user_profile.dart';
 
 abstract class ProfileRepository {
-  Future<ProfileModel?> getMyProfile();
+  // ── Base profile ────────────────────────────────────────────────────────
+
+  /// Fetch the profile row for the currently authenticated user.
+  Future<ProfileModel> fetchCurrentProfile();
+
+  /// Fetch any profile by its profiles.id (PK).
+  Future<ProfileModel> fetchProfileById(String profileId);
+
+  /// Persist changes to the profiles table.
   Future<void> updateProfile(ProfileModel profile);
-  Future<String?> uploadAvatar(
-    dynamic imageFile,
-  ); // Accepting File or XFile as dynamic to avoid dependency here or abstract it
-  Future<ProfileModel?> getProfileById(String userId);
 
-  // New Role-Specific Methods
-  Future<UserProfile?> getUserProfile(String userId);
-  Future<InnovatorProfile?> getInnovatorProfile(String profileId);
-  Future<MentorProfile?> getMentorProfile(String profileId);
-  Future<InvestorProfile?> getInvestorProfile(String profileId);
+  /// Upload an avatar file to Supabase Storage.
+  Future<String> uploadAvatar(File file);
 
-  Future<void> updateInnovatorProfile(InnovatorProfile profile);
-  Future<void> updateMentorProfile(MentorProfile profile);
-  Future<void> updateInvestorProfile(InvestorProfile profile);
+  // ── Role-specific ────────────────────────────────────────────────────────
+
+  Future<InnovatorProfile?> fetchInnovatorProfile(String profileId);
+  Future<void> upsertInnovatorProfile(InnovatorProfile profile);
+
+  Future<InvestorProfile?> fetchInvestorProfile(String profileId);
+  Future<void> upsertInvestorProfile(InvestorProfile model);
+
+  Future<MentorProfile?> fetchMentorProfile(String profileId);
+  Future<void> upsertMentorProfile(MentorProfile model);
+
+  Future<CollaboratorProfile?> fetchCollaboratorProfile(String profileId);
+  Future<void> upsertCollaboratorProfile(CollaboratorProfile model);
 }
+
+

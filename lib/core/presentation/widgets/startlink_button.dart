@@ -10,6 +10,7 @@ class StartLinkButton extends StatelessWidget {
   final StartLinkButtonVariant variant;
   final bool isLoading;
   final bool fullWidth;
+  final Color? textColor;
 
   const StartLinkButton({
     super.key,
@@ -19,6 +20,7 @@ class StartLinkButton extends StatelessWidget {
     this.variant = StartLinkButtonVariant.primary,
     this.isLoading = false,
     this.fullWidth = false,
+    this.textColor,
   });
 
   @override
@@ -99,7 +101,7 @@ class StartLinkButton extends StatelessWidget {
       TextButton(
         onPressed: onPressed,
         style: TextButton.styleFrom(
-          foregroundColor: AppColors.textSecondary,
+          foregroundColor: textColor ?? AppColors.textSecondary,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         ),
         child: _buildChild(context),

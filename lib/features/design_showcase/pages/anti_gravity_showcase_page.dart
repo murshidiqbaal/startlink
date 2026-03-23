@@ -3,9 +3,6 @@ import 'package:startlink/core/presentation/widgets/anti_gravity/anti_gravity_ca
 import 'package:startlink/core/presentation/widgets/anti_gravity/floating_nav_bar.dart';
 import 'package:startlink/core/presentation/widgets/anti_gravity/floating_widget.dart';
 import 'package:startlink/core/presentation/widgets/anti_gravity/glass_card.dart';
-import 'package:startlink/core/presentation/widgets/anti_gravity/hover_action_button.dart';
-import 'package:startlink/core/presentation/widgets/anti_gravity/levitating_list_tile.dart';
-import 'package:startlink/core/presentation/widgets/anti_gravity/neon_button.dart';
 import 'package:startlink/core/presentation/widgets/anti_gravity/space_background.dart';
 
 class AntiGravityShowcasePage extends StatelessWidget {
@@ -19,7 +16,7 @@ class AntiGravityShowcasePage extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: const Text(
-          "ORBITAL COMMAND",
+          "ZERO-G INTERFACE",
           style: TextStyle(
             fontFamily: 'Courier',
             fontWeight: FontWeight.w200,
@@ -38,300 +35,225 @@ class AntiGravityShowcasePage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 1. Hero Section Floating Card
-                Center(
-                  child: FloatingWidget(
-                    intensity: 15.0,
-                    duration: const Duration(seconds: 5),
-                    child: GlassCard(
-                      height: 200,
-                      borderColor: Colors.cyanAccent.withValues(alpha: 0.3),
+                _buildSectionHeader("INNOVATOR // VERTICAL ASCENSION"),
+                const SizedBox(height: 16),
+                const FloatingWidget(
+                  intensity: 15.0,
+                  duration: Duration(seconds: 4),
+                  direction: Axis.vertical,
+                  child: GlassCard(
+                    height: 180,
+                    borderColor: Colors.cyanAccent,
+                    child: Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(
-                            Icons.rocket_launch,
-                            color: Colors.white,
+                          Icon(
+                            Icons.lightbulb_outline,
                             size: 48,
+                            color: Colors.cyanAccent,
                           ),
-                          const SizedBox(height: 16),
+                          SizedBox(height: 12),
                           Text(
-                            "SYSTEM READY",
-                            style: Theme.of(context).textTheme.headlineMedium
-                                ?.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 2,
-                                ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            "All systems operational. Anti-gravity engine engaged.",
+                            "The Idea",
                             style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.7),
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
                             ),
-                            textAlign: TextAlign.center,
+                          ),
+                          Text(
+                            "Floating upwards like a bubble",
+                            style: TextStyle(
+                              color: Colors.white54,
+                              fontSize: 12,
+                            ),
                           ),
                         ],
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(height: 50),
 
-                // 2. Section Header
-                const Text(
-                  "ACTIVE MODULES",
-                  style: TextStyle(
-                    color: Colors.white54,
-                    letterSpacing: 2,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 48),
 
-                // 3. Grid of Floating Cards with staggered animation (handled by manual delays in FloatingWidget if we wanted,
-                // but here relying on random offsets in FloatingWidget default logic)
-                Row(
-                  children: [
-                    Expanded(
-                      child: FloatingWidget(
-                        intensity: 8.0,
-                        duration: const Duration(seconds: 6),
-                        child: _buildModuleCard(
-                          icon: Icons.shield_moon,
-                          title: "Defense",
-                          color: Colors.blueAccent,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: FloatingWidget(
-                        intensity: 12.0,
-                        duration: const Duration(seconds: 7),
-                        isReverse: true, // Floats opposite to neighbor
-                        child: _buildModuleCard(
-                          icon: Icons.bolt,
-                          title: "Power",
-                          color: Colors.amberAccent,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                _buildSectionHeader("COLLABORATOR // HORIZONTAL DRIFT"),
                 const SizedBox(height: 16),
-                FloatingWidget(
-                  intensity: 5.0,
-                  duration: const Duration(seconds: 8),
+                const FloatingWidget(
+                  intensity: 10.0,
+                  duration: Duration(seconds: 5),
+                  direction: Axis.horizontal,
                   child: GlassCard(
-                    padding: const EdgeInsets.all(24),
-                    borderColor: Colors.purpleAccent.withValues(alpha: 0.3),
+                    height: 120,
+                    borderColor: Colors.indigoAccent,
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
+                        Icon(
+                          Icons.compare_arrows,
+                          size: 32,
+                          color: Colors.indigoAccent,
+                        ),
+                        SizedBox(width: 16),
                         Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              "Communications",
+                            Text(
+                              "Connection Flow",
                               style: TextStyle(
                                 color: Colors.white,
+                                fontSize: 16,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            const SizedBox(height: 4),
                             Text(
-                              "Signal Strength: 100%",
+                              "Drifting side-to-side",
                               style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.5),
+                                color: Colors.white54,
+                                fontSize: 12,
                               ),
                             ),
                           ],
                         ),
-                        Container(
-                          width: 10,
-                          height: 10,
-                          decoration: const BoxDecoration(
-                            color: Colors.greenAccent,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.greenAccent,
-                                blurRadius: 10,
-                                spreadRadius: 2,
-                              ),
-                            ],
-                          ),
-                        ),
                       ],
                     ),
                   ),
                 ),
 
-                const SizedBox(height: 50),
+                const SizedBox(height: 48),
 
-                // 4. Action Buttons
-                Center(
-                  child: Wrap(
-                    spacing: 20,
-                    runSpacing: 20,
-                    alignment: WrapAlignment.center,
-                    children: [
-                      NeonButton(
-                        text: "INITIATE LAUNCH",
-                        onPressed: () {},
-                        glowColor: Colors.cyanAccent,
+                _buildSectionHeader("MENTOR // STABLE GUIDANCE"),
+                const SizedBox(height: 16),
+                const FloatingWidget(
+                  intensity: 5.0,
+                  duration: Duration(seconds: 8), // Slow
+                  child: GlassCard(
+                    height: 140,
+                    borderColor: Colors.amber,
+                    child: Padding(
+                      padding: EdgeInsets.all(20.0),
+                      child: Row(
+                        children: [
+                          Icon(Icons.school, size: 40, color: Colors.amber),
+                          SizedBox(width: 20),
+                          Expanded(
+                            child: Text(
+                              "Ancient wisdom floats slowly and steadily.",
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                      NeonButton(
-                        text: "ABORT",
-                        onPressed: () {},
-                        glowColor: Colors.redAccent,
-                      ),
-                    ],
+                    ),
                   ),
                 ),
 
-                const SizedBox(height: 50),
+                const SizedBox(height: 48),
 
-                // 5. Anti-Gravity & Tilt Cards
-                const Text(
-                  "INTERACTIVE GRAVITY MODULES",
-                  style: TextStyle(
-                    color: Colors.white54,
-                    letterSpacing: 2,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                AntiGravityCard(
-                  height: 180,
-                  onTap: () {},
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.touch_app,
-                          color: Colors.cyanAccent,
-                          size: 40,
+                _buildSectionHeader("INVESTOR // GROUNDED CONFIDENCE"),
+                const SizedBox(height: 16),
+                const FloatingWidget(
+                  intensity: 2.0, // Very subtle
+                  duration: Duration(seconds: 6),
+                  child: GlassCard(
+                    height: 120,
+                    borderColor: Colors.tealAccent,
+                    child: Center(
+                      child: ListTile(
+                        leading: Icon(
+                          Icons.account_balance_wallet,
+                          color: Colors.tealAccent,
+                          size: 32,
                         ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          "Touch & Tilt",
+                        title: Text(
+                          "Solid Assets",
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 18,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          "Move cursor or touch to rotate 3D",
+                        subtitle: Text(
+                          "Minimal movement. Maximum stability.",
+                          style: TextStyle(color: Colors.white38),
+                        ),
+                        trailing: Text(
+                          "\$1.2M",
                           style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.6),
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
                           ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 48),
+                _buildSectionHeader("INTERACTIVE // ANTI-GRAVITY TOUCH"),
+                const SizedBox(height: 16),
+                AntiGravityCard(
+                  height: 200,
+                  onTap: () {},
+                  child: const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.touch_app,
+                          size: 48,
+                          color: Colors.purpleAccent,
+                        ),
+                        SizedBox(height: 16),
+                        Text(
+                          "Touch Me",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
+                        Text(
+                          "I react to your presence",
+                          style: TextStyle(color: Colors.white54),
                         ),
                       ],
                     ),
                   ),
                 ),
 
-                const SizedBox(height: 50),
-
-                // 6. Levitating List
-                const Text(
-                  "ORBITAL DATA STREAM",
-                  style: TextStyle(
-                    color: Colors.white54,
-                    letterSpacing: 2,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: 3,
-                  itemBuilder: (context, index) {
-                    return LevitatingListTile(
-                      onTap: () {},
-                      leading: Icon(
-                        Icons.data_usage,
-                        color: index == 0 ? Colors.greenAccent : Colors.white70,
-                      ),
-                      title: Text("Data Stream $index"),
-                      subtitle: Text("Packet loss: 0.00${index + 1}%"),
-                      trailing: const Icon(
-                        Icons.chevron_right,
-                        color: Colors.white30,
-                      ),
-                    );
-                  },
-                ),
-
-                const SizedBox(height: 100), // Space for FAB and NavBar
+                const SizedBox(height: 100),
               ],
             ),
           ),
         ),
       ),
-      floatingActionButton: HoverActionButton(
-        onPressed: () {},
-        icon: Icons.add,
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       bottomNavigationBar: FloatingNavBar(
-        selectedIndex: 0,
-        onItemSelected: (index) {},
-        items: const [
-          Icons.dashboard_rounded,
-          Icons.rocket_launch_rounded,
-          Icons.person_rounded,
-        ],
+        selectedIndex: 1,
+        onItemSelected: (i) {},
+        items: const [Icons.home, Icons.explore, Icons.person],
       ),
     );
   }
 
-  Widget _buildModuleCard({
-    required IconData icon,
-    required String title,
-    required Color color,
-  }) {
-    return GlassCard(
-      height: 150,
-      borderColor: color.withValues(alpha: 0.4),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: color.withValues(alpha: 0.2),
-                  blurRadius: 15,
-                  spreadRadius: 1,
-                ),
-              ],
-            ),
-            child: Icon(icon, color: color, size: 30),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            title,
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.9),
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
+  Widget _buildSectionHeader(String title) {
+    return Container(
+      padding: const EdgeInsets.only(left: 8, bottom: 8),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: Colors.white24, width: 1)),
+      ),
+      child: Text(
+        title,
+        style: const TextStyle(
+          color: Colors.white54,
+          letterSpacing: 2.0,
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }

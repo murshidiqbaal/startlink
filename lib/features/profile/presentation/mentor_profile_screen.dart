@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:startlink/core/theme/app_theme.dart';
 import 'package:startlink/features/auth/domain/repository/auth_repository.dart';
 import 'package:startlink/features/profile/domain/entities/mentor_profile.dart';
 import 'package:startlink/features/profile/presentation/bloc/mentor_profile_bloc.dart';
 import 'package:startlink/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:startlink/features/profile/presentation/edit_mentor_profile.dart';
+import 'package:startlink/features/verification/domain/entities/user_badge.dart';
+import 'package:startlink/features/verification/presentation/bloc/verification_bloc.dart';
 
 class MentorProfileScreen extends StatefulWidget {
   final String? userId;
@@ -27,6 +30,7 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
         widget.userId ?? context.read<AuthRepository>().currentUser?.id;
     if (userId != null) {
       context.read<MentorProfileBloc>().add(LoadMentorProfile(userId));
+      context.read<VerificationBloc>().add(FetchVerificationsAndBadges(userId));
     }
   }
 
@@ -42,7 +46,7 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => const EditMentorProfileScreen(),
+                  builder: (_) => const EditMentorProfileScreen(profileId: ''),
                 ),
               ).then((_) => _loadProfile());
             },
@@ -51,32 +55,37 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
       ),
       body: BlocBuilder<ProfileBloc, ProfileState>(
         builder: (context, baseState) {
-          return BlocBuilder<MentorProfileBloc, MentorProfileState>(
-            builder: (context, roleState) {
-              if (roleState is MentorProfileLoading ||
-                  baseState is ProfileLoading) {
-                return const Center(child: CircularProgressIndicator());
-              }
+          return BlocBuilder<VerificationBloc, VerificationState>(
+            builder: (context, vState) {
+              return BlocBuilder<MentorProfileBloc, MentorProfileState>(
+                builder: (context, roleState) {
+                  if (roleState is MentorProfileLoading ||
+                      baseState is ProfileLoading) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
 
-              if (roleState is MentorProfileLoaded &&
-                  baseState is ProfileLoaded) {
-                return _buildBody(
-                  context,
-                  baseState.profile,
-                  roleState.profile,
-                );
-              }
+                  if (roleState is MentorProfileLoaded &&
+                      baseState is ProfileLoaded) {
+                    return _buildBody(
+                      context,
+                      baseState.profile,
+                      roleState.profile,
+                      vState,
+                    );
+                  }
 
-              if (roleState is MentorProfileError) {
-                return Center(child: Text(roleState.message));
-              }
+                  if (roleState is MentorProfileError) {
+                    return Center(child: Text(roleState.message));
+                  }
 
-              if (roleState is MentorProfileInitial) {
-                _loadProfile();
-                return const Center(child: CircularProgressIndicator());
-              }
+                  if (roleState is MentorProfileInitial) {
+                    _loadProfile();
+                    return const Center(child: CircularProgressIndicator());
+                  }
 
-              return const Center(child: CircularProgressIndicator());
+                  return const Center(child: CircularProgressIndicator());
+                },
+              );
             },
           );
         },
@@ -88,6 +97,7 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
     BuildContext context,
     dynamic baseProfile,
     MentorProfile roleProfile,
+    VerificationState vState,
   ) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
@@ -107,8 +117,8 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
                       backgroundColor: Colors.grey[800],
                       valueColor: AlwaysStoppedAnimation<Color>(
                         roleProfile.profileCompletion >= 80
-                            ? Colors.green
-                            : Colors.orange,
+                            ? AppColors.emerald
+                            : AppColors.amber,
                       ),
                       strokeWidth: 5,
                     ),
@@ -138,23 +148,22 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
                           ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      baseProfile.headline ?? 'No Headline',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
-                    ),
+                    _buildVerificationRow(vState),
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.work_outline,
                           size: 16,
-                          color: Theme.of(context).primaryColor,
+                          color: AppColors.brandCyan,
                         ),
                         const SizedBox(width: 4),
                         Text(
                           '${roleProfile.yearsOfExperience ?? 0} Years Exp.',
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 13,
+                          ),
                         ),
                       ],
                     ),
@@ -174,14 +183,15 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => const EditMentorProfileScreen(),
+                      builder: (_) =>
+                          const EditMentorProfileScreen(profileId: ''),
                     ),
                   ).then((_) => _loadProfile());
                 },
                 icon: const Icon(Icons.warning_amber_rounded),
                 label: const Text('Complete Profile to be Listed'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.amber[900],
+                  backgroundColor: AppColors.amber,
                 ),
               ),
             ),
@@ -204,9 +214,8 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
                 .map(
                   (e) => Chip(
                     label: Text(e),
-                    backgroundColor: Theme.of(
-                      context,
-                    ).colorScheme.surfaceContainerHighest,
+                    backgroundColor: AppColors.surfaceGlass,
+                    side: BorderSide(color: Colors.white.withOpacity(0.05)),
                   ),
                 )
                 .toList(),
@@ -217,34 +226,72 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
               style: TextStyle(color: Colors.grey),
             ),
 
+          const SizedBox(height: 32),
+
+          _buildSectionHeader(context, 'Badges & Recognition'),
+          const SizedBox(height: 8),
+          if (vState is VerificationLoaded && vState.badges.isNotEmpty)
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: vState.badges.map((b) => _BadgeChip(badge: b)).toList(),
+            )
+          else
+            const Text(
+              'No badges earned yet.',
+              style: TextStyle(color: Colors.grey),
+            ),
+
           const SizedBox(height: 24),
 
           _buildSectionHeader(context, 'Credentials'),
           ListTile(
             contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.link, color: Colors.blue),
+            leading: const Icon(Icons.link, color: AppColors.brandBlue),
             title: const Text('LinkedIn Profile'),
             subtitle: Text(roleProfile.linkedinUrl ?? 'Not linked'),
-            onTap: roleProfile.linkedinUrl != null
-                ? () {
-                    // Open URL
-                  }
-                : null,
-          ),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: Icon(
-              roleProfile.isVerified ? Icons.verified : Icons.verified_outlined,
-              color: roleProfile.isVerified ? Colors.blue : Colors.grey,
-            ),
-            title: Text(
-              roleProfile.isVerified
-                  ? 'Verified Mentor'
-                  : 'Verification Pending',
-            ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildVerificationRow(VerificationState state) {
+    bool isVerified = false;
+    String statusStr = 'Not Verified';
+    Color color = AppColors.rose;
+
+    if (state is VerificationLoaded) {
+      if (state.isRoleVerified('mentor')) {
+        isVerified = true;
+        statusStr = 'Verified Mentor';
+        color = AppColors.emerald;
+      } else {
+        final req = state.getRequestForRole('mentor');
+        if (req != null) {
+          statusStr = req.status;
+          color = req.status == 'Pending' ? AppColors.amber : AppColors.rose;
+        }
+      }
+    }
+
+    return Row(
+      children: [
+        Icon(
+          isVerified ? Icons.verified : Icons.error_outline,
+          size: 16,
+          color: color,
+        ),
+        const SizedBox(width: 4),
+        Text(
+          statusStr,
+          style: TextStyle(
+            color: color,
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
     );
   }
 
@@ -254,9 +301,45 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
       child: Text(
         title.toUpperCase(),
         style: Theme.of(context).textTheme.labelLarge?.copyWith(
-          color: Theme.of(context).colorScheme.primary,
+          color: AppColors.brandPurple,
           letterSpacing: 1.1,
         ),
+      ),
+    );
+  }
+}
+
+class _BadgeChip extends StatelessWidget {
+  final UserBadge badge;
+  const _BadgeChip({required this.badge});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.brandPurple.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.brandPurple.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.military_tech,
+            size: 14,
+            color: AppColors.brandPurple,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            badge.name,
+            style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }

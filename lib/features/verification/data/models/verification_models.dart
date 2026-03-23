@@ -10,9 +10,12 @@ class UserVerificationModel extends UserVerification {
     required super.status,
     super.verifiedAt,
     required super.createdAt,
+    super.fullName,
+    super.email,
   });
 
   factory UserVerificationModel.fromJson(Map<String, dynamic> json) {
+    final profile = json['profiles'];
     return UserVerificationModel(
       id: json['id'],
       profileId: json['profile_id'],
@@ -23,6 +26,8 @@ class UserVerificationModel extends UserVerification {
           ? DateTime.parse(json['verified_at'])
           : null,
       createdAt: DateTime.parse(json['created_at']),
+      fullName: profile != null ? profile['full_name'] : null,
+      email: profile != null ? profile['email'] : null,
     );
   }
 
@@ -48,6 +53,7 @@ class UserBadgeModel extends UserBadge {
     super.badgeDescription,
     super.icon,
     required super.awardedAt,
+    required super.name,
   });
 
   factory UserBadgeModel.fromJson(Map<String, dynamic> json) {
@@ -59,6 +65,7 @@ class UserBadgeModel extends UserBadge {
       badgeDescription: json['badge_description'],
       icon: json['icon'],
       awardedAt: DateTime.parse(json['awarded_at']),
+      name: json['name'],
     );
   }
 
@@ -70,6 +77,7 @@ class UserBadgeModel extends UserBadge {
       'badge_label': badgeLabel,
       'badge_description': badgeDescription,
       'icon': icon,
+      'name': name,
       'awarded_at': awardedAt.toIso8601String(),
     };
   }

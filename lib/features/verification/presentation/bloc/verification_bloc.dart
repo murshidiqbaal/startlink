@@ -68,9 +68,21 @@ class VerificationLoaded extends VerificationState {
 
   bool get isProfileVerified =>
       badges.any((b) => b.badgeKey == 'profile_verified');
-  bool get isIdentityVerified => verifications.any(
-    (v) => v.verificationType == 'Identity' && v.isApproved,
-  ); // Example
+
+  bool isRoleVerified(String role) {
+    final badgeKey = 'verified_${role.toLowerCase()}';
+    return badges.any((b) => b.badgeKey == badgeKey);
+  }
+
+  UserVerification? getRequestForRole(String role) {
+    try {
+      return verifications.firstWhere(
+        (v) => v.role.toLowerCase() == role.toLowerCase(),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
 
   @override
   List<Object> get props => [verifications, badges];

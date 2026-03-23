@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:startlink/core/presentation/widgets/startlink_button.dart';
 import 'package:startlink/core/theme/app_theme.dart';
 import 'package:startlink/features/idea/domain/entities/idea.dart';
+import 'package:startlink/features/idea/presentation/idea_post_screen.dart';
 import 'package:startlink/features/idea_dna/domain/repositories/idea_dna_repository.dart';
 import 'package:startlink/features/idea_dna/presentation/bloc/idea_dna_bloc.dart';
 import 'package:startlink/features/idea_dna/presentation/widgets/idea_dna_card.dart';
@@ -39,26 +40,23 @@ class _IdeaDetailView extends StatelessWidget {
             expandedHeight: 200,
             backgroundColor: AppColors.background,
             flexibleSpace: FlexibleSpaceBar(
-              title: Text(
-                idea.title,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-              background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      AppColors.brandPurple.withOpacity(0.3),
-                      AppColors.background,
-                    ],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-                ),
-              ),
+              background: idea.coverImageUrl != null
+                  ? Image.network(
+                      idea.coverImageUrl!,
+                      fit: BoxFit.cover,
+                    )
+                  : Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            AppColors.brandPurple.withOpacity(0.3),
+                            AppColors.background,
+                          ],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        ),
+                      ),
+                    ),
             ),
           ),
           SliverPadding(
@@ -70,15 +68,34 @@ class _IdeaDetailView extends StatelessWidget {
                   Row(
                     children: [
                       _TaskBadge(status: idea.status),
-                      const Spacer(),
-                      if (true) // TODO: Check if verified
-                        const Icon(Icons.verified, color: AppColors.brandBlue),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.brandCyan.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: AppColors.brandCyan.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Text(
+                          idea.currentStage,
+                          style: const TextStyle(
+                            color: AppColors.brandCyan,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    'Description',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    idea.title,
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       color: AppColors.textPrimary,
                       fontWeight: FontWeight.bold,
                     ),
@@ -91,18 +108,80 @@ class _IdeaDetailView extends StatelessWidget {
                       height: 1.6,
                     ),
                   ),
-                  const SizedBox(height: 32),
-                  // DNA Section
-                  IdeaDnaCard(ideaId: idea.id),
-                  const SizedBox(height: 32),
-                  Text(
-                    'Required Skills',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.bold,
+
+                  if (idea.problemStatement.isNotEmpty) ...[
+                    const SizedBox(height: 24),
+                    _Header('Problem Statement'),
+                    Text(
+                      idea.problemStatement,
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        height: 1.5,
+                      ),
                     ),
+                  ],
+
+                  if (idea.targetMarket.isNotEmpty) ...[
+                    const SizedBox(height: 24),
+                    _Header('Target Market'),
+                    Text(
+                      idea.targetMarket,
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 32),
+                  _Header('Startup DNA'),
+                  IdeaDnaCard(ideaId: idea.id),
+
+                  const SizedBox(height: 32),
+                  _Header('Business Info'),
+                  _InfoRow(
+                    label: 'Industry',
+                    value:
+                        '${idea.industry}${idea.subIndustry != null ? " (${idea.subIndustry})" : ""}',
+                    icon: Icons.factory_outlined,
+                  ),
+                  _InfoRow(
+                    label: 'Business Model',
+                    value: idea.businessModel ?? 'N/A',
+                    icon: Icons.account_balance_outlined,
+                  ),
+                  _InfoRow(
+                    label: 'Location',
+                    value: idea.location ?? 'Remote',
+                    icon: Icons.location_on_outlined,
+                  ),
+
+                  const SizedBox(height: 32),
+                  _Header('Funding & Team'),
+                  Row(
+                    children: [
+                      _StatCard(
+                        label: 'Funding Needed',
+                        value: '\$${idea.fundingNeeded?.toStringAsFixed(0) ?? "0"}',
+                        icon: Icons.attach_money,
+                      ),
+                      const SizedBox(width: 12),
+                      _StatCard(
+                        label: 'Equity Offered',
+                        value: '${idea.equityOffered?.toStringAsFixed(1) ?? "0"}%',
+                        icon: Icons.pie_chart_outline,
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 12),
+                  _InfoRow(
+                    label: 'Team Size',
+                    value: '${idea.teamSize} members',
+                    icon: Icons.groups_2_outlined,
+                  ),
+
+                  const SizedBox(height: 32),
+                  _Header('Required Skills'),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
@@ -129,6 +208,7 @@ class _IdeaDetailView extends StatelessWidget {
                       );
                     }).toList(),
                   ),
+
                   const SizedBox(height: 40),
                   // Actions
                   Row(
@@ -136,7 +216,13 @@ class _IdeaDetailView extends StatelessWidget {
                       Expanded(
                         child: OutlinedButton(
                           onPressed: () {
-                            // Navigate to Edit
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    IdeaPostScreen(idea: idea),
+                              ),
+                            );
                           },
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppColors.textPrimary,
@@ -144,6 +230,9 @@ class _IdeaDetailView extends StatelessWidget {
                               color: Colors.white.withOpacity(0.2),
                             ),
                             padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                           child: const Text('Edit Idea'),
                         ),
@@ -168,6 +257,100 @@ class _IdeaDetailView extends StatelessWidget {
   }
 }
 
+class _Header extends StatelessWidget {
+  final String title;
+  const _Header(this.title);
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Text(
+        title,
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+          color: AppColors.textPrimary,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  final String label, value;
+  final IconData icon;
+  const _InfoRow({required this.label, required this.value, required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: AppColors.textSecondary),
+          const SizedBox(width: 10),
+          Text(
+            '$label:',
+            style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatCard extends StatelessWidget {
+  final String label, value;
+  final IconData icon;
+  const _StatCard({required this.label, required this.value, required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceGlass,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withOpacity(0.05)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 14, color: AppColors.brandCyan),
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 10,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              value,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 class _TaskBadge extends StatelessWidget {
   final String status;
 

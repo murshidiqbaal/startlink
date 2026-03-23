@@ -6,6 +6,7 @@ class UserBadge {
   final String? badgeDescription;
   final String? icon;
   final DateTime awardedAt;
+  final String name;
 
   const UserBadge({
     required this.id,
@@ -15,5 +16,6 @@ class UserBadge {
     this.badgeDescription,
     this.icon,
     required this.awardedAt,
+    required this.name,
   });
 }

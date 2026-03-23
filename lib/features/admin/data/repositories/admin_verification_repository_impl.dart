@@ -28,7 +28,7 @@ class AdminVerificationRepositoryImpl implements AdminVerificationRepository {
   Future<List<UserVerification>> _fetchByStatus(String status) async {
     final response = await _supabase
         .from('user_verifications')
-        .select()
+        .select('*, profiles(full_name, email)')
         .eq('status', status)
         .order('created_at', ascending: false);
 
@@ -42,6 +42,16 @@ class AdminVerificationRepositoryImpl implements AdminVerificationRepository {
     String verificationId,
     String profileId,
   ) async {
+    // 1. Get the verification record to know the role
+    final verificationData = await _supabase
+        .from('user_verifications')
+        .select()
+        .eq('id', verificationId)
+        .single();
+
+    final role = verificationData['role'] as String?;
+
+    // 2. Update status in user_verifications
     await _supabase
         .from('user_verifications')
         .update({
@@ -50,14 +60,51 @@ class AdminVerificationRepositoryImpl implements AdminVerificationRepository {
         })
         .eq('id', verificationId);
 
-    // Trigger Badge Award (simplified; normally a trigger or separate call)
-    // We can use the VerificationRepository or direct DB call here since this is Admin repo
-    // For now, let's just ensure the status is updated.
-    // The Trust Score engine will pick this up when the user profile loads or via a trigger.
+    // 3. Award Badge
+    if (role != null) {
+      if (role.toLowerCase() == 'investor') {
+        await _supabase.from('user_badges').insert({
+          'profile_id': profileId,
+          'badge_key': 'verified_investor',
+          'badge_label': 'Verified Investor',
+          'badge_description': 'Approved investor on the platform',
+          'icon': 'shield_check',
+        });
+        
+        await _supabase
+            .from('investor_profiles')
+            .update({'is_verified': true})
+            .eq('profile_id', profileId);
+      } else if (role.toLowerCase() == 'mentor') {
+        await _supabase.from('user_badges').insert({
+          'profile_id': profileId,
+          'badge_key': 'verified_mentor',
+          'badge_label': 'Verified Mentor',
+          'badge_description': 'Approved mentor on the platform',
+          'icon': 'verified',
+        });
+
+        await _supabase
+            .from('mentor_profiles')
+            .update({'is_verified': true})
+            .eq('profile_id', profileId);
+      }
+    }
   }
 
   @override
   Future<void> rejectVerification(String verificationId, String reason) async {
+    // 1. Get the verification record to know the role and profileId
+    final verificationData = await _supabase
+        .from('user_verifications')
+        .select()
+        .eq('id', verificationId)
+        .single();
+
+    final role = verificationData['role'] as String?;
+    final profileId = verificationData['profile_id'] as String;
+
+    // 2. Update status in user_verifications
     await _supabase
         .from('user_verifications')
         .update({
@@ -65,5 +112,20 @@ class AdminVerificationRepositoryImpl implements AdminVerificationRepository {
           'metadata': {'rejection_reason': reason},
         })
         .eq('id', verificationId);
+
+    // 3. Ensure profile is NOT verified (in case it was previously)
+    if (role != null) {
+      if (role.toLowerCase() == 'investor') {
+        await _supabase
+            .from('investor_profiles')
+            .update({'is_verified': false})
+            .eq('profile_id', profileId);
+      } else if (role.toLowerCase() == 'mentor') {
+        await _supabase
+            .from('mentor_profiles')
+            .update({'is_verified': false})
+            .eq('profile_id', profileId);
+      }
+    }
   }
 }

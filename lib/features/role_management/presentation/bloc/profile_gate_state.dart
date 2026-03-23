@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:startlink/core/constants/user_role.dart';
+import 'package:startlink/features/profile/data/models/profile_model.dart';
 
 abstract class ProfileGateState extends Equatable {
   const ProfileGateState();
@@ -22,15 +23,22 @@ class ProfileGateBlocked extends ProfileGateState {
   final UserRole role;
   final List<String> missingFields;
   final int completionPercentage;
+  final ProfileModel baseProfile;
 
   const ProfileGateBlocked({
     required this.role,
     required this.missingFields,
     required this.completionPercentage,
+    required this.baseProfile,
   });
 
   @override
-  List<Object> get props => [role, missingFields, completionPercentage];
+  List<Object> get props => [
+    role,
+    missingFields,
+    completionPercentage,
+    baseProfile,
+  ];
 }
 
 class ProfileGateError extends ProfileGateState {

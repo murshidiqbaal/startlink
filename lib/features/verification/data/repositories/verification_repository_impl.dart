@@ -79,12 +79,13 @@ class VerificationRepositoryImpl implements VerificationRepository {
   }
 
   @override
-  Future<void> awardBadge(
-    String profileId,
-    String badgeKey,
-    String label,
-    String description,
-  ) async {
+  Future<void> awardBadge({
+    required String profileId,
+    required String badgeKey,
+    required String label,
+    required String description,
+    String? icon,
+  }) async {
     try {
       final existing = await _supabase
           .from('user_badges')
@@ -99,7 +100,7 @@ class VerificationRepositoryImpl implements VerificationRepository {
         'badge_key': badgeKey,
         'badge_label': label,
         'badge_description': description,
-        // 'icon' can be mapped in UI based on key or passed here
+        'icon': icon,
       });
     } catch (e) {
       print('Error awarding badge: $e'); // Fail silent for background logic

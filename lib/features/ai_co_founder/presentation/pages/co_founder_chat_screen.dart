@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:startlink/core/presentation/widgets/startlink_glass_card.dart';
+import 'package:startlink/core/theme/app_theme.dart';
 import 'package:startlink/features/ai_co_founder/domain/entities/chat_message.dart';
-// Note: Ensure Repo is provided via DI or imports
 import 'package:startlink/features/ai_co_founder/domain/repositories/co_founder_repository.dart';
 import 'package:startlink/features/ai_co_founder/presentation/bloc/co_founder_bloc.dart';
 
 class CoFounderChatScreen extends StatelessWidget {
-  final String? contextId; // e.g. Idea ID to discuss
+  final String? contextId;
 
   const CoFounderChatScreen({super.key, this.contextId});
 
@@ -15,20 +16,78 @@ class CoFounderChatScreen extends StatelessWidget {
     return BlocProvider(
       create: (context) =>
           CoFounderBloc(repository: context.read<CoFounderRepository>()),
-      child: _ChatView(contextId: contextId),
+      child: _CoFounderDashboard(contextId: contextId),
     );
   }
 }
 
-class _ChatView extends StatefulWidget {
+class _CoFounderDashboard extends StatefulWidget {
   final String? contextId;
-  const _ChatView({this.contextId});
+  const _CoFounderDashboard({this.contextId});
 
   @override
-  State<_ChatView> createState() => _ChatViewState();
+  State<_CoFounderDashboard> createState() => _CoFounderDashboardState();
 }
 
-class _ChatViewState extends State<_ChatView> {
+class _CoFounderDashboardState extends State<_CoFounderDashboard>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 4, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        title: const Text('AI Co-Founder'),
+        backgroundColor: AppColors.surfaceGlass,
+        bottom: TabBar(
+          controller: _tabController,
+          labelColor: AppColors.brandCyan,
+          unselectedLabelColor: AppColors.textSecondary,
+          indicatorColor: AppColors.brandCyan,
+          isScrollable: true,
+          tabs: const [
+            Tab(text: 'Chat', icon: Icon(Icons.chat_bubble_outline)),
+            Tab(text: 'Insights', icon: Icon(Icons.lightbulb_outline)),
+            Tab(text: 'Action Plan', icon: Icon(Icons.checklist)),
+            Tab(text: 'Risks', icon: Icon(Icons.warning_amber_rounded)),
+          ],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _ChatTab(contextId: widget.contextId),
+          _InsightsTab(),
+          _ActionsTab(),
+          _RisksTab(),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChatTab extends StatefulWidget {
+  final String? contextId;
+  const _ChatTab({this.contextId});
+
+  @override
+  State<_ChatTab> createState() => _ChatTabState();
+}
+
+class _ChatTabState extends State<_ChatTab> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
@@ -44,72 +103,48 @@ class _ChatViewState extends State<_ChatView> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Row(
-          children: [
-            Icon(Icons.smart_toy_outlined), // Robot icon
-            SizedBox(width: 8),
-            Text('AI Co-Founder'),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.info_outline),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('I am here to challenge your assumptions!'),
-                ),
+    return Column(
+      children: [
+        Expanded(
+          child: BlocConsumer<CoFounderBloc, CoFounderState>(
+            listener: (context, state) {
+              if (state.messages.isNotEmpty) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (_scrollController.hasClients) {
+                    _scrollController.animateTo(
+                      _scrollController.position.maxScrollExtent,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeOut,
+                    );
+                  }
+                });
+              }
+            },
+            builder: (context, state) {
+              if (state.messages.isEmpty &&
+                  state.status == CoFounderStatus.initial) {
+                return _buildEmptyState();
+              }
+
+              return ListView.builder(
+                controller: _scrollController,
+                padding: const EdgeInsets.all(16),
+                itemCount:
+                    state.messages.length +
+                    (state.status == CoFounderStatus.loading ? 1 : 0),
+                itemBuilder: (context, index) {
+                  if (index >= state.messages.length) {
+                    return const _TypingIndicator(); // Show typing if loading
+                  }
+                  final msg = state.messages[index];
+                  return _MessageBubble(message: msg);
+                },
               );
             },
           ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: BlocConsumer<CoFounderBloc, CoFounderState>(
-              listener: (context, state) {
-                // Scroll to bottom on new message
-                if (state.messages.isNotEmpty) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (_scrollController.hasClients) {
-                      _scrollController.animateTo(
-                        _scrollController.position.maxScrollExtent,
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeOut,
-                      );
-                    }
-                  });
-                }
-              },
-              builder: (context, state) {
-                if (state.messages.isEmpty &&
-                    state.status == CoFounderStatus.initial) {
-                  return _buildEmptyState();
-                }
-
-                return ListView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.all(16),
-                  itemCount:
-                      state.messages.length +
-                      (state.status == CoFounderStatus.loading ? 1 : 0),
-                  itemBuilder: (context, index) {
-                    if (index >= state.messages.length) {
-                      return const _TypingIndicator(); // Show typing if loading
-                    }
-                    final msg = state.messages[index];
-                    return _MessageBubble(message: msg);
-                  },
-                );
-              },
-            ),
-          ),
-          _buildInputArea(context),
-        ],
-      ),
+        ),
+        _buildInputArea(context),
+      ],
     );
   }
 
@@ -121,13 +156,13 @@ class _ChatViewState extends State<_ChatView> {
           Icon(
             Icons.psychology,
             size: 64,
-            color: Theme.of(context).colorScheme.secondary.withOpacity(0.5),
+            color: AppColors.brandCyan.withOpacity(0.5),
           ),
           const SizedBox(height: 16),
           const Text(
             "Pitch me your idea.\nI'll be brutally honest.",
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 18, color: Colors.grey),
+            style: TextStyle(fontSize: 18, color: AppColors.textSecondary),
           ),
         ],
       ),
@@ -137,20 +172,23 @@ class _ChatViewState extends State<_ChatView> {
   Widget _buildInputArea(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(8),
-      color: Theme.of(context).cardColor,
+      color: AppColors.surfaceGlass,
       child: SafeArea(
         child: Row(
           children: [
             Expanded(
               child: TextField(
                 controller: _controller,
+                style: const TextStyle(color: AppColors.textPrimary),
                 decoration: InputDecoration(
                   hintText: 'Discuss your strategy...',
+                  hintStyle: const TextStyle(color: AppColors.textSecondary),
+                  filled: true,
+                  fillColor: AppColors.background,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(24),
                     borderSide: BorderSide.none,
                   ),
-                  filled: true,
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 20,
                     vertical: 10,
@@ -163,12 +201,154 @@ class _ChatViewState extends State<_ChatView> {
             const SizedBox(width: 8),
             FloatingActionButton(
               mini: true,
+              backgroundColor: AppColors.brandCyan,
               onPressed: _sendMessage,
-              child: const Icon(Icons.send),
+              child: const Icon(Icons.send, color: Colors.white),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _InsightsTab extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<CoFounderBloc, CoFounderState>(
+      builder: (context, state) {
+        if (state.insights.isEmpty) {
+          return const Center(
+            child: Text(
+              'Start chatting to generate insights.',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
+          );
+        }
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: state.insights.length,
+          itemBuilder: (context, index) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: StartLinkGlassCard(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.lightbulb,
+                      color: AppColors.amber,
+                      size: 24,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        state.insights[index],
+                        style: const TextStyle(color: AppColors.textPrimary),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _ActionsTab extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<CoFounderBloc, CoFounderState>(
+      builder: (context, state) {
+        if (state.actionItems.isEmpty) {
+          return const Center(
+            child: Text(
+              'No action items yet.',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
+          );
+        }
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: state.actionItems.length,
+          itemBuilder: (context, index) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: StartLinkGlassCard(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.check_circle_outline,
+                      color: AppColors.brandCyan,
+                      size: 24,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        state.actionItems[index],
+                        style: const TextStyle(color: AppColors.textPrimary),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _RisksTab extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<CoFounderBloc, CoFounderState>(
+      builder: (context, state) {
+        if (state.risks.isEmpty) {
+          return const Center(
+            child: Text(
+              'No risks identified yet.',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
+          );
+        }
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: state.risks.length,
+          itemBuilder: (context, index) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: StartLinkGlassCard(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.warning_amber_rounded,
+                      color: AppColors.rose,
+                      size: 24,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        state.risks[index],
+                        style: const TextStyle(color: AppColors.textPrimary),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }
@@ -190,30 +370,38 @@ class _MessageBubble extends StatelessWidget {
         ),
         decoration: BoxDecoration(
           color: isUser
-              ? Theme.of(context).colorScheme.primaryContainer
-              : Theme.of(context).colorScheme.surfaceContainerHighest,
+              ? AppColors.brandCyan.withOpacity(0.2)
+              : AppColors.surfaceGlass,
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(16),
             topRight: const Radius.circular(16),
             bottomLeft: isUser ? const Radius.circular(16) : Radius.zero,
             bottomRight: isUser ? Radius.zero : const Radius.circular(16),
           ),
+          border: Border.all(
+            color: isUser
+                ? AppColors.brandCyan.withOpacity(0.3)
+                : Colors.white10,
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (!isUser) ...[
-              Text(
+              const Text(
                 'AI Co-Founder',
                 style: TextStyle(
                   fontSize: 10,
-                  color: Theme.of(context).colorScheme.primary,
+                  color: AppColors.brandPurple,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 4),
             ],
-            Text(message.text),
+            Text(
+              message.text,
+              style: const TextStyle(color: AppColors.textPrimary),
+            ),
           ],
         ),
       ),
@@ -232,9 +420,7 @@ class _TypingIndicator extends StatelessWidget {
         margin: const EdgeInsets.symmetric(vertical: 4),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Theme.of(
-            context,
-          ).colorScheme.surfaceContainerHighest.withOpacity(0.5),
+          color: AppColors.surfaceGlass,
           borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(16),
             topRight: Radius.circular(16),
@@ -243,7 +429,10 @@ class _TypingIndicator extends StatelessWidget {
         ),
         child: const Text(
           'Thinking...',
-          style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey),
+          style: TextStyle(
+            fontStyle: FontStyle.italic,
+            color: AppColors.textSecondary,
+          ),
         ),
       ),
     );

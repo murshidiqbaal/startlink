@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:startlink/core/presentation/pages/role_splash_screen.dart';
+import 'package:startlink/core/presentation/pages/splash_screen.dart';
 import 'package:startlink/core/services/supabase_client.dart'; // Import Supabase Service
 import 'package:startlink/core/theme/app_theme.dart';
 import 'package:startlink/features/achievements/data/repositories/achievement_repository_impl.dart';
@@ -21,7 +23,6 @@ import 'package:startlink/features/auth/bloc/role_bloc.dart';
 import 'package:startlink/features/auth/data/auth_remote_source.dart';
 import 'package:startlink/features/auth/data/repository/auth_repository_impl.dart';
 import 'package:startlink/features/auth/domain/repository/auth_repository.dart';
-import 'package:startlink/features/auth/presentation/auth_deep_link_handler.dart';
 import 'package:startlink/features/auth/presentation/login_screen.dart';
 import 'package:startlink/features/auth/presentation/role_selection_screen.dart';
 import 'package:startlink/features/collaboration/data/repositories/collaboration_repository_impl.dart';
@@ -199,7 +200,7 @@ class AppView extends StatelessWidget {
       title: 'StartLink',
       theme: AppTheme.darkTheme,
       debugShowCheckedModeBanner: false,
-      home: const AuthDeepLinkHandler(child: AuthGate()),
+      home: const SplashScreen(),
     );
   }
 }
@@ -215,7 +216,7 @@ class AuthGate extends StatelessWidget {
           // Fetch user-specific data upon authentication
           context.read<ProfileBloc>().add(FetchProfile());
           context.read<IdeaBloc>().add(FetchIdeas());
-          context.read<AuraBloc>().add(FetchAura(state.user.id));
+          context.read<AuraBloc>().add(SyncAura(state.user.id));
           context.read<VerificationBloc>().add(
             FetchVerificationsAndBadges(state.user.id),
           );
@@ -245,14 +246,20 @@ class AuthGate extends StatelessWidget {
                 if (roleState.activeRole.isNotEmpty) {
                   return RoleGateWrapper(
                     // Catch-all gate wrapper
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 500),
-                      transitionBuilder: (child, animation) {
-                        return FadeTransition(opacity: animation, child: child);
-                      },
-                      child: KeyedSubtree(
-                        key: ValueKey(roleState.activeRole),
-                        child: _buildDashboard(roleState.activeRole),
+                    child: RoleSplashWrapper(
+                      role: roleState.activeRole,
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 500),
+                        transitionBuilder: (child, animation) {
+                          return FadeTransition(
+                            opacity: animation,
+                            child: child,
+                          );
+                        },
+                        child: KeyedSubtree(
+                          key: ValueKey(roleState.activeRole),
+                          child: _buildDashboard(roleState.activeRole),
+                        ),
                       ),
                     ),
                   );

@@ -15,6 +15,8 @@ class IdeaCard extends StatelessWidget {
   final int? aiQualityScore;
   final bool isVerified;
 
+  final String? imageUrl;
+
   const IdeaCard({
     super.key,
     required this.title,
@@ -23,6 +25,7 @@ class IdeaCard extends StatelessWidget {
     required this.skills,
     required this.views,
     required this.applications,
+    this.imageUrl,
     this.onTap,
     this.onEdit,
     this.onApply,
@@ -56,6 +59,27 @@ class IdeaCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (imageUrl != null && imageUrl!.isNotEmpty) ...[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  imageUrl!,
+                  height: 120,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    height: 120,
+                    width: double.infinity,
+                    color: AppColors.surfaceGlass,
+                    child: const Icon(
+                      Icons.broken_image_outlined,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [

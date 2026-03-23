@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'package:startlink/core/theme/app_theme.dart';
 import 'package:startlink/features/auth/domain/repository/auth_repository.dart';
 import 'package:startlink/features/profile/data/models/profile_model.dart';
 import 'package:startlink/features/profile/domain/entities/investor_profile.dart';
 import 'package:startlink/features/profile/presentation/bloc/investor_profile_bloc.dart';
 import 'package:startlink/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:startlink/features/profile/presentation/edit_investor_profile.dart';
+import 'package:startlink/features/profile/presentation/secure_resume_page.dart';
+import 'package:startlink/features/verification/domain/entities/user_badge.dart';
+import 'package:startlink/features/verification/presentation/bloc/verification_bloc.dart';
 
 class InvestorProfileScreen extends StatefulWidget {
   final String? userId;
@@ -28,6 +32,7 @@ class _InvestorProfileScreenState extends State<InvestorProfileScreen> {
         widget.userId ?? context.read<AuthRepository>().currentUser?.id;
     if (userId != null) {
       context.read<InvestorProfileBloc>().add(LoadInvestorProfile(userId));
+      context.read<VerificationBloc>().add(FetchVerificationsAndBadges(userId));
     }
   }
 
@@ -43,7 +48,8 @@ class _InvestorProfileScreenState extends State<InvestorProfileScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => const EditInvestorProfileScreen(),
+                  builder: (_) =>
+                      const EditInvestorProfileScreen(profileId: ''),
                 ),
               ).then((_) => _loadProfile());
             },
@@ -52,34 +58,51 @@ class _InvestorProfileScreenState extends State<InvestorProfileScreen> {
       ),
       body: BlocBuilder<ProfileBloc, ProfileState>(
         builder: (context, baseState) {
-          return BlocBuilder<InvestorProfileBloc, InvestorProfileState>(
-            builder: (context, roleState) {
-              if (roleState is InvestorProfileLoading ||
-                  baseState is ProfileLoading) {
-                return const Center(child: CircularProgressIndicator());
-              }
+          return BlocBuilder<VerificationBloc, VerificationState>(
+            builder: (context, vState) {
+              return BlocBuilder<InvestorProfileBloc, InvestorProfileState>(
+                builder: (context, roleState) {
+                  if (roleState is InvestorProfileLoading ||
+                      baseState is ProfileLoading) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
 
-              if (roleState is InvestorProfileLoaded &&
-                  baseState is ProfileLoaded) {
-                return _buildBody(
-                  context,
-                  baseState.profile,
-                  roleState.profile,
-                );
-              }
+                  if (roleState is InvestorProfileLoaded &&
+                      baseState is ProfileLoaded) {
+                    return _buildBody(
+                      context,
+                      baseState.profile,
+                      roleState.profile,
+                      vState,
+                    );
+                  }
 
-              if (roleState is InvestorProfileError) {
-                return Center(child: Text(roleState.message));
-              }
+                  if (roleState is InvestorProfileError) {
+                    return Center(child: Text(roleState.message));
+                  }
 
-              if (roleState is InvestorProfileInitial) {
-                _loadProfile();
-                return const Center(child: CircularProgressIndicator());
-              }
-              return const Center(child: CircularProgressIndicator());
+                  if (roleState is InvestorProfileInitial) {
+                    _loadProfile();
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  return const Center(child: CircularProgressIndicator());
+                },
+              );
             },
           );
         },
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const SecureResumePage()),
+          );
+        },
+        label: const Text('Secure Resume'),
+        icon: const Icon(Icons.fingerprint),
+        backgroundColor: AppColors.brandCyan,
+        foregroundColor: Colors.black,
       ),
     );
   }
@@ -88,6 +111,7 @@ class _InvestorProfileScreenState extends State<InvestorProfileScreen> {
     BuildContext context,
     ProfileModel baseProfile,
     InvestorProfile roleProfile,
+    VerificationState vState,
   ) {
     final tickets = NumberFormat.compactCurrency(symbol: '\$');
 
@@ -96,7 +120,7 @@ class _InvestorProfileScreenState extends State<InvestorProfileScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Top Section: Photo & Completion
+          // Top Section
           Row(
             children: [
               Stack(
@@ -110,8 +134,8 @@ class _InvestorProfileScreenState extends State<InvestorProfileScreen> {
                       backgroundColor: Colors.grey[800],
                       valueColor: AlwaysStoppedAnimation<Color>(
                         roleProfile.profileCompletion >= 85
-                            ? Colors.green
-                            : Colors.orange,
+                            ? AppColors.emerald
+                            : AppColors.amber,
                       ),
                       strokeWidth: 5,
                     ),
@@ -150,23 +174,7 @@ class _InvestorProfileScreenState extends State<InvestorProfileScreen> {
                       ),
                     ],
                     const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).primaryColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        'Accredited Investor', // Placeholder or derivation
-                        style: TextStyle(
-                          color: Theme.of(context).primaryColor,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
+                    _buildVerificationRow(vState),
                   ],
                 ),
               ),
@@ -230,23 +238,28 @@ class _InvestorProfileScreenState extends State<InvestorProfileScreen> {
 
           const SizedBox(height: 16),
 
-          // Validation
+          // Verification & Badges
           _buildCard(
             context,
-            title: 'Verification Status',
-            icon: Icons.shield,
-            child: Row(
+            title: 'Verification & Badges',
+            icon: Icons.verified_user,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
-                  roleProfile.isVerified ? Icons.check_circle : Icons.pending,
-                  color: roleProfile.isVerified ? Colors.green : Colors.orange,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  roleProfile.isVerified
-                      ? 'Identity Verified'
-                      : 'Pending Verification',
-                ),
+                if (vState is VerificationLoaded &&
+                    vState.badges.isNotEmpty) ...[
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: vState.badges
+                        .map((b) => _BadgeChip(badge: b))
+                        .toList(),
+                  ),
+                ] else
+                  const Text(
+                    'No badges earned yet.',
+                    style: TextStyle(color: Colors.grey),
+                  ),
               ],
             ),
           ),
@@ -263,6 +276,45 @@ class _InvestorProfileScreenState extends State<InvestorProfileScreen> {
     );
   }
 
+  Widget _buildVerificationRow(VerificationState state) {
+    bool isVerified = false;
+    String statusStr = 'Not Verified';
+    Color color = AppColors.rose;
+
+    if (state is VerificationLoaded) {
+      if (state.isRoleVerified('investor')) {
+        isVerified = true;
+        statusStr = 'Verified Investor';
+        color = AppColors.emerald;
+      } else {
+        final req = state.getRequestForRole('investor');
+        if (req != null) {
+          statusStr = req.status;
+          color = req.status == 'Pending' ? AppColors.amber : AppColors.rose;
+        }
+      }
+    }
+
+    return Row(
+      children: [
+        Icon(
+          isVerified ? Icons.verified : Icons.error_outline,
+          size: 16,
+          color: color,
+        ),
+        const SizedBox(width: 4),
+        Text(
+          statusStr,
+          style: TextStyle(
+            color: color,
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildCard(
     BuildContext context, {
     required String title,
@@ -273,22 +325,22 @@ class _InvestorProfileScreenState extends State<InvestorProfileScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainer,
+        color: AppColors.surfaceGlass,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white10),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon, size: 18, color: Colors.grey),
+              Icon(icon, size: 18, color: AppColors.textSecondary),
               const SizedBox(width: 8),
               Text(
                 title.toUpperCase(),
                 style: const TextStyle(
                   fontSize: 12,
-                  color: Colors.grey,
+                  color: AppColors.textSecondary,
                   letterSpacing: 1,
                 ),
               ),
@@ -296,6 +348,42 @@ class _InvestorProfileScreenState extends State<InvestorProfileScreen> {
           ),
           const SizedBox(height: 12),
           child,
+        ],
+      ),
+    );
+  }
+}
+
+class _BadgeChip extends StatelessWidget {
+  final UserBadge badge;
+  const _BadgeChip({required this.badge});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.brandPurple.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.brandPurple.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.military_tech,
+            size: 14,
+            color: AppColors.brandPurple,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            badge.name,
+            style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ],
       ),
     );

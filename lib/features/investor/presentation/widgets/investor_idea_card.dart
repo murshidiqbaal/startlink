@@ -13,6 +13,7 @@ class InvestorIdeaCard extends StatelessWidget {
   final VoidCallback onExpressInterest;
   final bool isBookmarked;
   final bool isInterested;
+  final String? imageUrl;
 
   const InvestorIdeaCard({
     super.key,
@@ -28,6 +29,7 @@ class InvestorIdeaCard extends StatelessWidget {
     required this.onExpressInterest,
     this.isBookmarked = false,
     this.isInterested = false,
+    this.imageUrl,
   });
 
   @override
@@ -53,6 +55,24 @@ class InvestorIdeaCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (imageUrl != null && imageUrl!.isNotEmpty) ...[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    imageUrl!,
+                    height: 150,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      height: 150,
+                      width: double.infinity,
+                      color: Theme.of(context).colorScheme.surfaceVariant,
+                      child: const Icon(Icons.broken_image_outlined),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
               // Header: Boosted + Verified + Title
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,

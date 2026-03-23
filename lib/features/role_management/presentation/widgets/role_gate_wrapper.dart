@@ -50,7 +50,7 @@ class RoleGateWrapper extends StatelessWidget {
             TextButton(
               onPressed: () {
                 Navigator.pop(context); // Close dialog
-                _navigateToEditScreen(context, state.role);
+                _navigateToEditScreen(context, state);
               },
               child: Text('Complete ${state.role.toStringValue} Profile'),
             ),
@@ -60,18 +60,18 @@ class RoleGateWrapper extends StatelessWidget {
     );
   }
 
-  void _navigateToEditScreen(BuildContext context, UserRole role) {
+  void _navigateToEditScreen(BuildContext context, ProfileGateBlocked state) {
     // Navigate to respective edit screen
     Widget screen;
-    switch (role) {
+    switch (state.role) {
       case UserRole.innovator:
-        screen = const EditInnovatorProfileScreen();
+        screen = EditInnovatorProfileScreen(baseProfile: state.baseProfile);
         break;
       case UserRole.mentor:
-        screen = const EditMentorProfileScreen();
+        screen = EditMentorProfileScreen(profileId: state.baseProfile.id);
         break;
       case UserRole.investor:
-        screen = const EditInvestorProfileScreen();
+        screen = EditInvestorProfileScreen(profileId: state.baseProfile.id);
         break;
       case UserRole.collaborator:
         screen = const Scaffold(

@@ -17,10 +17,10 @@ class VerificationRuleEngine {
     // 1. Profile Verified Badge (General)
     if (completionScore >= 80) {
       await _repository.awardBadge(
-        profileId,
-        'profile_verified',
-        'Verified Profile',
-        'High quality profile completion.',
+        profileId: profileId,
+        badgeKey: 'profile_verified',
+        label: 'Verified Profile',
+        description: 'High quality profile completion.',
       );
     }
 
@@ -28,17 +28,17 @@ class VerificationRuleEngine {
     if (isRoleVerified) {
       if (role == 'Mentor') {
         await _repository.awardBadge(
-          profileId,
-          'trusted_mentor',
-          'Trusted Mentor',
-          'Verified Identity and Expertise.',
+          profileId: profileId,
+          badgeKey: 'trusted_mentor',
+          label: 'Trusted Mentor',
+          description: 'Verified Identity and Expertise.',
         );
       } else if (role == 'Investor') {
         await _repository.awardBadge(
-          profileId,
-          'verified_investor',
-          'Verified Investor',
-          'Accredited and Verified Identity.',
+          profileId: profileId,
+          badgeKey: 'verified_investor',
+          label: 'Verified Investor',
+          description: 'Accredited and Verified Identity.',
         );
       }
     }

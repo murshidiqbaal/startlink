@@ -1,61 +1,76 @@
-import 'package:bloc/bloc.dart';
-import 'package:equatable/equatable.dart';
+// lib/features/profile/presentation/bloc/innovator_profile_bloc.dart
+
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:startlink/features/profile/data/models/innovator_profile_model.dart';
+import 'package:startlink/features/profile/data/models/profile_model.dart';
 import 'package:startlink/features/profile/domain/entities/innovator_profile.dart';
 import 'package:startlink/features/profile/domain/repositories/profile_repository.dart';
 
-// Events
-abstract class InnovatorProfileEvent extends Equatable {
-  const InnovatorProfileEvent();
-  @override
-  List<Object> get props => [];
-}
+// ── Events ────────────────────────────────────────────────────────────────────
+
+abstract class InnovatorProfileEvent {}
 
 class LoadInnovatorProfile extends InnovatorProfileEvent {
+  /// Pass profiles.id (NOT auth.users.id)
   final String profileId;
-  const LoadInnovatorProfile(this.profileId);
-  @override
-  List<Object> get props => [profileId];
+  LoadInnovatorProfile(this.profileId);
 }
 
 class SaveInnovatorProfile extends InnovatorProfileEvent {
   final InnovatorProfile profile;
-  const SaveInnovatorProfile(this.profile);
-  @override
-  List<Object> get props => [profile];
+
+  /// Optionally pass the base profile to update it simultaneously
+  final ProfileModel? baseProfile;
+
+  SaveInnovatorProfile({required this.profile, this.baseProfile});
 }
 
-// States
-abstract class InnovatorProfileState extends Equatable {
-  const InnovatorProfileState();
-  @override
-  List<Object> get props => [];
+// ── State ─────────────────────────────────────────────────────────────────────
+
+enum InnovatorProfileStatus {
+  initial,
+  loading,
+  loaded,
+  saving,
+  success,
+  failure,
 }
 
-class InnovatorProfileInitial extends InnovatorProfileState {}
+class InnovatorProfileState {
+  final InnovatorProfileStatus status;
+  final InnovatorProfile? profile;
+  final String? errorMessage;
+  final bool avatarUploading;
 
-class InnovatorProfileLoading extends InnovatorProfileState {}
+  const InnovatorProfileState({
+    this.status = InnovatorProfileStatus.initial,
+    this.profile,
+    this.errorMessage,
+    this.avatarUploading = false,
+  });
 
-class InnovatorProfileLoaded extends InnovatorProfileState {
-  final InnovatorProfile profile;
-  const InnovatorProfileLoaded(this.profile);
-  @override
-  List<Object> get props => [profile];
+  InnovatorProfileState copyWith({
+    InnovatorProfileStatus? status,
+    InnovatorProfile? profile,
+    String? errorMessage,
+    bool? avatarUploading,
+  }) => InnovatorProfileState(
+    status: status ?? this.status,
+    profile: profile ?? this.profile,
+    errorMessage: errorMessage ?? this.errorMessage,
+    avatarUploading: avatarUploading ?? this.avatarUploading,
+  );
 }
 
-class InnovatorProfileError extends InnovatorProfileState {
-  final String message;
-  const InnovatorProfileError(this.message);
-  @override
-  List<Object> get props => [message];
-}
+// ── BLoC ──────────────────────────────────────────────────────────────────────
 
 class InnovatorProfileBloc
     extends Bloc<InnovatorProfileEvent, InnovatorProfileState> {
-  final ProfileRepository _repository;
+  final ProfileRepository _repo;
 
   InnovatorProfileBloc({required ProfileRepository repository})
-    : _repository = repository,
-      super(InnovatorProfileInitial()) {
+    : _repo = repository,
+      super(const InnovatorProfileState()) {
     on<LoadInnovatorProfile>(_onLoad);
     on<SaveInnovatorProfile>(_onSave);
   }
@@ -64,19 +79,25 @@ class InnovatorProfileBloc
     LoadInnovatorProfile event,
     Emitter<InnovatorProfileState> emit,
   ) async {
-    emit(InnovatorProfileLoading());
+    emit(state.copyWith(status: InnovatorProfileStatus.loading));
     try {
-      final profile = await _repository.getInnovatorProfile(event.profileId);
-      if (profile != null) {
-        emit(InnovatorProfileLoaded(profile));
-      } else {
-        // Assume creating new profile if not found
-        emit(
-          InnovatorProfileLoaded(InnovatorProfile(profileId: event.profileId)),
-        );
-      }
+      final profile = await _repo.fetchInnovatorProfile(event.profileId);
+
+      // If no row exists yet, return an empty model so the edit screen can
+      // still prefill from the base profile
+      emit(
+        state.copyWith(
+          status: InnovatorProfileStatus.loaded,
+          profile: profile ?? InnovatorProfileModel(profileId: event.profileId),
+        ),
+      );
     } catch (e) {
-      emit(InnovatorProfileError(e.toString()));
+      emit(
+        state.copyWith(
+          status: InnovatorProfileStatus.failure,
+          errorMessage: e.toString(),
+        ),
+      );
     }
   }
 
@@ -84,12 +105,29 @@ class InnovatorProfileBloc
     SaveInnovatorProfile event,
     Emitter<InnovatorProfileState> emit,
   ) async {
-    emit(InnovatorProfileLoading());
+    emit(state.copyWith(status: InnovatorProfileStatus.saving));
     try {
-      await _repository.updateInnovatorProfile(event.profile);
-      emit(InnovatorProfileLoaded(event.profile));
+      // Upsert role-specific table
+      await _repo.upsertInnovatorProfile(event.profile);
+
+      // Optionally update base profile in same transaction
+      if (event.baseProfile != null) {
+        await _repo.updateProfile(event.baseProfile!);
+      }
+
+      emit(
+        state.copyWith(
+          status: InnovatorProfileStatus.success,
+          profile: event.profile,
+        ),
+      );
     } catch (e) {
-      emit(InnovatorProfileError(e.toString()));
+      emit(
+        state.copyWith(
+          status: InnovatorProfileStatus.failure,
+          errorMessage: e.toString(),
+        ),
+      );
     }
   }
 }

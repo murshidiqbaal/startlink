@@ -2,9 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:startlink/core/presentation/widgets/startlink_button.dart';
+import 'package:startlink/core/presentation/widgets/startlink_glass_card.dart';
 import 'package:startlink/core/theme/app_theme.dart';
+import 'package:startlink/features/admin/presentation/pages/admin_dashboard_layout.dart';
+import 'package:startlink/features/ai_co_founder/presentation/pages/co_founder_chat_screen.dart';
 import 'package:startlink/features/collaboration/presentation/pages/collaboration_screen.dart';
+import 'package:startlink/features/compass/presentation/pages/compass_page.dart';
 import 'package:startlink/features/compass/presentation/widgets/innovation_compass_widget.dart';
+import 'package:startlink/features/debug/presentation/simulation_dashboard.dart';
+import 'package:startlink/features/home/presentation/utils/dashboard_features.dart';
 import 'package:startlink/features/home/presentation/widgets/empty_state.dart';
 import 'package:startlink/features/home/presentation/widgets/idea_card.dart';
 import 'package:startlink/features/home/presentation/widgets/role_aware_navigation_bar.dart';
@@ -12,6 +18,7 @@ import 'package:startlink/features/home/presentation/widgets/stats_card.dart';
 import 'package:startlink/features/idea/presentation/bloc/idea_bloc.dart';
 import 'package:startlink/features/idea/presentation/idea_post_screen.dart';
 import 'package:startlink/features/idea/presentation/pages/idea_detail_screen.dart';
+import 'package:startlink/features/matching/presentation/pages/matching_page.dart';
 import 'package:startlink/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:startlink/features/profile/presentation/edit_profile_screen.dart';
 import 'package:startlink/features/profile/presentation/profile_screen.dart';
@@ -200,7 +207,7 @@ class InnovatorHome extends StatelessWidget {
                 const SizedBox(width: 12),
                 const Expanded(
                   child: StatsCard(
-                    label: 'Collaborators',
+                    label: 'Collaborator',
                     value: '17',
                     icon: Icons.group_outlined,
                     iconColor: AppColors.amber,
@@ -217,6 +224,16 @@ class InnovatorHome extends StatelessWidget {
                 ),
               ],
             ),
+            const SizedBox(height: 32),
+            Text(
+              'Explore Features',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 16),
+            _buildFeatureList(context),
             const SizedBox(height: 32),
             _postIdeaButton(context),
             const SizedBox(height: 32),
@@ -244,6 +261,76 @@ class InnovatorHome extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Widget _buildFeatureList(BuildContext context) {
+    // Get all features but exclude the ones already in the main UI (Home, Idea, Collab, Profile)
+    // Note: 'idea' and 'collaboration' are core, but we might want access to 'matching', 'ai', 'simulation' etc.
+    final allFeatures = DashboardConfig.getAllFeatures(context);
+    final features = allFeatures
+        .where(
+          (f) =>
+              f.id != 'home' &&
+              f.id != 'profile' &&
+              f.id != 'idea', // ideas are listed below
+        )
+        .toList();
+
+    return SizedBox(
+      height: 110,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: features.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        itemBuilder: (context, index) {
+          final feature = features[index];
+          return _FeatureCompactCard(
+            feature: feature,
+            onTap: () => _navigateToFeature(context, feature),
+          );
+        },
+      ),
+    );
+  }
+
+  void _navigateToFeature(BuildContext context, DashboardFeature feature) {
+    Widget? screen;
+    switch (feature.id) {
+      case 'simulation':
+        screen = const SimulationDashboard();
+        break;
+      case 'collaboration':
+        screen = const CollaborationScreen();
+        break;
+      case 'ai_co_founder':
+        screen = const CoFounderChatScreen();
+        break;
+      case 'compass':
+        screen = const CompassPage();
+        break;
+      case 'matching':
+        screen = const MatchingPage();
+        break;
+      case 'admin':
+        screen = const AdminDashboardLayout();
+        break;
+      // Add more cases as needed
+      default:
+        // For features without a specific screen yet, or handled elsewhere
+        if (feature.routeName != null) {
+          Navigator.pushNamed(context, feature.routeName!);
+          return;
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Feature ${feature.title} coming soon!'),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        return;
+    }
+
+    Navigator.push(context, MaterialPageRoute(builder: (_) => screen!));
   }
 
   Widget _postIdeaButton(BuildContext context) {
@@ -320,6 +407,7 @@ class InnovatorHome extends StatelessWidget {
               description: idea.description,
               status: idea.status,
               skills: idea.tags ?? [],
+              imageUrl: idea.coverImageUrl,
               views: 0,
               applications: 0,
               onTap: () {
@@ -346,5 +434,73 @@ class InnovatorHome extends StatelessWidget {
     }
 
     return const SliverToBoxAdapter(child: SizedBox.shrink());
+  }
+}
+
+class _FeatureCompactCard extends StatelessWidget {
+  final DashboardFeature feature;
+  final VoidCallback onTap;
+
+  const _FeatureCompactCard({required this.feature, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 100,
+        margin: const EdgeInsets.only(bottom: 8), // For shadow or effect
+        child: Column(
+          children: [
+            StartLinkGlassCard(
+              padding: EdgeInsets.zero,
+              borderRadius: BorderRadius.circular(16),
+              borderGradient: LinearGradient(
+                colors: [
+                  AppColors.brandCyan.withOpacity(0.3),
+                  Colors.transparent,
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 60,
+                  child: (feature.imageUrl != null && feature.imageUrl!.isNotEmpty)
+                      ? Image.network(
+                          feature.imageUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (ctx, err, st) => Icon(
+                            feature.icon,
+                            color: AppColors.brandCyan,
+                            size: 28,
+                          ),
+                        )
+                      : Icon(
+                          feature.icon,
+                          color: AppColors.brandCyan,
+                          size: 28,
+                        ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              feature.title,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

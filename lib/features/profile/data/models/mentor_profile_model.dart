@@ -3,31 +3,14 @@ import 'package:startlink/features/profile/domain/entities/mentor_profile.dart';
 class MentorProfileModel extends MentorProfile {
   const MentorProfileModel({
     required super.profileId,
-    super.expertiseDomains,
+    super.expertiseDomains = const [],
     super.yearsOfExperience,
     super.mentorshipFocus,
     super.linkedinUrl,
-    super.certifications,
-    super.profileCompletion,
-    super.isVerified,
+    super.certifications = const [],
+    super.profileCompletion = 0,
+    super.isVerified = false,
   });
-
-  factory MentorProfileModel.fromJson(Map<String, dynamic> json) {
-    return MentorProfileModel(
-      profileId: json['profile_id'] as String,
-      expertiseDomains: json['expertise_domains'] != null
-          ? List<String>.from(json['expertise_domains'])
-          : const [],
-      yearsOfExperience: json['years_of_experience'] as int?,
-      mentorshipFocus: json['mentorship_focus'] as String?,
-      linkedinUrl: json['linkedin_url'] as String?,
-      certifications: json['certifications'] != null
-          ? List<String>.from(json['certifications'])
-          : const [],
-      profileCompletion: json['profile_completion'] ?? 0,
-      isVerified: json['is_verified'] ?? false,
-    );
-  }
 
   factory MentorProfileModel.fromEntity(MentorProfile entity) {
     return MentorProfileModel(
@@ -42,18 +25,27 @@ class MentorProfileModel extends MentorProfile {
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'profile_id': profileId,
-      'expertise_domains': expertiseDomains,
-      'years_of_experience': yearsOfExperience,
-      'mentorship_focus': mentorshipFocus,
-      'linkedin_url': linkedinUrl,
-      'certifications': certifications,
-      'profile_completion': profileCompletion,
-      'is_verified': isVerified,
-    };
-  }
+  factory MentorProfileModel.fromJson(Map<String, dynamic> json) =>
+      MentorProfileModel(
+        profileId: json['profile_id'] as String,
+        expertiseDomains: _toStrList(json['expertise_domains']),
+        yearsOfExperience: (json['years_of_experience'] as num?)?.toInt(),
+        mentorshipFocus: json['mentorship_focus'] as String?,
+        linkedinUrl: json['linkedin_url'] as String?,
+        certifications: _toStrList(json['certifications']),
+        profileCompletion: (json['profile_completion'] as num?)?.toInt() ?? 0,
+        isVerified: (json['is_verified'] as bool?) ?? false,
+      );
+
+  Map<String, dynamic> toUpsertJson() => {
+    'profile_id': profileId,
+    'expertise_domains': expertiseDomains,
+    'years_of_experience': yearsOfExperience,
+    'mentorship_focus': mentorshipFocus,
+    'linkedin_url': linkedinUrl,
+    'certifications': certifications,
+    'profile_completion': profileCompletion,
+  };
 
   MentorProfileModel copyWith({
     List<String>? expertiseDomains,
@@ -62,17 +54,17 @@ class MentorProfileModel extends MentorProfile {
     String? linkedinUrl,
     List<String>? certifications,
     int? profileCompletion,
-    bool? isVerified,
-  }) {
-    return MentorProfileModel(
-      profileId: profileId,
-      expertiseDomains: expertiseDomains ?? this.expertiseDomains,
-      yearsOfExperience: yearsOfExperience ?? this.yearsOfExperience,
-      mentorshipFocus: mentorshipFocus ?? this.mentorshipFocus,
-      linkedinUrl: linkedinUrl ?? this.linkedinUrl,
-      certifications: certifications ?? this.certifications,
-      profileCompletion: profileCompletion ?? this.profileCompletion,
-      isVerified: isVerified ?? this.isVerified,
-    );
-  }
+  }) => MentorProfileModel(
+    profileId: profileId,
+    expertiseDomains: expertiseDomains ?? this.expertiseDomains,
+    yearsOfExperience: yearsOfExperience ?? this.yearsOfExperience,
+    mentorshipFocus: mentorshipFocus ?? this.mentorshipFocus,
+    linkedinUrl: linkedinUrl ?? this.linkedinUrl,
+    certifications: certifications ?? this.certifications,
+    profileCompletion: profileCompletion ?? this.profileCompletion,
+    isVerified: isVerified,
+  );
+
+  static List<String> _toStrList(dynamic v) =>
+      (v as List?)?.map((e) => e.toString()).toList() ?? [];
 }

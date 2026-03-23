@@ -20,11 +20,8 @@ class ProfileGateBloc extends Bloc<ProfileGateEvent, ProfileGateState> {
   ) async {
     emit(ProfileGateLoading());
     try {
-      final baseProfile = await _profileRepository.getUserProfile(event.userId);
-      if (baseProfile == null) {
-        emit(const ProfileGateError("Base profile not found"));
-        return;
-      }
+      // fetchProfileById throws exception if not found because of .single()
+      final baseProfile = await _profileRepository.fetchProfileById(event.userId);
 
       int completion = 0;
       List<String> missing = []; // Simplified missing fields logic
@@ -32,7 +29,7 @@ class ProfileGateBloc extends Bloc<ProfileGateEvent, ProfileGateState> {
 
       switch (event.role) {
         case UserRole.innovator:
-          final roleProfile = await _profileRepository.getInnovatorProfile(
+          final roleProfile = await _profileRepository.fetchInnovatorProfile(
             event.userId,
           );
           // Auto-create empty if null?
@@ -54,13 +51,13 @@ class ProfileGateBloc extends Bloc<ProfileGateEvent, ProfileGateState> {
           if (baseProfile.about == null || baseProfile.about!.isEmpty) {
             missing.add("About");
           }
-          if (baseProfile.profilePhoto == null) missing.add("Profile Photo");
+          if (baseProfile.avatarUrl == null) missing.add("Profile Photo");
 
           isAllowed = completion >= 70;
           break;
 
         case UserRole.mentor:
-          final roleProfile = await _profileRepository.getMentorProfile(
+          final roleProfile = await _profileRepository.fetchMentorProfile(
             event.userId,
           );
           completion = ProfileCompletionCalculator.calculateMentorCompletion(
@@ -86,7 +83,7 @@ class ProfileGateBloc extends Bloc<ProfileGateEvent, ProfileGateState> {
           break;
 
         case UserRole.investor:
-          final roleProfile = await _profileRepository.getInvestorProfile(
+          final roleProfile = await _profileRepository.fetchInvestorProfile(
             event.userId,
           );
           completion = ProfileCompletionCalculator.calculateInvestorCompletion(
@@ -125,6 +122,7 @@ class ProfileGateBloc extends Bloc<ProfileGateEvent, ProfileGateState> {
             role: event.role,
             missingFields: missing,
             completionPercentage: completion,
+            baseProfile: baseProfile,
           ),
         );
       }

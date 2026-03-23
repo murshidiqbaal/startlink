@@ -2,127 +2,146 @@ import 'package:startlink/features/profile/data/models/profile_model.dart';
 import 'package:startlink/features/profile/domain/entities/innovator_profile.dart';
 import 'package:startlink/features/profile/domain/entities/investor_profile.dart';
 import 'package:startlink/features/profile/domain/entities/mentor_profile.dart';
-import 'package:startlink/features/profile/domain/entities/user_profile.dart';
 
 class ProfileCompletionCalculator {
+  // ── Innovator completion ────────────────────────────────────────────────
+  // Profile (from `profiles` table) + Innovator (from `innovator_profiles`)
+  // Max = 100
   static int calculateInnovatorCompletion(
-    UserProfile baseProfile,
-    InnovatorProfile? roleProfile,
+    ProfileModel base,
+    InnovatorProfile? role,
   ) {
-    if (roleProfile == null) return 0;
+    int score = 0;
 
-    int currentScore = 0;
+    // Required fields — heavy weight (total 60)
+    if (base.fullName != null && base.fullName!.isNotEmpty) score += 20;
+    if (base.avatarUrl != null && base.avatarUrl!.isNotEmpty) score += 20;
+    if (base.headline != null && base.headline!.isNotEmpty) score += 15;
+    if (base.role != null && base.role!.isNotEmpty) score += 5;
 
-    // Required: skills, about, profile photo
-    // Let's assign weights. Total 100.
-    // Photo: 20, About: 20, Skills: 60 (Crucial for innovator)
-
-    // Base Profile Checks
-    if (baseProfile.profilePhoto != null &&
-        baseProfile.profilePhoto!.isNotEmpty) {
-      currentScore += 20;
+    // Optional — high value (total 40)
+    if (role != null) {
+      if (role.bio != null && role.bio!.isNotEmpty) score += 10;
+      if (role.skills.isNotEmpty) score += 10;
+      if (role.experienceLevel != null && role.experienceLevel!.isNotEmpty) {
+        score += 5;
+      }
+      if (role.currentStatus != null && role.currentStatus!.isNotEmpty) {
+        score += 5;
+      }
+      if (role.linkedinUrl != null && role.linkedinUrl!.isNotEmpty) score += 5;
+      if (role.portfolioUrl != null && role.portfolioUrl!.isNotEmpty) {
+        score += 5;
+      }
     }
-    if (baseProfile.about != null && baseProfile.about!.isNotEmpty) {
-      currentScore += 20;
-    }
 
-    // Role Profile Checks
-    if (roleProfile.skills.isNotEmpty) {
-      currentScore += 60;
-    }
-
-    // You can refine this logic. For now, simple presence.
-    return currentScore;
+    return score.clamp(0, 100);
   }
 
+  /// Returns a list of human-readable missing field hints for the profile.
+  static List<String> missingHints({
+    required ProfileModel base,
+    required InnovatorProfile? role,
+  }) {
+    final hints = <String>[];
+    if (base.fullName == null || base.fullName!.isEmpty) {
+      hints.add('Add your full name');
+    }
+    if (base.avatarUrl == null || base.avatarUrl!.isEmpty) {
+      hints.add('Upload a profile photo');
+    }
+    if (base.headline == null || base.headline!.isEmpty) {
+      hints.add('Write a one-line headline');
+    }
+    if (role == null || role.bio == null || role.bio!.isEmpty) {
+      hints.add('Add a short bio');
+    }
+    if (role == null || role.skills.isEmpty) {
+      hints.add('Add your skills');
+    }
+    if (role == null || role.linkedinUrl == null || role.linkedinUrl!.isEmpty) {
+      hints.add('Link your LinkedIn profile');
+    }
+    return hints;
+  }
+
+  // ── Mentor completion ───────────────────────────────────────────────────
   static int calculateMentorCompletion(
-    UserProfile baseProfile,
+    dynamic baseProfile,
     MentorProfile? roleProfile,
   ) {
     if (roleProfile == null) return 0;
-    int currentScore = 0;
-    // Required: Expertise domains, Years of experience, LinkedIn, Mentorship focus
-    // Weights: Expertise: 30, YOE: 20, LinkedIn: 20, Focus: 30
-
-    if (roleProfile.expertiseDomains.isNotEmpty) currentScore += 30;
+    int score = 0;
+    if (roleProfile.expertiseDomains.isNotEmpty) score += 30;
     if (roleProfile.yearsOfExperience != null &&
-        roleProfile.yearsOfExperience! > 0) {
-      currentScore += 20;
-    }
+        roleProfile.yearsOfExperience! > 0)
+      score += 20;
     if (roleProfile.linkedinUrl != null &&
         roleProfile.linkedinUrl!.isNotEmpty) {
-      currentScore += 20;
+      score += 20;
     }
     if (roleProfile.mentorshipFocus != null &&
-        roleProfile.mentorshipFocus!.isNotEmpty) {
-      currentScore += 30;
-    }
-
-    return currentScore;
+        roleProfile.mentorshipFocus!.isNotEmpty)
+      score += 30;
+    return score.clamp(0, 100);
   }
 
+  // ── Investor completion ─────────────────────────────────────────────────
   static int calculateInvestorCompletion(
-    UserProfile baseProfile,
+    dynamic baseProfile,
     InvestorProfile? roleProfile,
   ) {
     if (roleProfile == null) return 0;
-    int currentScore = 0;
-
-    // Required: Investment focus, Ticket size, Preferred stage, Organization, LinkedIn
-    // Weights: Focus: 20, Ticket: 20, Stage: 20, Org: 20, LinkedIn: 20
-
+    int score = 0;
     if (roleProfile.investmentFocus != null &&
-        roleProfile.investmentFocus!.isNotEmpty) {
-      currentScore += 20;
-    }
+        roleProfile.investmentFocus!.isNotEmpty)
+      score += 20;
     if (roleProfile.ticketSizeMin != null ||
         roleProfile.ticketSizeMax != null) {
-      currentScore += 20;
+      score += 20;
     }
     if (roleProfile.preferredStage != null &&
-        roleProfile.preferredStage!.isNotEmpty) {
-      currentScore += 20;
-    }
+        roleProfile.preferredStage!.isNotEmpty)
+      score += 20;
     if (roleProfile.organizationName != null &&
-        roleProfile.organizationName!.isNotEmpty) {
-      currentScore += 20;
-    }
+        roleProfile.organizationName!.isNotEmpty)
+      score += 20;
     if (roleProfile.linkedinUrl != null &&
         roleProfile.linkedinUrl!.isNotEmpty) {
-      currentScore += 20;
+      score += 20;
     }
-
-    return currentScore;
+    return score.clamp(0, 100);
   }
 
-  static bool isInnovatorComplete(UserProfile base, InnovatorProfile? role) {
+  static bool isInnovatorComplete(ProfileModel base, InnovatorProfile? role) {
     return calculateInnovatorCompletion(base, role) >= 70;
   }
 
-  static bool isMentorComplete(UserProfile base, MentorProfile? role) {
+  static bool isMentorComplete(dynamic base, MentorProfile? role) {
     return calculateMentorCompletion(base, role) >= 80;
   }
 
-  static bool isInvestorComplete(UserProfile base, InvestorProfile? role) {
+  static bool isInvestorComplete(dynamic base, InvestorProfile? role) {
     return calculateInvestorCompletion(base, role) >= 85;
   }
 
-  // Legacy support for ProfileModel
+  // Legacy method (for ProfileBloc.UpdateProfile which only has ProfileModel)
   static int calculate(ProfileModel profile) {
     int score = 0;
-    if (profile.fullName != null && profile.fullName!.isNotEmpty) score += 10;
-    if (profile.headline != null && profile.headline!.isNotEmpty) score += 10;
-    if (profile.about != null && profile.about!.isNotEmpty) score += 20;
-    if (profile.skills.isNotEmpty) score += 20;
-    if (profile.education != null && profile.education!.isNotEmpty) score += 10;
-    if (profile.experienceLevel != null &&
-        profile.experienceLevel!.isNotEmpty) {
+    if (profile.fullName != null && profile.fullName!.isNotEmpty) score += 15;
+    if (profile.avatarUrl != null && profile.avatarUrl!.isNotEmpty) score += 15;
+    if (profile.headline != null && profile.headline!.isNotEmpty) score += 15;
+    if (profile.about != null && profile.about!.isNotEmpty) score += 10;
+    if (profile.skills.isNotEmpty) score += 15;
+    if (profile.experienceLevel != null && profile.experienceLevel!.isNotEmpty)
+      score += 10;
+    if (profile.linkedinUrl != null && profile.linkedinUrl!.isNotEmpty) {
       score += 10;
     }
-    if (profile.linkedinUrl != null && profile.linkedinUrl!.isNotEmpty) {
-      score += 20;
+    if (profile.portfolioUrl != null && profile.portfolioUrl!.isNotEmpty) {
+      score += 5;
     }
-    // Cap at 100
-    return score > 100 ? 100 : score;
+    if (profile.githubUrl != null && profile.githubUrl!.isNotEmpty) score += 5;
+    return score.clamp(0, 100);
   }
 }

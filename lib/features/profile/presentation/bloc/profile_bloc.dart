@@ -47,9 +47,12 @@ class ProfileLoading extends ProfileState {}
 
 class ProfileLoaded extends ProfileState {
   final ProfileModel profile;
-  const ProfileLoaded(this.profile);
+  final bool isAvatarUploading;
+
+  const ProfileLoaded(this.profile, {this.isAvatarUploading = false});
+
   @override
-  List<Object> get props => [profile];
+  List<Object> get props => [profile, isAvatarUploading];
 }
 
 class ProfileError extends ProfileState {
@@ -77,12 +80,8 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
   ) async {
     emit(ProfileLoading());
     try {
-      final profile = await _profileRepository.getMyProfile();
-      if (profile != null) {
-        emit(ProfileLoaded(profile));
-      } else {
-        emit(const ProfileError("User not logged in"));
-      }
+      final profile = await _profileRepository.fetchCurrentProfile();
+      emit(ProfileLoaded(profile));
     } catch (e) {
       emit(ProfileError(e.toString()));
     }
@@ -94,12 +93,8 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
   ) async {
     emit(ProfileLoading());
     try {
-      final profile = await _profileRepository.getProfileById(event.userId);
-      if (profile != null) {
-        emit(ProfileLoaded(profile));
-      } else {
-        emit(const ProfileError("Profile not found"));
-      }
+      final profile = await _profileRepository.fetchProfileById(event.userId);
+      emit(ProfileLoaded(profile));
     } catch (e) {
       emit(ProfileError(e.toString()));
     }
@@ -131,7 +126,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
   ) async {
     final currentState = state;
     if (currentState is ProfileLoaded) {
-      emit(ProfileLoading());
+      emit(ProfileLoaded(currentState.profile, isAvatarUploading: true));
       try {
         final imageUrl = await _profileRepository.uploadAvatar(event.imageFile);
         if (imageUrl != null) {
@@ -147,14 +142,16 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
           );
 
           await _profileRepository.updateProfile(finalProfile);
-          emit(ProfileLoaded(finalProfile));
+          emit(ProfileLoaded(finalProfile, isAvatarUploading: false));
         } else {
-          emit(
-            ProfileLoaded(currentState.profile),
-          ); // Revert if upload failed (or check internal error logic)
+          emit(ProfileLoaded(currentState.profile, isAvatarUploading: false));
         }
       } catch (e) {
-        emit(ProfileError(e.toString()));
+        // We stay in ProfileLoaded but set isAvatarUploading to false
+        // and optionally emit an error if the UI needs it.
+        // For now, let's keep the profile data and just stop the "loading" state.
+        emit(ProfileLoaded(currentState.profile, isAvatarUploading: false));
+        // You might want to also emit a side-effect for the error.
       }
     }
   }

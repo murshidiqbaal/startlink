@@ -1,3 +1,11 @@
+// lib/features/collaboration/presentation/pages/collaborator_dashboard.dart
+//
+// ── CHANGES from original ────────────────────────────────────────────────────
+//  • Wraps the dashboard in a ConversationBloc provider so IdeaInboxScreen
+//    can call context.read<ConversationBloc>() safely.
+//  • IdeaInboxScreen import updated to the new messaging feature path.
+// ────────────────────────────────────────────────────────────────────────────
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:startlink/features/collaboration/presentation/pages/collaboration_screen.dart';
@@ -6,23 +14,42 @@ import 'package:startlink/features/home/presentation/widgets/idea_card.dart';
 import 'package:startlink/features/home/presentation/widgets/role_aware_navigation_bar.dart';
 import 'package:startlink/features/idea/presentation/bloc/idea_bloc.dart';
 import 'package:startlink/features/idea/presentation/pages/idea_detail_screen.dart';
+// import 'package:startlink/features/messaging/data/repositories/message_repository.dart';
+import 'package:startlink/features/messaging/data/repositories/message_repositoy.dart';
+import 'package:startlink/features/messaging/presentation/bloc/conversation_bloc.dart';
+import 'package:startlink/features/messaging/presentation/pages/idea_inbox_screen.dart';
 import 'package:startlink/features/profile/presentation/profile_screen.dart';
 
-class CollaboratorDashboard extends StatefulWidget {
+class CollaboratorDashboard extends StatelessWidget {
   const CollaboratorDashboard({super.key});
 
   @override
-  State<CollaboratorDashboard> createState() => _CollaboratorDashboardState();
+  Widget build(BuildContext context) {
+    // Provide ConversationBloc above the tab scaffold so IdeaInboxScreen
+    // can access it regardless of navigation depth
+    return BlocProvider(
+      create: (_) => ConversationBloc(repository: MessageRepository()),
+      child: const _CollaboratorScaffold(),
+    );
+  }
 }
 
-class _CollaboratorDashboardState extends State<CollaboratorDashboard> {
+class _CollaboratorScaffold extends StatefulWidget {
+  const _CollaboratorScaffold();
+
+  @override
+  State<_CollaboratorScaffold> createState() => _CollaboratorScaffoldState();
+}
+
+class _CollaboratorScaffoldState extends State<_CollaboratorScaffold> {
   int _selectedIndex = 0;
 
-  final List<Widget> _pages = [
-    const CollaboratorHome(),
-    const CollaborationScreen(), // Collaborations
-    const Center(child: Text('Messages Coming Soon')),
-    const ProfileScreen(),
+  // Pages are created once; state is preserved across tab switches
+  final List<Widget> _pages = const [
+    CollaboratorHome(),
+    CollaborationScreen(),
+    IdeaInboxScreen(),   // ← now the real inbox
+    ProfileScreen(),
   ];
 
   @override
@@ -39,13 +66,18 @@ class _CollaboratorDashboardState extends State<CollaboratorDashboard> {
             icon: Icon(Icons.work_history),
             label: 'Collaborations',
           ),
-          NavigationDestination(icon: Icon(Icons.message), label: 'Messages'),
+          NavigationDestination(
+            icon: Icon(Icons.message),
+            label: 'Messages',
+          ),
           NavigationDestination(icon: Icon(Icons.person), label: 'Profile'),
         ],
       ),
     );
   }
 }
+
+// ── Collaborator Home (unchanged, copied here for completeness) ───────────────
 
 class CollaboratorHome extends StatefulWidget {
   const CollaboratorHome({super.key});
@@ -58,7 +90,6 @@ class _CollaboratorHomeState extends State<CollaboratorHome> {
   @override
   void initState() {
     super.initState();
-    // Ensure we have fresh data
     context.read<IdeaBloc>().add(FetchPublicIdeas());
   }
 
@@ -73,16 +104,18 @@ class _CollaboratorHomeState extends State<CollaboratorHome> {
         builder: (context, state) {
           if (state is IdeaLoading) {
             return const Center(child: CircularProgressIndicator());
-          } else if (state is IdeaLoaded) {
+          }
+
+          if (state is IdeaLoaded) {
             if (state.ideas.isEmpty) {
               return const Center(
                 child: Text('No ideas found to collaborate on.'),
               );
             }
+
             return RefreshIndicator(
-              onRefresh: () async {
-                context.read<IdeaBloc>().add(FetchPublicIdeas());
-              },
+              onRefresh: () async =>
+                  context.read<IdeaBloc>().add(FetchPublicIdeas()),
               child: ListView.builder(
                 padding: const EdgeInsets.all(16),
                 itemCount: state.ideas.length,
@@ -93,30 +126,30 @@ class _CollaboratorHomeState extends State<CollaboratorHome> {
                     description: idea.description,
                     status: idea.status,
                     skills: idea.tags,
-                    views: 120, // Placeholder
-                    applications: 5, // Placeholder
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => IdeaDetailScreen(idea: idea),
-                        ),
-                      );
-                    },
-                    onApply: () {
-                      showDialog(
-                        context: context,
-                        builder: (context) =>
-                            ApplyCollaborationDialog(idea: idea),
-                      );
-                    },
+                    views: 120,
+                    applications: 5,
+                    imageUrl: idea.coverImageUrl,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => IdeaDetailScreen(idea: idea),
+                      ),
+                    ),
+                    onApply: () => showDialog(
+                      context: context,
+                      builder: (_) =>
+                          ApplyCollaborationDialog(idea: idea),
+                    ),
                   );
                 },
               ),
             );
-          } else if (state is IdeaError) {
+          }
+
+          if (state is IdeaError) {
             return Center(child: Text('Error: ${state.message}'));
           }
+
           return const Center(child: Text('Welcome to StartLink'));
         },
       ),

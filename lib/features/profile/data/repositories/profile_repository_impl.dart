@@ -1,13 +1,15 @@
+import 'dart:io';
+
 import 'package:startlink/core/services/supabase_client.dart';
+import 'package:startlink/features/profile/data/models/collaborator_profile_model.dart';
 import 'package:startlink/features/profile/data/models/innovator_profile_model.dart';
 import 'package:startlink/features/profile/data/models/investor_profile_model.dart';
 import 'package:startlink/features/profile/data/models/mentor_profile_model.dart';
 import 'package:startlink/features/profile/data/models/profile_model.dart';
-import 'package:startlink/features/profile/data/models/user_profile_model.dart';
+import 'package:startlink/features/profile/domain/entities/collaborator_profile.dart';
 import 'package:startlink/features/profile/domain/entities/innovator_profile.dart';
 import 'package:startlink/features/profile/domain/entities/investor_profile.dart';
 import 'package:startlink/features/profile/domain/entities/mentor_profile.dart';
-import 'package:startlink/features/profile/domain/entities/user_profile.dart';
 import 'package:startlink/features/profile/domain/repositories/profile_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -18,96 +20,51 @@ class ProfileRepositoryImpl implements ProfileRepository {
     : _supabase = supabase ?? SupabaseService.client;
 
   @override
-  Future<ProfileModel?> getMyProfile() async {
-    try {
-      final userId = _supabase.auth.currentUser?.id;
-      if (userId == null) return null;
+  Future<ProfileModel> fetchCurrentProfile() async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception('User not logged in');
 
-      final response = await _supabase
-          .from('profiles')
-          .select()
-          .eq('id', userId)
-          .single();
+    final response = await _supabase
+        .from('profiles')
+        .select()
+        .eq('id', userId)
+        .single();
+    return ProfileModel.fromJson(response);
+  }
 
-      return ProfileModel.fromJson(response);
-    } catch (e) {
-      // If profile doesn't exist, return empty profile if user is logged in
-      final userId = _supabase.auth.currentUser?.id;
-      if (userId != null) {
-        return ProfileModel(id: userId);
-      }
-      return null;
-    }
+  @override
+  Future<ProfileModel> fetchProfileById(String profileId) async {
+    final response = await _supabase
+        .from('profiles')
+        .select()
+        .eq('id', profileId)
+        .single();
+    return ProfileModel.fromJson(response);
   }
 
   @override
   Future<void> updateProfile(ProfileModel profile) async {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) throw Exception('User not logged in');
-
-    await _supabase
-        .from('profiles')
-        .upsert(
-          profile.toJson()..['id'] = userId,
-        ); // Upsert to create if missing
+    await _supabase.from('profiles').upsert(profile.toJson()..['id'] = userId);
   }
 
   @override
-  Future<String?> uploadAvatar(dynamic imageFile) async {
+  Future<String> uploadAvatar(File file) async {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) throw Exception('User not logged in');
 
-    try {
-      final fileExt = imageFile.path.split('.').last;
-      final fileName = '$userId/${DateTime.now().toIso8601String()}.$fileExt';
-      final filePath = fileName;
+    final fileExt = file.path.split('.').last;
+    final fileName = '$userId/${DateTime.now().toIso8601String()}.$fileExt';
 
-      await _supabase.storage
-          .from('avatars')
-          .upload(
-            filePath,
-            imageFile,
-            fileOptions: const FileOptions(cacheControl: '3600', upsert: false),
-          );
-
-      final imageUrl = _supabase.storage.from('avatars').getPublicUrl(filePath);
-      return imageUrl;
-    } catch (e) {
-      throw Exception('Failed to upload avatar: $e');
-    }
+    await _supabase.storage.from('avatars').upload(fileName, file);
+    return _supabase.storage.from('avatars').getPublicUrl(fileName);
   }
 
-  @override
-  Future<ProfileModel?> getProfileById(String userId) async {
-    try {
-      final response = await _supabase
-          .from('profiles')
-          .select()
-          .eq('id', userId)
-          .single();
-
-      return ProfileModel.fromJson(response);
-    } catch (e) {
-      return null;
-    }
-  }
+  // ── Role-specific ────────────────────────────────────────────────────────
 
   @override
-  Future<UserProfile?> getUserProfile(String userId) async {
-    try {
-      final response = await _supabase
-          .from('profiles')
-          .select()
-          .eq('id', userId)
-          .single();
-      return UserProfileModel.fromJson(response);
-    } catch (e) {
-      return null;
-    }
-  }
-
-  @override
-  Future<InnovatorProfile?> getInnovatorProfile(String profileId) async {
+  Future<InnovatorProfileModel?> fetchInnovatorProfile(String profileId) async {
     try {
       final response = await _supabase
           .from('innovator_profiles')
@@ -115,27 +72,19 @@ class ProfileRepositoryImpl implements ProfileRepository {
           .eq('profile_id', profileId)
           .single();
       return InnovatorProfileModel.fromJson(response);
-    } catch (e) {
+    } catch (_) {
       return null;
     }
   }
 
   @override
-  Future<MentorProfile?> getMentorProfile(String profileId) async {
-    try {
-      final response = await _supabase
-          .from('mentor_profiles')
-          .select()
-          .eq('profile_id', profileId)
-          .single();
-      return MentorProfileModel.fromJson(response);
-    } catch (e) {
-      return null;
-    }
+  Future<void> upsertInnovatorProfile(InnovatorProfile profile) async {
+    final model = InnovatorProfileModel.fromEntity(profile);
+    await _supabase.from('innovator_profiles').upsert(model.toUpsertJson());
   }
 
   @override
-  Future<InvestorProfile?> getInvestorProfile(String profileId) async {
+  Future<InvestorProfileModel?> fetchInvestorProfile(String profileId) async {
     try {
       final response = await _supabase
           .from('investor_profiles')
@@ -143,32 +92,56 @@ class ProfileRepositoryImpl implements ProfileRepository {
           .eq('profile_id', profileId)
           .single();
       return InvestorProfileModel.fromJson(response);
-    } catch (e) {
+    } catch (_) {
       return null;
     }
   }
 
   @override
-  Future<void> updateInnovatorProfile(InnovatorProfile profile) async {
-    final model = profile is InnovatorProfileModel
-        ? profile
-        : InnovatorProfileModel.fromEntity(profile);
-    await _supabase.from('innovator_profiles').upsert(model.toJson());
+  Future<void> upsertInvestorProfile(InvestorProfile profile) async {
+    final model = InvestorProfileModel.fromEntity(profile);
+    await _supabase.from('investor_profiles').upsert(model.toUpsertJson());
   }
 
   @override
-  Future<void> updateMentorProfile(MentorProfile profile) async {
-    final model = profile is MentorProfileModel
-        ? profile
-        : MentorProfileModel.fromEntity(profile);
-    await _supabase.from('mentor_profiles').upsert(model.toJson());
+  Future<MentorProfileModel?> fetchMentorProfile(String profileId) async {
+    try {
+      final response = await _supabase
+          .from('mentor_profiles')
+          .select()
+          .eq('profile_id', profileId)
+          .single();
+      return MentorProfileModel.fromJson(response);
+    } catch (_) {
+      return null;
+    }
   }
 
   @override
-  Future<void> updateInvestorProfile(InvestorProfile profile) async {
-    final model = profile is InvestorProfileModel
-        ? profile
-        : InvestorProfileModel.fromEntity(profile);
-    await _supabase.from('investor_profiles').upsert(model.toJson());
+  Future<void> upsertMentorProfile(MentorProfile profile) async {
+    final model = MentorProfileModel.fromEntity(profile);
+    await _supabase.from('mentor_profiles').upsert(model.toUpsertJson());
+  }
+
+  @override
+  Future<CollaboratorProfileModel?> fetchCollaboratorProfile(
+    String profileId,
+  ) async {
+    try {
+      final response = await _supabase
+          .from('collaborator_profiles')
+          .select()
+          .eq('profile_id', profileId)
+          .single();
+      return CollaboratorProfileModel.fromJson(response);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Future<void> upsertCollaboratorProfile(CollaboratorProfile profile) async {
+    final model = CollaboratorProfileModel.fromEntity(profile);
+    await _supabase.from('collaborator_profiles').upsert(model.toUpsertJson());
   }
 }

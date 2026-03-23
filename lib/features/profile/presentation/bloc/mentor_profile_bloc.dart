@@ -1,5 +1,6 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:startlink/features/profile/data/models/mentor_profile_model.dart';
 import 'package:startlink/features/profile/domain/entities/mentor_profile.dart';
 import 'package:startlink/features/profile/domain/repositories/profile_repository.dart';
 
@@ -65,11 +66,15 @@ class MentorProfileBloc extends Bloc<MentorProfileEvent, MentorProfileState> {
   ) async {
     emit(MentorProfileLoading());
     try {
-      final profile = await _repository.getMentorProfile(event.profileId);
+      final profile = await _repository.fetchMentorProfile(event.profileId);
       if (profile != null) {
         emit(MentorProfileLoaded(profile));
       } else {
-        emit(MentorProfileLoaded(MentorProfile(profileId: event.profileId)));
+        emit(
+          MentorProfileLoaded(
+            MentorProfileModel(profileId: event.profileId) as MentorProfile,
+          ),
+        );
       }
     } catch (e) {
       emit(MentorProfileError(e.toString()));
@@ -82,7 +87,7 @@ class MentorProfileBloc extends Bloc<MentorProfileEvent, MentorProfileState> {
   ) async {
     emit(MentorProfileLoading());
     try {
-      await _repository.updateMentorProfile(event.profile);
+      await _repository.upsertMentorProfile(event.profile);
       emit(MentorProfileLoaded(event.profile));
     } catch (e) {
       emit(MentorProfileError(e.toString()));

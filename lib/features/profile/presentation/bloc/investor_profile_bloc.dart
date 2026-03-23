@@ -1,5 +1,6 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:startlink/features/profile/data/models/investor_profile_model.dart';
 import 'package:startlink/features/profile/domain/entities/investor_profile.dart';
 import 'package:startlink/features/profile/domain/repositories/profile_repository.dart';
 
@@ -66,12 +67,14 @@ class InvestorProfileBloc
   ) async {
     emit(InvestorProfileLoading());
     try {
-      final profile = await _repository.getInvestorProfile(event.profileId);
+      final profile = await _repository.fetchInvestorProfile(event.profileId);
       if (profile != null) {
         emit(InvestorProfileLoaded(profile));
       } else {
         emit(
-          InvestorProfileLoaded(InvestorProfile(profileId: event.profileId)),
+          InvestorProfileLoaded(
+            InvestorProfileModel(profileId: event.profileId) as InvestorProfile,
+          ),
         );
       }
     } catch (e) {
@@ -85,7 +88,7 @@ class InvestorProfileBloc
   ) async {
     emit(InvestorProfileLoading());
     try {
-      await _repository.updateInvestorProfile(event.profile);
+      await _repository.upsertInvestorProfile(event.profile);
       emit(InvestorProfileLoaded(event.profile));
     } catch (e) {
       emit(InvestorProfileError(e.toString()));

@@ -9,6 +9,7 @@ import 'package:startlink/features/investor/presentation/bloc/investor_interest_
 import 'package:startlink/features/investor/presentation/pages/investor_idea_detail_screen.dart';
 import 'package:startlink/features/investor/presentation/widgets/investor_idea_card.dart';
 import 'package:startlink/features/profile/presentation/investor_profile_screen.dart';
+import 'package:startlink/features/verification/presentation/widgets/role_verification_guard.dart';
 
 class InvestorDashboard extends StatefulWidget {
   const InvestorDashboard({super.key});
@@ -28,7 +29,10 @@ class _InvestorDashboardState extends State<InvestorDashboard> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _pages[_selectedIndex],
+      body: RoleVerificationGuard(
+        role: 'investor',
+        child: _pages[_selectedIndex],
+      ),
       bottomNavigationBar: RoleAwareNavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) {
@@ -160,6 +164,7 @@ class InvestorHome extends StatelessWidget {
                                 stage: idea.currentStage,
                                 targetMarket: idea.targetMarket,
                                 skills: idea.tags,
+                                imageUrl: idea.coverImageUrl,
                                 isBoosted:
                                     idea.id == 'boosted' ||
                                     idea.viewCount >

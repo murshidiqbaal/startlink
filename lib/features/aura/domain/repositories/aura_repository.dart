@@ -13,4 +13,8 @@ abstract class AuraRepository {
 
   Future<List<Map<String, dynamic>>> getLeaderboard(String role);
   Future<Map<String, dynamic>?> getWeeklySummary(String userId);
+
+  /// Calculates and awards points for past actions (Ideas, Verification, etc.)
+  /// that haven't been rewarded yet.
+  Future<void> syncRetroactivePoints(String userId);
 }

@@ -16,6 +16,21 @@ class IdeaModel extends Idea {
     super.applicationCount,
     super.aiQualityScore,
     super.isVerified,
+    super.industry,
+    super.subIndustry,
+    super.businessModel,
+    super.monetizationStrategy,
+    super.location,
+    super.fundingNeeded,
+    super.equityOffered,
+    super.teamSize,
+    super.lookingForInvestor,
+    super.lookingForCofounder,
+    super.lookingForMentor,
+    super.coverImageUrl,
+    super.pitchDeckUrl,
+    super.demoVideoUrl,
+    super.websiteUrl,
   });
 
   factory IdeaModel.fromJson(Map<String, dynamic> json) {
@@ -27,16 +42,28 @@ class IdeaModel extends Idea {
       problemStatement: json['problem_statement'] as String? ?? '',
       targetMarket: json['target_market'] as String? ?? '',
       currentStage: json['current_stage'] as String? ?? 'Idea',
-      isPublic: json['visibility'] == 'Public', // Capitalized
+      isPublic: json['visibility'] == 'Public',
       tags: json['tags'] != null ? List<String>.from(json['tags']) : [],
       status: json['status'] ?? 'Draft',
       viewCount: json['view_count'] ?? 0,
       applicationCount: json['application_count'] ?? 0,
-      aiQualityScore: json['ai_quality_score'] != null
-          ? (json['ai_quality_score'] as num).toDouble()
-          : null,
-      // Logic for reading verified status from joined profile would go here.
-      // e.g. isVerified: json['profiles']?['user_verifications'] != null ? ...
+      aiQualityScore: (json['ai_quality_score'] as num?)?.toDouble(),
+      isVerified: json['is_verified'] ?? false,
+      industry: json['industry'],
+      subIndustry: json['sub_industry'],
+      businessModel: json['business_model'],
+      monetizationStrategy: json['monetization_strategy'],
+      location: json['location'],
+      fundingNeeded: (json['funding_needed'] as num?)?.toDouble(),
+      equityOffered: (json['equity_offered'] as num?)?.toDouble(),
+      teamSize: json['team_size'] ?? 1,
+      lookingForInvestor: json['looking_for_investor'] ?? false,
+      lookingForCofounder: json['looking_for_cofounder'] ?? false,
+      lookingForMentor: json['looking_for_mentor'] ?? false,
+      coverImageUrl: json['cover_image_url'],
+      pitchDeckUrl: json['pitch_deck_url'],
+      demoVideoUrl: json['demo_video_url'],
+      websiteUrl: json['website_url'],
     );
   }
 
@@ -48,10 +75,25 @@ class IdeaModel extends Idea {
       'problem_statement': problemStatement,
       'target_market': targetMarket,
       'current_stage': currentStage,
-      'visibility': isPublic ? 'Public' : 'Private', // Capitalized
+      'visibility': isPublic ? 'Public' : 'Private',
       'tags': tags,
       'status': status,
       'ai_quality_score': aiQualityScore,
+      'industry': industry,
+      'sub_industry': subIndustry,
+      'business_model': businessModel,
+      'monetization_strategy': monetizationStrategy,
+      'location': location,
+      'funding_needed': fundingNeeded,
+      'equity_offered': equityOffered,
+      'team_size': teamSize,
+      'looking_for_investor': lookingForInvestor,
+      'looking_for_cofounder': lookingForCofounder,
+      'looking_for_mentor': lookingForMentor,
+      'cover_image_url': coverImageUrl,
+      'pitch_deck_url': pitchDeckUrl,
+      'demo_video_url': demoVideoUrl,
+      'website_url': websiteUrl,
     };
   }
 }

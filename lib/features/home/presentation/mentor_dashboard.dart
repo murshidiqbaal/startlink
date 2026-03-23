@@ -5,6 +5,7 @@ import 'package:startlink/features/home/presentation/widgets/idea_card.dart';
 import 'package:startlink/features/home/presentation/widgets/role_aware_navigation_bar.dart';
 import 'package:startlink/features/idea/domain/repositories/idea_repository.dart';
 import 'package:startlink/features/profile/presentation/mentor_profile_screen.dart';
+import 'package:startlink/features/verification/presentation/widgets/role_verification_guard.dart';
 
 class MentorDashboard extends StatefulWidget {
   const MentorDashboard({super.key});
@@ -21,7 +22,10 @@ class _MentorDashboardState extends State<MentorDashboard> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _pages[_selectedIndex],
+      body: RoleVerificationGuard(
+        role: 'mentor',
+        child: _pages[_selectedIndex],
+      ),
       bottomNavigationBar: RoleAwareNavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) {
@@ -95,6 +99,7 @@ class MentorHome extends StatelessWidget {
                       applications: idea.applicationCount,
                       aiQualityScore: idea.aiQualityScore?.toInt(),
                       isVerified: idea.isVerified,
+                      imageUrl: idea.coverImageUrl,
                       onTap: () {
                         // Navigate to detail
                       },

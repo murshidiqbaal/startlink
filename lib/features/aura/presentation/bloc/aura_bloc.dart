@@ -26,6 +26,11 @@ class AwardAura extends AuraEvent {
   });
 }
 
+class SyncAura extends AuraEvent {
+  final String userId;
+  const SyncAura(this.userId);
+}
+
 // States
 abstract class AuraState extends Equatable {
   const AuraState();
@@ -63,6 +68,7 @@ class AuraBloc extends Bloc<AuraEvent, AuraState> {
       super(AuraInitial()) {
     on<FetchAura>(_onFetch);
     on<AwardAura>(_onAward);
+    on<SyncAura>(_onSync);
   }
 
   Future<void> _onFetch(FetchAura event, Emitter<AuraState> emit) async {
@@ -95,6 +101,16 @@ class AuraBloc extends Bloc<AuraEvent, AuraState> {
       add(FetchAura(event.userId));
     } catch (e) {
       // Silent fail or snackbar trigger logic
+    }
+  }
+
+  Future<void> _onSync(SyncAura event, Emitter<AuraState> emit) async {
+    try {
+      await _repository.syncRetroactivePoints(event.userId);
+      // Refresh data after sync
+      add(FetchAura(event.userId));
+    } catch (e) {
+      // Non-blocking error
     }
   }
 }

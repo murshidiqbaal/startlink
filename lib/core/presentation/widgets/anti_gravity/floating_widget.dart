@@ -1,8 +1,10 @@
-import 'package:flutter/material.dart';
 import 'dart:math' as math;
+
+import 'package:flutter/material.dart';
 
 class FloatingWidget extends StatefulWidget {
   final Widget child;
+  final Axis direction;
   final double intensity;
   final Duration duration;
   final bool isReverse;
@@ -13,6 +15,7 @@ class FloatingWidget extends StatefulWidget {
     this.intensity = 10.0,
     this.duration = const Duration(seconds: 4),
     this.isReverse = false,
+    this.direction = Axis.vertical,
   });
 
   @override
@@ -57,7 +60,9 @@ class _FloatingWidgetState extends State<FloatingWidget>
       animation: _animation,
       builder: (context, child) {
         return Transform.translate(
-          offset: Offset(0, _animation.value),
+          offset: widget.direction == Axis.vertical
+              ? Offset(0, _animation.value)
+              : Offset(_animation.value, 0),
           child: child,
         );
       },
