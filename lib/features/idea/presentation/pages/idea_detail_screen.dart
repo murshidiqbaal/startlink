@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:startlink/core/presentation/widgets/anti_gravity/glass_card.dart';
 import 'package:startlink/core/presentation/widgets/startlink_button.dart';
 import 'package:startlink/core/services/supabase_client.dart';
 import 'package:startlink/core/theme/app_theme.dart';
 import 'package:startlink/features/chat/domain/repositories/chat_repository.dart';
-import 'package:startlink/features/chat/presentation/screens/chat_screen.dart';
+import 'package:startlink/features/collaboration/presentation/pages/idea_chat_screen.dart';
 import 'package:startlink/features/collaboration/presentation/pages/idea_applications_screen.dart';
 import 'package:startlink/features/collaboration/presentation/widgets/apply_collaboration_dialog.dart';
 import 'package:startlink/features/collaboration/presentation/bloc/collaboration_bloc.dart';
@@ -450,45 +451,32 @@ class IdeaChatButton extends StatelessWidget {
     final currentUserId = SupabaseService.client.auth.currentUser?.id;
     if (currentUserId == null) return const SizedBox.shrink();
 
-    // The owner is always a team member
-    if (currentUserId == idea.ownerId) {
-      return _buildButton(context);
-    }
-
-    return FutureBuilder<bool>(
-      future: context.read<ChatRepository>().isTeamMember(
-        idea.id,
-        currentUserId,
-      ),
-      builder: (context, snapshot) {
-        if (snapshot.hasData && snapshot.data == true) {
-          return _buildButton(context);
-        }
-        return const SizedBox.shrink();
-      },
-    );
+    // Public chat button accessible to all authenticated users
+    return _buildButton(context);
   }
 
   Widget _buildButton(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: 16),
-      child: SizedBox(
-        width: double.infinity,
-        child: OutlinedButton.icon(
-          onPressed: () async {
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      child: GlassCard(
+        height: 80,
+        borderColor: Colors.white.withValues(alpha: 0.1),
+        child: InkWell(
+          onTap: () async {
             final scaffoldMessenger = ScaffoldMessenger.of(context);
             try {
               final chatRepo = context.read<ChatRepository>();
-              final roomId = await chatRepo.getOrCreateRoom(idea.id);
+              final groupId = await chatRepo.getOrCreateGroup(idea.id, type: 'public');
               
               if (!context.mounted) return;
               
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => ChatScreen(
-                    roomId: roomId,
-                    ideaTitle: idea.title,
+                  builder: (_) => IdeaChatScreen(
+                    ideaId: idea.id,
+                    groupId: groupId,
+                    ideaTitle: '${idea.title} (Public)',
                   ),
                 ),
               );
@@ -498,15 +486,37 @@ class IdeaChatButton extends StatelessWidget {
               );
             }
           },
-          icon: const Icon(Icons.chat_bubble_outline, size: 18),
-          label: const Text('Open Team Chat'),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: AppColors.brandCyan,
-            side: const BorderSide(color: AppColors.brandCyan),
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.forum_outlined, color: Colors.cyanAccent),
+              const SizedBox(width: 12),
+              const Text(
+                'Discuss Idea',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  letterSpacing: 1.1,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.cyanAccent.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Text(
+                  'PUBLIC',
+                  style: TextStyle(
+                    color: Colors.cyanAccent,
+                    fontSize: 8,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),

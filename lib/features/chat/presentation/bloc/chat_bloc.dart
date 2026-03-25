@@ -23,7 +23,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   ) async {
     emit(ChatLoading());
     try {
-      final roomId = await _chatRepository.getOrCreateRoom(event.ideaId);
+      final roomId = await _chatRepository.getOrCreateGroup(event.ideaId);
       final teamMembers = await _chatRepository.getTeamMembers(event.ideaId);
       
       // Cancel previous subscription if any

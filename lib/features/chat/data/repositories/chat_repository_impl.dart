@@ -1,5 +1,5 @@
-// lib/features/chat/data/repositories/chat_repository_impl.dart
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:startlink/features/collaboration/domain/entities/idea_team_member.dart';
 import '../../domain/entities/chat_room.dart';
 import '../../domain/entities/message.dart';
 import '../../domain/repositories/chat_repository.dart';
@@ -9,117 +9,126 @@ import '../models/message_model.dart';
 class ChatRepositoryImpl implements ChatRepository {
   final SupabaseClient _supabase;
 
-  ChatRepositoryImpl(this._supabase);
+  ChatRepositoryImpl({SupabaseClient? supabase})
+      : _supabase = supabase ?? Supabase.instance.client;
 
   @override
-  Future<List<ChatRoom>> getInnovatorChatRooms() async {
+  Future<List<ChatGroup>> getInnovatorGroups() async {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) return [];
 
     final response = await _supabase
-        .from('ideas')
-        .select('*, chat_rooms!inner(*)')
-        .eq('owner_id', userId);
+        .from('groups')
+        .select('*, ideas!inner(*)')
+        .eq('type', 'team')
+        .eq('ideas.owner_id', userId);
 
-    final List<ChatRoom> rooms = [];
-    for (var idea in response) {
-      final roomData = idea['chat_rooms'];
-      if (roomData != null) {
-        // Since it's a 1:1, it might be a Map or a List depending on the query
-        if (roomData is List && roomData.isNotEmpty) {
-          rooms.add(ChatRoomModel.fromJson({
-            ...roomData[0],
-            'ideas': {'title': idea['title']}
-          }));
-        } else if (roomData is Map) {
-          rooms.add(ChatRoomModel.fromJson({
-            ...roomData,
-            'ideas': {'title': idea['title']}
-          }));
-        }
-      }
-    }
-    return rooms;
+    return ChatGroupModel.fromJsonList(response);
   }
 
   @override
-  Future<List<ChatRoom>> getCollaboratorChatRooms() async {
+  Future<List<ChatGroup>> getCollaboratorGroups() async {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) return [];
 
     final response = await _supabase
-        .from('idea_collaborators')
-        .select('ideas!inner(id, title, chat_rooms!inner(*))')
-        .eq('user_id', userId)
-        .eq('status', 'Accepted');
+        .from('groups')
+        .select('*, ideas!inner(idea_collaborators!inner(*))')
+        .eq('type', 'team')
+        .eq('ideas.idea_collaborators.user_id', userId)
+        .eq('ideas.idea_collaborators.status', 'Accepted');
 
-    final List<ChatRoom> rooms = [];
-    for (var item in response) {
-      final idea = item['ideas'];
-      final roomData = idea['chat_rooms'];
-      if (roomData != null) {
-        if (roomData is List && roomData.isNotEmpty) {
-          rooms.add(ChatRoomModel.fromJson({
-            ...roomData[0],
-            'ideas': {'title': idea['title']}
-          }));
-        } else if (roomData is Map) {
-          rooms.add(ChatRoomModel.fromJson({
-            ...roomData,
-            'ideas': {'title': idea['title']}
-          }));
-        }
-      }
-    }
-    return rooms;
+    return ChatGroupModel.fromJsonList(response);
   }
 
   @override
-  Future<List<Message>> getMessages(String roomId) async {
+  Future<List<Message>> getMessages(String groupId) async {
     final response = await _supabase
         .from('messages')
-        .select()
-        .eq('room_id', roomId)
+        .select('''
+          id,
+          group_id,
+          sender_id,
+          content,
+          is_read,
+          created_at,
+          sender:profiles(
+            id,
+            full_name,
+            avatar_url
+          )
+        ''')
+        .eq('group_id', groupId)
         .order('created_at', ascending: true);
 
     return MessageModel.fromJsonList(response);
   }
 
   @override
-  Future<void> sendMessage(String roomId, String message) async {
+  Future<Message> sendMessage(String groupId, String message) async {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) throw Exception('User not authenticated');
 
-    await _supabase.from('messages').insert({
-      'room_id': roomId,
+    final data = await _supabase.from('messages').insert({
+      'group_id': groupId,
       'sender_id': userId,
-      'message': message,
-    });
+      'content': message,
+      'is_read': false,
+    }).select('''
+      id,
+      group_id,
+      sender_id,
+      content,
+      is_read,
+      created_at,
+      sender:profiles(
+        id,
+        full_name,
+        avatar_url
+      )
+    ''').single();
+
+    return MessageModel.fromJson(data);
   }
 
   @override
-  Future<String> getOrCreateRoom(String ideaId) async {
+  Future<String> getOrCreateGroup(String ideaId, {String type = 'team'}) async {
     final existing = await _supabase
-        .from('chat_rooms')
+        .from('groups')
         .select('id')
         .eq('idea_id', ideaId)
+        .eq('type', type)
         .maybeSingle();
 
     if (existing != null) {
       return existing['id'] as String;
     }
 
+    // Get idea title for the group name
+    final ideaResponse = await _supabase
+        .from('ideas')
+        .select('title')
+        .eq('id', ideaId)
+        .single();
+    final ideaTitle = ideaResponse['title'] as String;
+
     final response = await _supabase
-        .from('chat_rooms')
-        .insert({'idea_id': ideaId})
+        .from('groups')
+        .insert({
+          'idea_id': ideaId,
+          'type': type,
+          'name': type == 'public' ? '$ideaTitle (Community)' : ideaTitle,
+        })
         .select('id')
         .single();
 
     return response['id'] as String;
   }
 
+
+
   @override
-  Future<List<Map<String, dynamic>>> getTeamMembers(String ideaId) async {
+  Future<List<IdeaTeamMember>> getTeamMembers(String ideaId) async {
     final idea = await _supabase
         .from('ideas')
         .select('owner_id, profiles!owner_id(full_name, avatar_url)')
@@ -128,40 +137,41 @@ class ChatRepositoryImpl implements ChatRepository {
     
     final collaborators = await _supabase
         .from('idea_collaborators')
-        .select('user_id, profiles!user_id(full_name, avatar_url)')
+        .select('user_id, role, profiles!user_id(full_name, avatar_url)')
         .eq('idea_id', ideaId)
         .eq('status', 'Accepted');
 
-    final List<Map<String, dynamic>> members = [];
+    final List<IdeaTeamMember> members = [];
     
-    // Add owner
     if (idea['profiles'] != null) {
-      members.add({
-        'user_id': idea['owner_id'],
-        'full_name': idea['profiles']['full_name'],
-        'avatar_url': idea['profiles']['avatar_url'],
-      });
+      members.add(IdeaTeamMember(
+        userId: idea['owner_id'] as String,
+        fullName: idea['profiles']['full_name'] as String? ?? 'Idea Owner',
+        avatarUrl: idea['profiles']['avatar_url'] as String?,
+        role: 'Innovator',
+      ));
     }
 
-    // Add collaborators
-    for (var c in collaborators) {
+    for (var c in collaborators as List) {
       if (c['profiles'] != null) {
-        members.add({
-          'user_id': c['user_id'],
-          'full_name': c['profiles']['full_name'],
-          'avatar_url': c['profiles']['avatar_url'],
-        });
+        members.add(IdeaTeamMember(
+          userId: c['user_id'] as String,
+          fullName: c['profiles']['full_name'] as String? ?? 'Collaborator',
+          avatarUrl: c['profiles']['avatar_url'] as String?,
+          role: c['role'] as String? ?? 'Team Member',
+        ));
       }
     }
+
     return members;
   }
 
   @override
-  Stream<List<Message>> subscribeMessages(String roomId) {
+  Stream<List<Message>> subscribeMessages(String groupId) {
     return _supabase
         .from('messages')
         .stream(primaryKey: ['id'])
-        .eq('room_id', roomId)
+        .eq('group_id', groupId)
         .order('created_at', ascending: true)
         .map((data) => MessageModel.fromJsonList(data));
   }

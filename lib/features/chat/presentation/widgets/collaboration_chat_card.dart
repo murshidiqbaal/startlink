@@ -6,7 +6,7 @@ class CollaborationChatCard extends StatelessWidget {
   final String ideaTitle;
   final String partnerName;
   final String avatar;
-  final String roomId;
+  final String groupId;
   final String ideaId;
 
   const CollaborationChatCard({
@@ -14,7 +14,7 @@ class CollaborationChatCard extends StatelessWidget {
     required this.ideaTitle,
     required this.partnerName,
     required this.avatar,
-    required this.roomId,
+    required this.groupId,
     required this.ideaId,
   });
 
@@ -35,7 +35,7 @@ class CollaborationChatCard extends StatelessWidget {
             MaterialPageRoute(
               builder: (_) => IdeaWorkspaceScreen(
                 ideaId: ideaId,
-                roomId: roomId,
+                groupId: groupId,
                 ideaTitle: ideaTitle,
               ),
             ),

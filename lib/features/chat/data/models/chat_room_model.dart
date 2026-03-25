@@ -1,24 +1,24 @@
 // lib/features/chat/data/models/chat_room_model.dart
 import '../../domain/entities/chat_room.dart';
 
-class ChatRoomModel extends ChatRoom {
-  ChatRoomModel({
+class ChatGroupModel extends ChatGroup {
+  const ChatGroupModel({
     required super.id,
     required super.ideaId,
-    required super.ideaTitle,
-    required super.createdAt,
+    required super.name,
+    required super.type,
   });
 
-  factory ChatRoomModel.fromJson(Map<String, dynamic> json) {
-    return ChatRoomModel(
+  factory ChatGroupModel.fromJson(Map<String, dynamic> json) {
+    return ChatGroupModel(
       id: json['id'] as String,
       ideaId: json['idea_id'] as String,
-      ideaTitle: json['ideas'] != null ? json['ideas']['title'] as String : 'Unknown Idea',
-      createdAt: DateTime.parse(json['created_at'] as String),
+      name: json['name'] as String? ?? 'Idea Team',
+      type: json['type'] as String? ?? 'team',
     );
   }
 
-  static List<ChatRoomModel> fromJsonList(List<dynamic> list) {
-    return list.map((e) => ChatRoomModel.fromJson(e as Map<String, dynamic>)).toList();
+  static List<ChatGroupModel> fromJsonList(List<dynamic> list) {
+    return list.map((e) => ChatGroupModel.fromJson(e as Map<String, dynamic>)).toList();
   }
 }

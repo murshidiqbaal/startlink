@@ -61,13 +61,13 @@ class _CollaborationChatListScreenState extends State<CollaborationChatListScree
                 itemCount: state.chats.length,
                 itemBuilder: (context, index) {
                   final chat = state.chats[index];
-                  return CollaborationChatCard(
-                    ideaId: chat.ideaId,
-                    ideaTitle: chat.ideaTitle,
-                    partnerName: chat.partnerName,
-                    avatar: chat.partnerAvatar,
-                    roomId: chat.roomId,
-                  );
+                    return CollaborationChatCard(
+                      ideaId: chat.ideaId,
+                      ideaTitle: chat.ideaTitle,
+                      partnerName: chat.partnerName,
+                      avatar: chat.partnerAvatar,
+                      groupId: chat.roomId, // If the model still uses roomId, we map it to groupId here
+                    );
                 },
               ),
             );

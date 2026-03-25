@@ -1,14 +1,19 @@
 // lib/features/chat/domain/entities/chat_room.dart
-class ChatRoom {
+import 'package:equatable/equatable.dart';
+
+class ChatGroup extends Equatable {
   final String id;
   final String ideaId;
-  final String ideaTitle;
-  final DateTime createdAt;
+  final String name;
+  final String type; // 'team' or 'public'
 
-  ChatRoom({
+  const ChatGroup({
     required this.id,
     required this.ideaId,
-    required this.ideaTitle,
-    required this.createdAt,
+    required this.name,
+    required this.type,
   });
+
+  @override
+  List<Object?> get props => [id, ideaId, name, type];
 }

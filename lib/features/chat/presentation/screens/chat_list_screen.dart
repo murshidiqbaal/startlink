@@ -67,8 +67,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
                 final room = state.rooms[index];
                 return ChatRoomCard(
                   ideaId: room.ideaId,
-                  ideaTitle: room.ideaTitle,
-                  roomId: room.id,
+                  ideaTitle: room.name,
+                  groupId: room.id,
                 );
               },
             );

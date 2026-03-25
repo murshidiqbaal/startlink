@@ -2,19 +2,34 @@ import 'package:equatable/equatable.dart';
 
 class Message extends Equatable {
   final String id;
-  final String roomId;
+  final String groupId;
   final String senderId;
-  final String message;
+  final String content;
+  final bool isRead;
   final DateTime createdAt;
+  final String? senderName;
+  final String? senderAvatar;
 
   const Message({
     required this.id,
-    required this.roomId,
+    required this.groupId,
     required this.senderId,
-    required this.message,
+    required this.content,
+    required this.isRead,
     required this.createdAt,
+    this.senderName,
+    this.senderAvatar,
   });
 
   @override
-  List<Object?> get props => [id, roomId, senderId, message, createdAt];
+  List<Object?> get props => [
+        id,
+        groupId,
+        senderId,
+        content,
+        isRead,
+        createdAt,
+        senderName,
+        senderAvatar,
+      ];
 }

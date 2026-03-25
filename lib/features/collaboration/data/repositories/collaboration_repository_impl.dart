@@ -70,26 +70,10 @@ class CollaborationRepositoryImpl implements CollaborationRepository {
     required String requestId,
     required String status,
   }) async {
-    final response = await _supabase
+    await _supabase
         .from('collaboration_requests')
         .update({'status': status})
-        .eq('request_id', requestId)
-        .select()
-        .maybeSingle();
-
-    if (status == 'accepted') {
-      final request = CollaborationRequestModel.fromJson(response!);
-      await _supabase.from('idea_collaborators').upsert({
-        'idea_id': request.ideaId,
-        'user_id': request.applicantId,
-        'role': request.roleApplied,
-      }, onConflict: 'idea_id,user_id');
-
-      // Ensure chat room exists
-      await _supabase.from('chat_rooms').upsert({
-        'idea_id': request.ideaId,
-      }, onConflict: 'idea_id');
-    }
+        .eq('request_id', requestId);
   }
 
   @override

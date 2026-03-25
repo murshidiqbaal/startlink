@@ -18,8 +18,8 @@ class ChatListBloc extends Bloc<ChatListEvent, ChatListState> {
   ) async {
     emit(ChatListLoading());
     try {
-      final rooms = await _repository.getInnovatorChatRooms();
-      emit(ChatListLoaded(rooms));
+      final groups = await _repository.getInnovatorGroups();
+      emit(ChatListLoaded(groups));
     } catch (e) {
       emit(ChatListError(e.toString()));
     }
@@ -31,8 +31,8 @@ class ChatListBloc extends Bloc<ChatListEvent, ChatListState> {
   ) async {
     emit(ChatListLoading());
     try {
-      final rooms = await _repository.getCollaboratorChatRooms();
-      emit(ChatListLoaded(rooms));
+      final groups = await _repository.getCollaboratorGroups();
+      emit(ChatListLoaded(groups));
     } catch (e) {
       emit(ChatListError(e.toString()));
     }

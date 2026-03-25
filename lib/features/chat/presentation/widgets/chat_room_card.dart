@@ -5,13 +5,13 @@ import '../screens/idea_workspace_screen.dart';
 
 class ChatRoomCard extends StatelessWidget {
   final String ideaTitle;
-  final String roomId;
+  final String groupId;
   final String ideaId;
 
   const ChatRoomCard({
     super.key,
     required this.ideaTitle,
-    required this.roomId,
+    required this.groupId,
     required this.ideaId,
   });
 
@@ -60,7 +60,7 @@ class ChatRoomCard extends StatelessWidget {
             MaterialPageRoute(
               builder: (_) => IdeaWorkspaceScreen(
                 ideaId: ideaId,
-                roomId: roomId,
+                groupId: groupId,
                 ideaTitle: ideaTitle,
               ),
             ),

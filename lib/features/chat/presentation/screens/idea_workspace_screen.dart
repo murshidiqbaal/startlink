@@ -5,13 +5,13 @@ import 'package:startlink/features/collaboration/presentation/screens/idea_team_
 
 class IdeaWorkspaceScreen extends StatefulWidget {
   final String ideaId;
-  final String roomId;
+  final String groupId;
   final String ideaTitle;
 
   const IdeaWorkspaceScreen({
     super.key,
     required this.ideaId,
-    required this.roomId,
+    required this.groupId,
     required this.ideaTitle,
   });
 
@@ -29,7 +29,8 @@ class _IdeaWorkspaceScreenState extends State<IdeaWorkspaceScreen> {
     super.initState();
     _pages = [
       ChatScreen(
-        roomId: widget.roomId,
+        ideaId: widget.ideaId,
+        groupId: widget.groupId,
         ideaTitle: widget.ideaTitle,
       ),
       IdeaTeamScreen(

@@ -114,7 +114,7 @@ class App extends StatelessWidget {
           create: (context) => IdeaDnaRepositoryImpl(),
         ),
         RepositoryProvider<ChatRepository>(
-          create: (context) => ChatRepositoryImpl(SupabaseService.client),
+          create: (context) => ChatRepositoryImpl(supabase: SupabaseService.client),
         ),
       ],
       child: MultiBlocProvider(

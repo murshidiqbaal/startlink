@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -9,12 +8,14 @@ import '../bloc/chat_room_event.dart';
 import '../bloc/chat_room_state.dart';
 
 class ChatScreen extends StatelessWidget {
-  final String roomId;
+  final String ideaId;
+  final String groupId;
   final String ideaTitle;
 
   const ChatScreen({
     super.key,
-    required this.roomId,
+    required this.ideaId,
+    required this.groupId,
     required this.ideaTitle,
   });
 
@@ -24,16 +25,16 @@ class ChatScreen extends StatelessWidget {
       create: (ctx) => ChatRoomBloc(
         ctx.read<ChatRepository>(),
         Supabase.instance.client,
-      )..add(LoadMessages(roomId)),
-      child: _ChatRoomView(ideaTitle: ideaTitle, roomId: roomId),
+      )..add(LoadMessages(ideaId, groupId)),
+      child: _ChatRoomView(ideaTitle: ideaTitle, groupId: groupId),
     );
   }
 }
 
 class _ChatRoomView extends StatefulWidget {
   final String ideaTitle;
-  final String roomId;
-  const _ChatRoomView({required this.ideaTitle, required this.roomId});
+  final String groupId;
+  const _ChatRoomView({required this.ideaTitle, required this.groupId});
 
   @override
   State<_ChatRoomView> createState() => _ChatRoomViewState();
@@ -43,23 +44,16 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
   final TextEditingController _msgCtrl = TextEditingController();
   final ScrollController _scrollCtrl = ScrollController();
 
-  void _scrollToBottom() {
-    if (_scrollCtrl.hasClients) {
-      _scrollCtrl.animateTo(
-        _scrollCtrl.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
-    }
-  }
-
   void _sendMessage() {
     final text = _msgCtrl.text.trim();
     if (text.isNotEmpty) {
-      context.read<ChatRoomBloc>().add(SendMessageEvent(widget.roomId, text));
+        context.read<ChatRoomBloc>().add(SendMessage(widget.groupId, text));
       _msgCtrl.clear();
-      // Scroll to bottom immediately for better UX
-      Timer(const Duration(milliseconds: 100), _scrollToBottom);
+      // Animate smoothly to the very bottom (which is offset 0 on a reversed list)
+      if (_scrollCtrl.hasClients) {
+        _scrollCtrl.animateTo(0.0,
+            duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+      }
     }
   }
 
@@ -79,9 +73,19 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
               widget.ideaTitle,
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
-            const Text(
-              "Team Chat",
-              style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+            BlocBuilder<ChatRoomBloc, ChatRoomState>(
+              builder: (context, state) {
+                if (state is ChatRoomLoaded) {
+                  return Text(
+                    "${state.teamMembers.length} members",
+                    style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                  );
+                }
+                return const Text(
+                  "Team Chat",
+                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                );
+              },
             ),
           ],
         ),
@@ -91,9 +95,7 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
           Expanded(
             child: BlocConsumer<ChatRoomBloc, ChatRoomState>(
               listener: (context, state) {
-                if (state is ChatRoomLoaded) {
-                  Timer(const Duration(milliseconds: 100), _scrollToBottom);
-                }
+                // Removed manual timer scroll to bottom; reverse: true handles it gracefully.
               },
               builder: (context, state) {
                 if (state is ChatRoomLoading) {
@@ -106,11 +108,19 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
                   return ListView.builder(
                     controller: _scrollCtrl,
                     padding: const EdgeInsets.all(16),
+                    reverse: true, // Crucial for instant bottom-anchored real-time UX
                     itemCount: state.messages.length,
                     itemBuilder: (context, index) {
-                      final msg = state.messages[index];
+                      // Because the list is reversed, index 0 is at the bottom (newest)
+                      final actualIndex = state.messages.length - 1 - index;
+                      final msg = state.messages[actualIndex];
                       final isMe = msg.senderId == userId;
-                      return _MessageBubble(message: msg.message, isMe: isMe);
+                      return _MessageBubble(
+                        message: msg.content,
+                        isMe: isMe,
+                        senderName: msg.senderName,
+                        senderAvatar: msg.senderAvatar,
+                      );
                     },
                   );
                 }
@@ -170,33 +180,76 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
 class _MessageBubble extends StatelessWidget {
   final String message;
   final bool isMe;
+  final String? senderName;
+  final String? senderAvatar;
 
-  const _MessageBubble({required this.message, required this.isMe});
+  const _MessageBubble({
+    required this.message,
+    required this.isMe,
+    this.senderName,
+    this.senderAvatar,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Align(
-      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
-        decoration: BoxDecoration(
-          color: isMe ? AppColors.brandPurple : AppColors.surfaceGlass,
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(16),
-            topRight: const Radius.circular(16),
-            bottomLeft: Radius.circular(isMe ? 16 : 4),
-            bottomRight: Radius.circular(isMe ? 4 : 16),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Column(
+        crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        children: [
+          if (!isMe && senderName != null)
+            Padding(
+              padding: const EdgeInsets.only(left: 4, bottom: 4),
+              child: Text(
+                senderName!,
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          Row(
+            mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              if (!isMe)
+                CircleAvatar(
+                  radius: 12,
+                  backgroundColor: AppColors.brandPurple.withValues(alpha: 0.2),
+                  backgroundImage: senderAvatar != null ? NetworkImage(senderAvatar!) : null,
+                  child: senderAvatar == null
+                      ? Text(
+                          senderName?.isNotEmpty == true ? senderName![0].toUpperCase() : "?",
+                          style: const TextStyle(fontSize: 10, color: AppColors.brandPurple),
+                        )
+                      : null,
+                ),
+              if (!isMe) const SizedBox(width: 8),
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: isMe ? AppColors.brandPurple : AppColors.surfaceGlass,
+                    borderRadius: BorderRadius.only(
+                      topLeft: const Radius.circular(16),
+                      topRight: const Radius.circular(16),
+                      bottomLeft: Radius.circular(isMe ? 16 : 4),
+                      bottomRight: Radius.circular(isMe ? 4 : 16),
+                    ),
+                  ),
+                  child: Text(
+                    message,
+                    style: TextStyle(
+                      color: isMe ? Colors.white : AppColors.textPrimary,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ),
-        child: Text(
-          message,
-          style: TextStyle(
-            color: isMe ? Colors.white : AppColors.textPrimary,
-            fontSize: 14,
-          ),
-        ),
+        ],
       ),
     );
   }

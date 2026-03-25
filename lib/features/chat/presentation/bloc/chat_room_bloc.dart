@@ -14,8 +14,8 @@ class ChatRoomBloc extends Bloc<ChatRoomEvent, ChatRoomState> {
 
   ChatRoomBloc(this._repository, this._supabase) : super(ChatRoomInitial()) {
     on<LoadMessages>(_onLoadMessages);
-    on<SendMessageEvent>(_onSendMessage);
-    on<ReceiveMessage>(_onReceiveMessage);
+    on<SendMessage>(_onSendMessage);
+    on<ReceiveRealtimeMessage>(_onReceiveMessage);
   }
 
   Future<void> _onLoadMessages(
@@ -24,24 +24,29 @@ class ChatRoomBloc extends Bloc<ChatRoomEvent, ChatRoomState> {
   ) async {
     emit(ChatRoomLoading());
     try {
-      final messages = await _repository.getMessages(event.roomId);
-      emit(ChatRoomLoaded(messages));
+      final messages = await _repository.getMessages(event.groupId);
+      final teamMembers = await _repository.getTeamMembers(event.ideaId);
+      emit(ChatRoomLoaded(
+        groupId: event.groupId,
+        messages: messages,
+        teamMembers: teamMembers,
+      ));
 
-      // Subscribe to real-time updates for this room
+      // Subscribe to real-time updates for messages
       _channel?.unsubscribe();
       _channel = _supabase
-          .channel('room_${event.roomId}')
+          .channel('messages:${event.groupId}') // Use scoped channel
           .onPostgresChanges(
             event: PostgresChangeEvent.insert,
             schema: 'public',
             table: 'messages',
             filter: PostgresChangeFilter(
               type: PostgresChangeFilterType.eq,
-              column: 'room_id',
-              value: event.roomId,
+              column: 'group_id',
+              value: event.groupId,
             ),
             callback: (payload) {
-              add(ReceiveMessage(payload.newRecord));
+              add(ReceiveRealtimeMessage(payload.newRecord));
             },
           )
           .subscribe();
@@ -51,27 +56,47 @@ class ChatRoomBloc extends Bloc<ChatRoomEvent, ChatRoomState> {
   }
 
   Future<void> _onSendMessage(
-    SendMessageEvent event,
+    SendMessage event,
     Emitter<ChatRoomState> emit,
   ) async {
     try {
-      await _repository.sendMessage(event.roomId, event.content);
+      final newMessage = await _repository.sendMessage(event.groupId, event.content);
+      if (state is ChatRoomLoaded) {
+        final current = state as ChatRoomLoaded;
+        // Inject instantly instead of waiting for Realtime round-trip
+        if (!current.messages.any((m) => m.id == newMessage.id)) {
+          emit(ChatRoomLoaded(
+            groupId: current.groupId,
+            messages: [...current.messages, newMessage],
+            teamMembers: current.teamMembers,
+          ));
+        }
+      }
     } catch (e) {
-      // In a real app, we might want a separate error state or toast
+      // Temporarily emit error so the user can see what's happening
+      emit(ChatRoomError('Send failed: ${e.toString()}'));
     }
   }
 
   void _onReceiveMessage(
-    ReceiveMessage event,
+    ReceiveRealtimeMessage event,
     Emitter<ChatRoomState> emit,
   ) {
     if (state is ChatRoomLoaded) {
       final current = state as ChatRoomLoaded;
+      
+      // Filter by group_id
+      if (event.payload['group_id'] != current.groupId) return;
+      
       final newMessage = MessageModel.fromJson(event.payload);
       
       // Prevent duplicates if the message we sent also comes back via channel
       if (!current.messages.any((m) => m.id == newMessage.id)) {
-        emit(ChatRoomLoaded([...current.messages, newMessage]));
+        emit(ChatRoomLoaded(
+          groupId: current.groupId,
+          messages: [...current.messages, newMessage],
+          teamMembers: current.teamMembers,
+        ));
       }
     }
   }

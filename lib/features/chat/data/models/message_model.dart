@@ -4,27 +4,36 @@ import '../../domain/entities/message.dart';
 class MessageModel extends Message {
   const MessageModel({
     required super.id,
-    required super.roomId,
+    required super.groupId,
     required super.senderId,
-    required super.message,
+    required super.content,
+    required super.isRead,
     required super.createdAt,
+    super.senderName,
+    super.senderAvatar,
   });
 
   factory MessageModel.fromJson(Map<String, dynamic> json) {
+    final profile = (json['sender'] ?? json['profiles']) as Map<String, dynamic>?;
+    
     return MessageModel(
       id: json['id'] as String,
-      roomId: json['room_id'] as String,
+      groupId: json['group_id'] as String,
       senderId: json['sender_id'] as String,
-      message: json['message'] as String,
+      content: json['content'] as String,
+      isRead: json['is_read'] as bool? ?? false,
       createdAt: DateTime.parse(json['created_at'] as String),
+      senderName: profile?['full_name'] as String?,
+      senderAvatar: profile?['avatar_url'] as String?,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'room_id': roomId,
+      'group_id': groupId,
       'sender_id': senderId,
-      'message': message,
+      'content': content,
+      'is_read': isRead,
     };
   }
 

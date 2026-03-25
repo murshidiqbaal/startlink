@@ -9,25 +9,26 @@ abstract class ChatRoomEvent extends Equatable {
 }
 
 class LoadMessages extends ChatRoomEvent {
-  final String roomId;
-  const LoadMessages(this.roomId);
+  final String ideaId;
+  final String groupId;
+  const LoadMessages(this.ideaId, this.groupId);
 
   @override
-  List<Object?> get props => [roomId];
+  List<Object?> get props => [ideaId, groupId];
 }
 
-class SendMessageEvent extends ChatRoomEvent {
-  final String roomId;
+class SendMessage extends ChatRoomEvent {
+  final String groupId;
   final String content;
-  const SendMessageEvent(this.roomId, this.content);
+  const SendMessage(this.groupId, this.content);
 
   @override
-  List<Object?> get props => [roomId, content];
+  List<Object?> get props => [groupId, content];
 }
 
-class ReceiveMessage extends ChatRoomEvent {
+class ReceiveRealtimeMessage extends ChatRoomEvent {
   final Map<String, dynamic> payload;
-  const ReceiveMessage(this.payload);
+  const ReceiveRealtimeMessage(this.payload);
 
   @override
   List<Object?> get props => [payload];

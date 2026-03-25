@@ -15,10 +15,8 @@ import 'package:startlink/features/home/presentation/widgets/idea_card.dart';
 import 'package:startlink/features/home/presentation/widgets/role_aware_navigation_bar.dart';
 import 'package:startlink/features/idea/presentation/bloc/idea_bloc.dart';
 import 'package:startlink/features/idea/presentation/pages/idea_detail_screen.dart';
-import 'package:startlink/features/chat/presentation/screens/collaboration_chat_list_screen.dart';
+import 'package:startlink/features/collaboration/presentation/pages/idea_inbox_screen.dart';
 import 'package:startlink/features/profile/presentation/profile_screen.dart';
-import 'package:startlink/features/chat/data/repositories/collaboration_chat_repository_impl.dart';
-import 'package:startlink/features/chat/presentation/bloc/collaboration_chat_bloc.dart';
 
 class CollaboratorDashboard extends StatelessWidget {
   const CollaboratorDashboard({super.key});
@@ -44,10 +42,7 @@ class _CollaboratorScaffoldState extends State<_CollaboratorScaffold> {
   final List<Widget> _pages = [
     const CollaboratorHome(),
     const MyCollaborationsScreen(),
-    BlocProvider(
-      create: (context) => CollaborationChatBloc(CollaborationChatRepositoryImpl()),
-      child: const CollaborationChatListScreen(isInnovator: false),
-    ),
+    const IdeaInboxScreen(),
     const ProfileScreen(),
   ];
 
