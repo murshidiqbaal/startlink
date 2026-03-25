@@ -55,6 +55,15 @@ class FetchMyCollaborations extends CollaborationEvent {}
 
 class FetchReceivedCollaborations extends CollaborationEvent {}
 
+class FetchIdeaTeamMembers extends CollaborationEvent {
+  final String ideaId;
+
+  const FetchIdeaTeamMembers(this.ideaId);
+
+  @override
+  List<Object?> get props => [ideaId];
+}
+
 class UpdateCollaborationStatus extends CollaborationEvent {
   final String collaborationId;
   final String status;

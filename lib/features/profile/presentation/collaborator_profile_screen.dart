@@ -3,8 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:startlink/core/theme/app_theme.dart';
 import 'package:startlink/features/profile/data/models/profile_model.dart';
 import 'package:startlink/features/profile/domain/entities/collaborator_profile.dart';
-import 'package:startlink/features/profile/domain/repositories/profile_repository.dart';
-import 'package:startlink/features/profile/presentation/bloc/collaborator_profile_bloc.dart';
+import 'package:startlink/features/profile/presentation/bloc/profile_bloc.dart';
+import 'package:startlink/features/profile/presentation/bloc/profile_state.dart';
+import 'package:startlink/features/profile/presentation/bloc/profile_event.dart';
 import 'package:startlink/features/profile/presentation/edit_collaborator_profile.dart';
 
 class CollaboratorProfileScreen extends StatelessWidget {
@@ -19,47 +20,27 @@ class CollaboratorProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (ctx) => CollaboratorProfileBloc(
-        repository: ctx.read<ProfileRepository>(),
-      )..add(FetchCollaboratorProfile(baseProfile.id)),
-      child: _CollaboratorProfileContent(
-        baseProfile: baseProfile,
-        isCurrentUser: isCurrentUser,
-      ),
+    return BlocBuilder<ProfileBloc, ProfileState>(
+      builder: (context, state) {
+        if (state is ProfileLoading) {
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        }
+        if (state is ProfileError) {
+          return Scaffold(body: Center(child: Text('Error: ${state.message}')));
+        }
+        if (state is ProfileLoaded) {
+          if (state.collaboratorProfile == null) {
+            // Trigger load if not present
+            context.read<ProfileBloc>().add(LoadCollaboratorProfile(baseProfile.id));
+            return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          }
+          return _buildScrollableContent(context, state.collaboratorProfile!);
+        }
+        return const SizedBox.shrink();
+      },
     );
   }
-}
 
-class _CollaboratorProfileContent extends StatelessWidget {
-  final ProfileModel baseProfile;
-  final bool isCurrentUser;
-
-  const _CollaboratorProfileContent({
-    required this.baseProfile,
-    required this.isCurrentUser,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: BlocBuilder<CollaboratorProfileBloc, CollaboratorProfileState>(
-        builder: (context, state) {
-          if (state is CollaboratorProfileLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (state is CollaboratorProfileError) {
-            return Center(child: Text('Error: ${state.message}'));
-          }
-          if (state is CollaboratorProfileLoaded) {
-            return _buildScrollableContent(context, state.profile);
-          }
-          return const SizedBox.shrink();
-        },
-      ),
-    );
-  }
 
   Widget _buildScrollableContent(BuildContext context, CollaboratorProfile collabProfile) {
     return CustomScrollView(
@@ -299,14 +280,11 @@ class _CollaboratorProfileContent extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => BlocProvider.value(
-          value: context.read<CollaboratorProfileBloc>(),
-          child: EditCollaboratorProfileScreen(profile: profile),
-        ),
+        builder: (_) => EditCollaboratorProfileScreen(profileId: baseProfile.id),
       ),
     ).then((_) {
       if (context.mounted) {
-        context.read<CollaboratorProfileBloc>().add(FetchCollaboratorProfile(baseProfile.id));
+        context.read<ProfileBloc>().add(LoadCollaboratorProfile(baseProfile.id));
       }
     });
   }

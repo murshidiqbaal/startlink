@@ -6,7 +6,7 @@ import 'package:startlink/core/presentation/widgets/startlink_glass_card.dart';
 import 'package:startlink/core/theme/app_theme.dart';
 import 'package:startlink/features/admin/presentation/pages/admin_dashboard_layout.dart';
 import 'package:startlink/features/ai_co_founder/presentation/pages/co_founder_chat_screen.dart';
-import 'package:startlink/features/collaboration/presentation/pages/collaboration_screen.dart';
+import 'package:startlink/features/collaboration/presentation/screens/received_applications_screen.dart';
 import 'package:startlink/features/compass/presentation/pages/compass_page.dart';
 import 'package:startlink/features/compass/presentation/widgets/innovation_compass_widget.dart';
 import 'package:startlink/features/debug/presentation/simulation_dashboard.dart';
@@ -20,8 +20,12 @@ import 'package:startlink/features/idea/presentation/idea_post_screen.dart';
 import 'package:startlink/features/idea/presentation/pages/idea_detail_screen.dart';
 import 'package:startlink/features/matching/presentation/pages/matching_page.dart';
 import 'package:startlink/features/profile/presentation/bloc/profile_bloc.dart';
+import 'package:startlink/features/profile/presentation/bloc/profile_state.dart';
 import 'package:startlink/features/profile/presentation/edit_profile_screen.dart';
 import 'package:startlink/features/profile/presentation/profile_screen.dart';
+import 'package:startlink/features/chat/presentation/screens/collaboration_chat_list_screen.dart';
+import 'package:startlink/features/chat/data/repositories/collaboration_chat_repository_impl.dart';
+import 'package:startlink/features/chat/presentation/bloc/collaboration_chat_bloc.dart';
 
 class InnovatorDashboard extends StatefulWidget {
   const InnovatorDashboard({super.key});
@@ -33,16 +37,23 @@ class InnovatorDashboard extends StatefulWidget {
 class _InnovatorDashboardState extends State<InnovatorDashboard> {
   int _selectedIndex = 0;
 
-  final List<Widget> _pages = const [
-    InnovatorHome(),
-    CollaborationScreen(),
-    ProfileScreen(),
+  final List<Widget> _pages = [
+    const InnovatorHome(),
+    const ReceivedApplicationsScreen(),
+    BlocProvider(
+      create: (context) => CollaborationChatBloc(CollaborationChatRepositoryImpl()),
+      child: const CollaborationChatListScreen(isInnovator: true),
+    ),
+    const ProfileScreen(),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _pages[_selectedIndex],
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: _pages,
+      ),
       bottomNavigationBar: RoleAwareNavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) {
@@ -58,6 +69,11 @@ class _InnovatorDashboardState extends State<InnovatorDashboard> {
             icon: Icon(Icons.work_history_outlined),
             selectedIcon: Icon(Icons.work_history),
             label: 'Requests',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.message_outlined),
+            selectedIcon: Icon(Icons.message),
+            label: 'Messages',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline),
@@ -300,7 +316,7 @@ class InnovatorHome extends StatelessWidget {
         screen = const SimulationDashboard();
         break;
       case 'collaboration':
-        screen = const CollaborationScreen();
+        screen = const ReceivedApplicationsScreen();
         break;
       case 'ai_co_founder':
         screen = const CoFounderChatScreen();

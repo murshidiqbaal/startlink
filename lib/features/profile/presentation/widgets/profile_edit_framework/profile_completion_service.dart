@@ -4,8 +4,23 @@ import 'package:startlink/features/profile/domain/entities/collaborator_profile.
 import 'package:startlink/features/profile/domain/entities/innovator_profile.dart';
 import 'package:startlink/features/profile/domain/entities/investor_profile.dart';
 import 'package:startlink/features/profile/domain/entities/mentor_profile.dart';
+import 'package:startlink/features/profile/domain/entities/role_profile.dart';
 
 class ProfileCompletionService {
+  // ── Unified dispatcher (non-generic, safe runtime dispatch) ───────────────
+
+  /// Calculates the completion score for any [RoleProfile] subtype.
+  /// Uses `is` runtime checks — no unsafe casts, no generic parameters.
+  static int calculate(RoleProfile p) {
+    if (p is InvestorProfile) return calculateInvestor(p);
+    if (p is MentorProfile) return calculateMentor(p);
+    if (p is CollaboratorProfile) return calculateCollaborator(p);
+    if (p is InnovatorProfile) return calculateInnovator(p);
+    return 0;
+  }
+
+  // ── Role-specific calculators ─────────────────────────────────────────────
+
   static int calculateInvestor(InvestorProfile p) {
     int score = 0;
     if (_has(p.investmentFocus)) score += 20;

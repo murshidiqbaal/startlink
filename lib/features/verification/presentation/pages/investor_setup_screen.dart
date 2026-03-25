@@ -6,6 +6,8 @@ import 'package:startlink/features/profile/domain/entities/investor_profile.dart
 import 'package:startlink/features/profile/domain/repositories/profile_repository.dart';
 import 'package:startlink/features/profile/presentation/bloc/investor_profile_bloc.dart';
 import 'package:startlink/features/profile/presentation/bloc/profile_bloc.dart';
+import 'package:startlink/features/profile/presentation/bloc/profile_state.dart';
+import 'package:startlink/features/profile/presentation/bloc/profile_event.dart';
 import 'package:startlink/features/verification/presentation/bloc/verification_bloc.dart';
 
 class InvestorSetupScreen extends StatelessWidget {

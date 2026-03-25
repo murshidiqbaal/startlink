@@ -44,15 +44,23 @@ class _CollaborationScreenState extends State<CollaborationScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text(
           _role == 'Innovator' ? 'Manage Applications' : 'My Collaborations',
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
+        backgroundColor: AppColors.background,
+        elevation: 0,
         bottom: TabBar(
           controller: _tabController,
+          labelColor: AppColors.brandCyan,
+          unselectedLabelColor: AppColors.textSecondary,
+          indicatorColor: AppColors.brandCyan,
+          indicatorWeight: 3,
           tabs: const [
             Tab(text: 'Pending'),
-            Tab(text: 'History'), // Accepted/Rejected
+            Tab(text: 'History'),
           ],
         ),
       ),
@@ -69,45 +77,89 @@ class _CollaborationScreenState extends State<CollaborationScreen>
                 content: Text(message),
                 backgroundColor: AppColors.emerald,
                 behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
             );
-            _fetchData(); // Refresh list after action or new application
+            _fetchData();
           }
         },
         builder: (context, state) {
           if (state is CollaborationLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator(color: AppColors.brandCyan));
           } else if (state is CollaborationLoaded) {
             final pending = state.applications
-                .where((c) => c.status == 'pending')
+                .where((c) => c.status.toLowerCase() == 'pending')
                 .toList();
             final history = state.applications
-                .where((c) => c.status != 'pending')
+                .where((c) => c.status.toLowerCase() != 'pending')
                 .toList();
 
             return TabBarView(
               controller: _tabController,
               children: [
-                _buildList(pending, isInnovator: _role == 'Innovator'),
-                _buildList(history, isInnovator: _role == 'Innovator'),
+                _buildList(
+                  pending, 
+                  isInnovator: _role == 'Innovator',
+                  emptyMessage: _role == 'Innovator' 
+                      ? 'No pending applications for your ideas.' 
+                      : 'You haven\'t applied to any ideas yet.',
+                  emptyIcon: Icons.hourglass_empty,
+                ),
+                _buildList(
+                  history, 
+                  isInnovator: _role == 'Innovator',
+                  emptyMessage: 'No collaboration history found.',
+                  emptyIcon: Icons.history,
+                ),
               ],
             );
           } else if (state is CollaborationError) {
-            return Center(child: Text(state.message));
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.error_outline, size: 48, color: AppColors.rose),
+                    const SizedBox(height: 16),
+                    Text(state.message, textAlign: TextAlign.center),
+                    const SizedBox(height: 16),
+                    ElevatedButton(onPressed: _fetchData, child: const Text('Retry')),
+                  ],
+                ),
+              ),
+            );
           }
-          // Fallback for empty state or partial loads handled by _buildList if list is empty
-          // But if state is not Loaded yet (e.g. Initial), logic above handles loading/error
           return const SizedBox.shrink();
         },
       ),
     );
   }
 
-  Widget _buildList(List<dynamic> items, {required bool isInnovator}) {
+  Widget _buildList(
+    List<dynamic> items, {
+    required bool isInnovator,
+    required String emptyMessage,
+    required IconData emptyIcon,
+  }) {
     if (items.isEmpty) {
-      return const Center(child: Text('No items to display'));
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(emptyIcon, size: 64, color: AppColors.textSecondary.withValues(alpha: 0.2)),
+            const SizedBox(height: 16),
+            Text(
+              emptyMessage,
+              style: const TextStyle(color: AppColors.textSecondary, fontSize: 16),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
     }
     return ListView.builder(
+      padding: const EdgeInsets.symmetric(vertical: 8),
       itemCount: items.length,
       itemBuilder: (context, index) {
         final item = items[index];

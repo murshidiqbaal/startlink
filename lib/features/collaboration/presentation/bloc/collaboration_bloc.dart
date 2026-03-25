@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:startlink/features/collaboration/domain/entities/collaboration_request.dart';
+import 'package:startlink/features/collaboration/domain/entities/idea_team_member.dart';
 import 'package:startlink/features/collaboration/domain/repositories/collaboration_repository.dart';
 
 part 'collaboration_event.dart';
@@ -20,6 +21,7 @@ class CollaborationBloc extends Bloc<CollaborationEvent, CollaborationState> {
     on<FetchMyCollaborations>(_onFetchMyCollaborations);
     on<FetchReceivedCollaborations>(_onFetchReceivedCollaborations);
     on<UpdateCollaborationStatus>(_onUpdateCollaborationStatus);
+    on<FetchIdeaTeamMembers>(_onFetchIdeaTeamMembers);
   }
 
   Future<void> _onApplyCollaboration(
@@ -123,6 +125,19 @@ class CollaborationBloc extends Bloc<CollaborationEvent, CollaborationState> {
         status: event.status.toLowerCase(),
       );
       emit(const CollaborationActionSuccess('Status updated successfully'));
+    } catch (e) {
+      emit(CollaborationError(e.toString()));
+    }
+  }
+
+  Future<void> _onFetchIdeaTeamMembers(
+    FetchIdeaTeamMembers event,
+    Emitter<CollaborationState> emit,
+  ) async {
+    emit(CollaborationLoading());
+    try {
+      final members = await _repository.fetchIdeaTeamMembers(event.ideaId);
+      emit(IdeaTeamMembersLoaded(members));
     } catch (e) {
       emit(CollaborationError(e.toString()));
     }

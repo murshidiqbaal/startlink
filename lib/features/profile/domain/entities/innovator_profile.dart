@@ -1,9 +1,7 @@
-import 'package:equatable/equatable.dart';
+import 'package:startlink/features/profile/domain/entities/role_profile.dart';
 
 /// Domain entity for the `innovator_profiles` Supabase table.
-class InnovatorProfile extends Equatable {
-  final String profileId;
-
+class InnovatorProfile extends RoleProfile {
   // ── Professional Snapshot ────────────────────────────────────────────────
   final List<String> skills;
   final String? bio;
@@ -26,11 +24,11 @@ class InnovatorProfile extends Equatable {
   final bool openToMentors;
   final String? preferredWorkMode; // 'Remote', 'Hybrid', 'Onsite'
 
-  // ── Completion ────────────────────────────────────────────────────────────
-  final int profileCompletion;
-
   const InnovatorProfile({
-    required this.profileId,
+    required super.profileId,
+    super.profileCompletion = 0,
+    super.createdAt,
+    super.updatedAt,
     this.skills = const [],
     this.bio,
     this.experienceLevel,
@@ -47,12 +45,11 @@ class InnovatorProfile extends Equatable {
     this.openToInvestors = false,
     this.openToMentors = false,
     this.preferredWorkMode,
-    this.profileCompletion = 0,
-  });
+  }) : super(role: 'innovator');
 
   @override
   List<Object?> get props => [
-    profileId,
+    ...super.props,
     skills,
     bio,
     experienceLevel,
@@ -69,6 +66,5 @@ class InnovatorProfile extends Equatable {
     openToInvestors,
     openToMentors,
     preferredWorkMode,
-    profileCompletion,
   ];
 }

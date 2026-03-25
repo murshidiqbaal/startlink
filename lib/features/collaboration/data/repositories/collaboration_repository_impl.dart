@@ -1,6 +1,8 @@
 import 'package:startlink/core/services/supabase_client.dart';
 import 'package:startlink/features/collaboration/data/models/collaboration_request_model.dart';
 import 'package:startlink/features/collaboration/domain/entities/collaboration_request.dart';
+import 'package:startlink/features/collaboration/domain/entities/idea_team_member.dart';
+import 'package:startlink/features/collaboration/data/models/idea_team_member_model.dart';
 import 'package:startlink/features/collaboration/domain/repositories/collaboration_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -82,6 +84,11 @@ class CollaborationRepositoryImpl implements CollaborationRepository {
         'user_id': request.applicantId,
         'role': request.roleApplied,
       }, onConflict: 'idea_id,user_id');
+
+      // Ensure chat room exists
+      await _supabase.from('chat_rooms').upsert({
+        'idea_id': request.ideaId,
+      }, onConflict: 'idea_id');
     }
   }
 
@@ -132,6 +139,24 @@ class CollaborationRepositoryImpl implements CollaborationRepository {
 
     return (response as List)
         .map((json) => CollaborationRequestModel.fromJson(json))
+        .toList();
+  }
+  @override
+  Future<List<IdeaTeamMember>> fetchIdeaTeamMembers(String ideaId) async {
+    final response = await _supabase
+        .from('idea_collaborators')
+        .select('''
+          user_id,
+          role,
+          profiles!idea_collaborators_user_id_fkey(
+            full_name,
+            avatar_url
+          )
+        ''')
+        .eq('idea_id', ideaId);
+
+    return (response as List)
+        .map((json) => IdeaTeamMemberModel.fromJson(json))
         .toList();
   }
 }

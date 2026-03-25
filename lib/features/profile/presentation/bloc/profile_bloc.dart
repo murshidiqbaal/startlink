@@ -1,66 +1,13 @@
-import 'package:bloc/bloc.dart';
-import 'package:equatable/equatable.dart';
-import 'package:startlink/features/profile/data/models/profile_model.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:startlink/features/profile/data/models/collaborator_profile_model.dart';
 import 'package:startlink/features/profile/domain/repositories/profile_repository.dart';
 import 'package:startlink/features/profile/domain/utils/profile_completion_calculator.dart';
+import 'package:startlink/features/profile/presentation/widgets/profile_edit_framework/profile_completion_service.dart';
+import 'package:startlink/features/profile/presentation/bloc/profile_event.dart';
+import 'package:startlink/features/profile/presentation/bloc/profile_state.dart';
 
-// Events
-abstract class ProfileEvent extends Equatable {
-  const ProfileEvent();
-  @override
-  List<Object> get props => [];
-}
-
-class FetchProfile extends ProfileEvent {}
-
-class FetchProfileById extends ProfileEvent {
-  final String userId;
-  const FetchProfileById(this.userId);
-  @override
-  List<Object> get props => [userId];
-}
-
-class UpdateProfile extends ProfileEvent {
-  final ProfileModel profile;
-  const UpdateProfile(this.profile);
-  @override
-  List<Object> get props => [profile];
-}
-
-class UploadAvatar extends ProfileEvent {
-  final dynamic imageFile; // File or XFile
-  const UploadAvatar(this.imageFile);
-  @override
-  List<Object> get props => [imageFile];
-}
-
-// States
-abstract class ProfileState extends Equatable {
-  const ProfileState();
-  @override
-  List<Object> get props => [];
-}
-
-class ProfileInitial extends ProfileState {}
-
-class ProfileLoading extends ProfileState {}
-
-class ProfileLoaded extends ProfileState {
-  final ProfileModel profile;
-  final bool isAvatarUploading;
-
-  const ProfileLoaded(this.profile, {this.isAvatarUploading = false});
-
-  @override
-  List<Object> get props => [profile, isAvatarUploading];
-}
-
-class ProfileError extends ProfileState {
-  final String message;
-  const ProfileError(this.message);
-  @override
-  List<Object> get props => [message];
-}
+export 'package:startlink/features/profile/presentation/bloc/profile_event.dart';
+export 'package:startlink/features/profile/presentation/bloc/profile_state.dart';
 
 class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
   final ProfileRepository _profileRepository;
@@ -72,6 +19,53 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     on<FetchProfileById>(_onFetchProfileById);
     on<UpdateProfile>(_onUpdateProfile);
     on<UploadAvatar>(_onUploadAvatar);
+    on<LoadCollaboratorProfile>(_onLoadCollaboratorProfile);
+    on<SaveCollaboratorProfile>(_onSaveCollaboratorProfile);
+  }
+
+  Future<void> _onLoadCollaboratorProfile(
+    LoadCollaboratorProfile event,
+    Emitter<ProfileState> emit,
+  ) async {
+    final currentState = state;
+    if (currentState is ProfileLoaded) {
+      emit(ProfileLoaded(currentState.profile, collaboratorProfile: currentState.collaboratorProfile, isAvatarUploading: currentState.isAvatarUploading));
+      try {
+        final collabProfile = await _profileRepository.fetchCollaboratorProfile(event.profileId);
+        emit(ProfileLoaded(currentState.profile, collaboratorProfile: collabProfile as CollaboratorProfileModel?));
+      } catch (e) {
+        emit(ProfileError(e.toString()));
+      }
+    } else {
+      emit(ProfileLoading());
+      try {
+        final profile = await _profileRepository.fetchProfileById(event.profileId);
+        final collabProfile = await _profileRepository.fetchCollaboratorProfile(event.profileId);
+        emit(ProfileLoaded(profile, collaboratorProfile: collabProfile as CollaboratorProfileModel?));
+      } catch (e) {
+        emit(ProfileError(e.toString()));
+      }
+    }
+  }
+
+  Future<void> _onSaveCollaboratorProfile(
+    SaveCollaboratorProfile event,
+    Emitter<ProfileState> emit,
+  ) async {
+    final currentState = state;
+    if (currentState is ProfileLoaded) {
+      emit(ProfileLoaded(currentState.profile, collaboratorProfile: currentState.collaboratorProfile, isAvatarUploading: true));
+      try {
+        // Calculate completion
+        final updatedCollab = (event.profile as CollaboratorProfileModel).copyWith(
+          profileCompletion: ProfileCompletionService.calculateCollaborator(event.profile),
+        );
+        await _profileRepository.upsertCollaboratorProfile(updatedCollab);
+        emit(ProfileLoaded(currentState.profile, collaboratorProfile: updatedCollab, isAvatarUploading: false));
+      } catch (e) {
+        emit(ProfileError(e.toString()));
+      }
+    }
   }
 
   Future<void> _onFetchProfile(
@@ -129,7 +123,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       emit(ProfileLoaded(currentState.profile, isAvatarUploading: true));
       try {
         final imageUrl = await _profileRepository.uploadAvatar(event.imageFile);
-        if (imageUrl != null) {
+        if (imageUrl.isNotEmpty) {
           final updatedProfile = currentState.profile.copyWith(
             avatarUrl: imageUrl,
           );

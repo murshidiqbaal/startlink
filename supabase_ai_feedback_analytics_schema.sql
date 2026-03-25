@@ -43,7 +43,7 @@ on public.idea_confidence_history for select using (true);
 -- Write: only system/triggers ideally, but we'll allow owner for MVP simulation or Edge Functions
 create policy "System updates confidence"
 on public.idea_confidence_history for insert with check (
-  exists (select 1 from ideas where id = idea_confidence_history.idea_id and owner_id = auth.uid()) 
+  exists (select 1 from ideas i where i.id = idea_confidence_history.idea_id and i.owner_id = auth.uid()) 
   or 
   exists (select 1 from profiles where id = auth.uid() and role = 'Admin')
 );

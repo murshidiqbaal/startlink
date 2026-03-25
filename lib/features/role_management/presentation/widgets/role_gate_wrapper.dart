@@ -65,7 +65,7 @@ class RoleGateWrapper extends StatelessWidget {
     Widget screen;
     switch (state.role) {
       case UserRole.innovator:
-        screen = EditInnovatorProfileScreen(baseProfile: state.baseProfile);
+        screen = EditInnovatorProfileScreen(profileId: state.baseProfile.id);
         break;
       case UserRole.mentor:
         screen = EditMentorProfileScreen(profileId: state.baseProfile.id);

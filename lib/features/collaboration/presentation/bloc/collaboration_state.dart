@@ -38,6 +38,15 @@ class CollaborationError extends CollaborationState {
   List<Object?> get props => [message];
 }
 
+class IdeaTeamMembersLoaded extends CollaborationState {
+  final List<IdeaTeamMember> members;
+
+  const IdeaTeamMembersLoaded(this.members);
+
+  @override
+  List<Object?> get props => [members];
+}
+
 class CollaborationActionSuccess extends CollaborationState {
   final String message;
 

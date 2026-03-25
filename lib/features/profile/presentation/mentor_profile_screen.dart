@@ -3,12 +3,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:startlink/core/theme/app_theme.dart';
 import 'package:startlink/features/auth/domain/repository/auth_repository.dart';
 import 'package:startlink/features/profile/domain/entities/mentor_profile.dart';
-import 'package:startlink/features/profile/presentation/bloc/mentor_profile_bloc.dart';
-import 'package:startlink/features/profile/presentation/bloc/profile_bloc.dart';
+import 'package:startlink/features/profile/presentation/bloc/role_profile_event.dart';
+import 'package:startlink/features/profile/presentation/bloc/role_profile_state.dart';
+import 'package:startlink/features/profile/presentation/bloc/unified_role_profile_bloc.dart';
 import 'package:startlink/features/profile/presentation/edit_mentor_profile.dart';
 import 'package:startlink/features/verification/domain/entities/user_badge.dart';
 import 'package:startlink/features/verification/presentation/bloc/verification_bloc.dart';
-import 'package:startlink/features/verification/presentation/widgets/verification_status_card.dart';
+import 'package:startlink/features/profile/presentation/widgets/verification_status_card.dart';
 
 class MentorProfileScreen extends StatefulWidget {
   final String? userId;
@@ -30,7 +31,9 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
     final userId =
         widget.userId ?? context.read<AuthRepository>().currentUser?.id;
     if (userId != null) {
-      context.read<MentorProfileBloc>().add(LoadMentorProfile(userId));
+      context.read<RoleProfileBloc>().add(
+            LoadRoleProfile(profileId: userId, role: 'mentor'),
+          );
       context.read<VerificationBloc>().add(FetchVerificationsAndBadges(userId));
     }
   }
@@ -56,63 +59,55 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
           ),
         ],
       ),
-      body: BlocBuilder<ProfileBloc, ProfileState>(
-        builder: (context, baseState) {
-          return BlocBuilder<VerificationBloc, VerificationState>(
-            builder: (context, vState) {
-              return BlocBuilder<MentorProfileBloc, MentorProfileState>(
-                builder: (context, roleState) {
-                  if (roleState is MentorProfileLoading ||
-                      baseState is ProfileLoading) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
+      body: BlocBuilder<VerificationBloc, VerificationState>(
+        builder: (context, vState) {
+          return BlocBuilder<RoleProfileBloc, RoleProfileState>(
+            builder: (context, state) {
+              final isLoaded = state.baseProfile != null && state.profile is MentorProfile;
 
-                  if (roleState is MentorProfileLoaded &&
-                      baseState is ProfileLoaded) {
-                    if (roleState.profile.profileCompletion == 0) {
-                      return _buildEmptyProfileView(context, roleState.profile.profileId);
-                    }
-                    return _buildBody(
-                      context,
-                      baseState.profile,
-                      roleState.profile,
-                      vState,
-                    );
-                  }
+              if (state.isLoading && !isLoaded) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-                  if (roleState is MentorProfileError) {
-                    return Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24.0),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.error_outline, size: 48, color: AppColors.rose),
-                            const SizedBox(height: 16),
-                            Text(
-                              roleState.message,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(color: AppColors.textSecondary),
-                            ),
-                            const SizedBox(height: 24),
-                            ElevatedButton(
-                              onPressed: _loadProfile,
-                              child: const Text('Retry'),
-                            ),
-                          ],
+              if (isLoaded) {
+                if (state.completionScore == 0) {
+                  return _buildEmptyProfileView(context, widget.userId ?? '');
+                }
+                return _buildBody(
+                  context,
+                  state.baseProfile!,
+                  state.profile as MentorProfile,
+                  state.verificationStatus,
+                  vState,
+                );
+              }
+
+              if (state.error != null) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error_outline, size: 48, color: AppColors.rose),
+                        const SizedBox(height: 16),
+                        Text(
+                          state.error!,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: AppColors.textSecondary),
                         ),
-                      ),
-                    );
-                  }
+                        const SizedBox(height: 24),
+                        ElevatedButton(
+                          onPressed: _loadProfile,
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
 
-                  if (roleState is MentorProfileInitial) {
-                    _loadProfile();
-                    return const Center(child: CircularProgressIndicator());
-                  }
-
-                  return const Center(child: CircularProgressIndicator());
-                },
-              );
+              return const Center(child: CircularProgressIndicator());
             },
           );
         },
@@ -124,6 +119,7 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
     BuildContext context,
     dynamic baseProfile,
     MentorProfile roleProfile,
+    VerificationStatus verificationStatus,
     VerificationState vState,
   ) {
     return SingleChildScrollView(
@@ -178,13 +174,10 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
                     ),
                     const SizedBox(height: 8),
                     VerificationStatusCard(
-                      status: (vState is VerificationLoaded && vState.isRoleVerified('mentor'))
-                          ? 'Approved'
-                          : (vState is VerificationLoaded ? (vState.getRequestForRole('mentor')?.status ?? 'Not Verified') : 'Not Verified'),
+                      status: verificationStatus,
                       role: 'mentor',
-                      onActionPressed: (vState is VerificationLoaded && (vState.isRoleVerified('mentor') || vState.getRequestForRole('mentor')?.status == 'Pending'))
-                          ? null
-                          : () {
+                      onActionPressed: verificationStatus == VerificationStatus.notVerified
+                          ? () {
                               if (roleProfile.profileCompletion < 80) {
                                 Navigator.push(
                                   context,
@@ -201,7 +194,8 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
                                       ),
                                     );
                               }
-                            },
+                            }
+                          : null,
                     ),
                     const SizedBox(height: 8),
                     Row(

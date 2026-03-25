@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:startlink/core/presentation/pages/role_splash_screen.dart';
 import 'package:startlink/core/presentation/pages/splash_screen.dart';
-import 'package:startlink/core/services/supabase_client.dart'; // Import Supabase Service
+import 'package:startlink/core/services/supabase_client.dart';
 import 'package:startlink/core/theme/app_theme.dart';
 import 'package:startlink/features/achievements/data/repositories/achievement_repository_impl.dart';
 import 'package:startlink/features/achievements/domain/repositories/achievement_repository.dart';
@@ -27,25 +27,18 @@ import 'package:startlink/features/auth/presentation/login_screen.dart';
 import 'package:startlink/features/auth/presentation/role_selection_screen.dart';
 import 'package:startlink/features/collaboration/data/repositories/collaboration_repository_impl.dart';
 import 'package:startlink/features/collaboration/domain/repositories/collaboration_repository.dart';
-import 'package:startlink/features/collaboration/presentation/bloc/collaboration_bloc.dart';
 import 'package:startlink/features/compass/data/repositories/compass_repository_impl.dart';
 import 'package:startlink/features/compass/domain/repositories/compass_repository.dart';
-import 'package:startlink/features/home/presentation/collaborator_dashboard.dart';
-import 'package:startlink/features/home/presentation/innovator_dashboard.dart';
 import 'package:startlink/features/home/presentation/investor_dashboard.dart';
 import 'package:startlink/features/home/presentation/mentor_dashboard.dart';
 import 'package:startlink/features/idea/data/repositories/idea_repository_impl.dart';
 import 'package:startlink/features/idea/domain/repositories/idea_repository.dart';
-import 'package:startlink/features/idea/presentation/bloc/idea_bloc.dart';
 import 'package:startlink/features/idea_dna/data/repositories/idea_dna_repository_impl.dart';
 import 'package:startlink/features/idea_dna/domain/repositories/idea_dna_repository.dart';
 import 'package:startlink/features/investor/data/repositories/interest_repository_impl.dart';
 import 'package:startlink/features/investor/domain/repositories/interest_repository.dart';
 import 'package:startlink/features/profile/data/repositories/profile_repository_impl.dart';
 import 'package:startlink/features/profile/domain/repositories/profile_repository.dart';
-import 'package:startlink/features/profile/presentation/bloc/investor_profile_bloc.dart';
-import 'package:startlink/features/profile/presentation/bloc/mentor_profile_bloc.dart';
-import 'package:startlink/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:startlink/features/role_management/presentation/bloc/profile_gate_bloc.dart';
 import 'package:startlink/features/role_management/presentation/bloc/profile_gate_event.dart';
 import 'package:startlink/features/role_management/presentation/widgets/role_gate_wrapper.dart';
@@ -55,11 +48,12 @@ import 'package:startlink/features/trust/presentation/bloc/trust_score_bloc.dart
 import 'package:startlink/features/verification/data/repositories/verification_repository_impl.dart';
 import 'package:startlink/features/verification/domain/repositories/verification_repository.dart';
 import 'package:startlink/features/verification/presentation/bloc/verification_bloc.dart';
-import 'package:startlink/features/profile/presentation/bloc/innovator_profile_bloc.dart';
-import 'package:startlink/features/profile/presentation/bloc/collaborator_profile_bloc.dart';
 import 'package:startlink/features/admin/presentation/bloc/admin_verification_bloc.dart';
 import 'package:startlink/features/admin/domain/repositories/admin_repository.dart';
 import 'package:startlink/features/admin/data/repositories/admin_repository_impl.dart';
+import 'package:startlink/features/chat/domain/repositories/chat_repository.dart';
+import 'package:startlink/features/chat/data/repositories/chat_repository_impl.dart';
+import 'package:startlink/features/home/presentation/app_shell.dart';
 
 class App extends StatelessWidget {
   const App({super.key});
@@ -119,6 +113,9 @@ class App extends StatelessWidget {
         RepositoryProvider<IdeaDnaRepository>(
           create: (context) => IdeaDnaRepositoryImpl(),
         ),
+        RepositoryProvider<ChatRepository>(
+          create: (context) => ChatRepositoryImpl(SupabaseService.client),
+        ),
       ],
       child: MultiBlocProvider(
         providers: [
@@ -132,29 +129,10 @@ class App extends StatelessWidget {
                 RoleBloc(authRepository: context.read<AuthRepository>())
                   ..add(RoleStarted()),
           ),
-          BlocProvider<IdeaBloc>(
-            create: (context) =>
-                IdeaBloc(ideaRepository: context.read<IdeaRepository>())
-                  ..add(FetchIdeas()),
-          ),
-          BlocProvider<ProfileBloc>(
-            create: (context) => ProfileBloc(
-              profileRepository: context.read<ProfileRepository>(),
-            )..add(FetchProfile()),
-          ),
-          BlocProvider<CollaborationBloc>(
-            create: (context) => CollaborationBloc(
-              repository: context.read<CollaborationRepository>(),
-            ),
-          ),
+          // Shared global blocs
           BlocProvider<ProfileGateBloc>(
             create: (context) => ProfileGateBloc(
               profileRepository: context.read<ProfileRepository>(),
-            ),
-          ),
-          BlocProvider<MentorProfileBloc>(
-            create: (context) => MentorProfileBloc(
-              repository: context.read<ProfileRepository>(),
             ),
           ),
           BlocProvider<TrustScoreBloc>(
@@ -164,11 +142,6 @@ class App extends StatelessWidget {
           BlocProvider<AIInsightBloc>(
             create: (context) =>
                 AIInsightBloc(repository: context.read<AIInsightRepository>()),
-          ),
-          BlocProvider<InvestorProfileBloc>(
-            create: (context) => InvestorProfileBloc(
-              repository: context.read<ProfileRepository>(),
-            ),
           ),
           BlocProvider<AuraBloc>(
             create: (context) =>
@@ -184,23 +157,9 @@ class App extends StatelessWidget {
               repository: context.read<VerificationRepository>(),
             ),
           ),
-          BlocProvider<TrustScoreBloc>(
-            create: (context) =>
-                TrustScoreBloc(repository: context.read<TrustRepository>()),
-          ),
           BlocProvider<CoFounderBloc>(
             create: (context) =>
                 CoFounderBloc(repository: context.read<CoFounderRepository>()),
-          ),
-          BlocProvider<InnovatorProfileBloc>(
-            create: (context) => InnovatorProfileBloc(
-              repository: context.read<ProfileRepository>(),
-            ),
-          ),
-          BlocProvider<CollaboratorProfileBloc>(
-            create: (context) => CollaboratorProfileBloc(
-              repository: context.read<ProfileRepository>(),
-            ),
           ),
           BlocProvider<AdminVerificationBloc>(
             create: (context) => AdminVerificationBloc(
@@ -236,15 +195,11 @@ class AuthGate extends StatelessWidget {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthAuthenticated) {
-          // Fetch user-specific data upon authentication
-          context.read<ProfileBloc>().add(FetchProfile());
-          context.read<IdeaBloc>().add(FetchIdeas());
           context.read<AuraBloc>().add(SyncAura(state.user.id));
           context.read<VerificationBloc>().add(
             FetchVerificationsAndBadges(state.user.id),
           );
           context.read<AchievementBloc>().add(FetchAchievements(state.user.id));
-          // Add other fetches here if needed, e.g. Collaborations
         }
       },
       child: BlocBuilder<AuthBloc, AuthState>(
@@ -255,7 +210,6 @@ class AuthGate extends StatelessWidget {
             );
           } else if (authState is AuthAuthenticated) {
             return BlocConsumer<RoleBloc, RoleState>(
-              // Changed to Consumer to listen for role changes
               listener: (context, roleState) {
                 final userId = (authState).user.id;
                 context.read<ProfileGateBloc>().add(
@@ -268,16 +222,12 @@ class AuthGate extends StatelessWidget {
               builder: (context, roleState) {
                 if (roleState.activeRole.isNotEmpty) {
                   return RoleGateWrapper(
-                    // Catch-all gate wrapper
                     child: RoleSplashWrapper(
                       role: roleState.activeRole,
                       child: AnimatedSwitcher(
                         duration: const Duration(milliseconds: 500),
                         transitionBuilder: (child, animation) {
-                          return FadeTransition(
-                            opacity: animation,
-                            child: child,
-                          );
+                          return FadeTransition(opacity: animation, child: child);
                         },
                         child: KeyedSubtree(
                           key: ValueKey(roleState.activeRole),
@@ -302,15 +252,15 @@ class AuthGate extends StatelessWidget {
   Widget _buildDashboard(String role) {
     switch (role) {
       case 'Innovator':
-        return const InnovatorDashboard();
+        return AppShell(role: 'Innovator');
       case 'Collaborator':
-        return const CollaboratorDashboard();
+        return AppShell(role: 'Collaborator');
       case 'Investor':
         return const InvestorDashboard();
       case 'Mentor':
         return const MentorDashboard();
       default:
-        return const InnovatorDashboard(); // Default or RoleScreen
+        return AppShell(role: 'Innovator');
     }
   }
 }

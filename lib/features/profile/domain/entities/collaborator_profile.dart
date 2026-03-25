@@ -1,7 +1,7 @@
-import 'package:equatable/equatable.dart';
+import 'package:startlink/features/profile/domain/entities/role_profile.dart';
 
-class CollaboratorProfile extends Equatable {
-  final String profileId;
+/// Domain entity for the `collaborator_profiles` Supabase table.
+class CollaboratorProfile extends RoleProfile {
   final List<String> specialties;
   final String? availability;
   final int? experienceYears;
@@ -12,10 +12,12 @@ class CollaboratorProfile extends Equatable {
   final String? linkedinUrl;
   final String? resumeUrl;
   final double? hourlyRate;
-  final int profileCompletion;
 
   const CollaboratorProfile({
-    required this.profileId,
+    required super.profileId,
+    super.profileCompletion = 0,
+    super.createdAt,
+    super.updatedAt,
     this.specialties = const [],
     this.availability,
     this.experienceYears,
@@ -26,12 +28,11 @@ class CollaboratorProfile extends Equatable {
     this.linkedinUrl,
     this.resumeUrl,
     this.hourlyRate,
-    this.profileCompletion = 0,
-  });
+  }) : super(role: 'collaborator');
 
   @override
   List<Object?> get props => [
-    profileId,
+    ...super.props,
     specialties,
     availability,
     experienceYears,
@@ -42,6 +43,5 @@ class CollaboratorProfile extends Equatable {
     linkedinUrl,
     resumeUrl,
     hourlyRate,
-    profileCompletion,
   ];
 }

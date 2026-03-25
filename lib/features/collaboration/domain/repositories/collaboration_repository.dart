@@ -1,4 +1,5 @@
 import 'package:startlink/features/collaboration/domain/entities/collaboration_request.dart';
+import 'package:startlink/features/collaboration/domain/entities/idea_team_member.dart';
 
 abstract class CollaborationRepository {
   Future<void> applyForIdea({
@@ -19,4 +20,5 @@ abstract class CollaborationRepository {
   // but these should eventually be migrated to the new system.
   Future<List<CollaborationRequest>> fetchMyCollaborations();
   Future<List<CollaborationRequest>> fetchReceivedCollaborations();
+  Future<List<IdeaTeamMember>> fetchIdeaTeamMembers(String ideaId);
 }

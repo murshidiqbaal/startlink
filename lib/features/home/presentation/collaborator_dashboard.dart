@@ -8,29 +8,25 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:startlink/features/collaboration/presentation/pages/collaboration_screen.dart';
+import 'package:startlink/features/collaboration/presentation/screens/my_collaborations_screen.dart';
+import 'package:startlink/features/collaboration/presentation/bloc/collaboration_bloc.dart';
 import 'package:startlink/features/collaboration/presentation/widgets/apply_collaboration_dialog.dart';
 import 'package:startlink/features/home/presentation/widgets/idea_card.dart';
 import 'package:startlink/features/home/presentation/widgets/role_aware_navigation_bar.dart';
 import 'package:startlink/features/idea/presentation/bloc/idea_bloc.dart';
 import 'package:startlink/features/idea/presentation/pages/idea_detail_screen.dart';
-// import 'package:startlink/features/messaging/data/repositories/message_repository.dart';
-import 'package:startlink/features/messaging/data/repositories/message_repositoy.dart';
-import 'package:startlink/features/messaging/presentation/bloc/conversation_bloc.dart';
-import 'package:startlink/features/messaging/presentation/pages/idea_inbox_screen.dart';
+import 'package:startlink/features/chat/presentation/screens/collaboration_chat_list_screen.dart';
 import 'package:startlink/features/profile/presentation/profile_screen.dart';
+import 'package:startlink/features/chat/data/repositories/collaboration_chat_repository_impl.dart';
+import 'package:startlink/features/chat/presentation/bloc/collaboration_chat_bloc.dart';
 
 class CollaboratorDashboard extends StatelessWidget {
   const CollaboratorDashboard({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Provide ConversationBloc above the tab scaffold so IdeaInboxScreen
-    // can access it regardless of navigation depth
-    return BlocProvider(
-      create: (_) => ConversationBloc(repository: MessageRepository()),
-      child: const _CollaboratorScaffold(),
-    );
+    // Shared blocs now provided via AppShell
+    return const _CollaboratorScaffold();
   }
 }
 
@@ -45,11 +41,14 @@ class _CollaboratorScaffoldState extends State<_CollaboratorScaffold> {
   int _selectedIndex = 0;
 
   // Pages are created once; state is preserved across tab switches
-  final List<Widget> _pages = const [
-    CollaboratorHome(),
-    CollaborationScreen(),
-    IdeaInboxScreen(),   // ← now the real inbox
-    ProfileScreen(),
+  final List<Widget> _pages = [
+    const CollaboratorHome(),
+    const MyCollaborationsScreen(),
+    BlocProvider(
+      create: (context) => CollaborationChatBloc(CollaborationChatRepositoryImpl()),
+      child: const CollaborationChatListScreen(isInnovator: false),
+    ),
+    const ProfileScreen(),
   ];
 
   @override
@@ -137,8 +136,10 @@ class _CollaboratorHomeState extends State<CollaboratorHome> {
                     ),
                     onApply: () => showDialog(
                       context: context,
-                      builder: (_) =>
-                          ApplyCollaborationDialog(idea: idea),
+                      builder: (dialogContext) => BlocProvider.value(
+                        value: context.read<CollaborationBloc>(),
+                        child: ApplyCollaborationDialog(idea: idea),
+                      ),
                     ),
                   );
                 },

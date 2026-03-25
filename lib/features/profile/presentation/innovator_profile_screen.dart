@@ -10,9 +10,10 @@ import 'package:startlink/features/auth/bloc/auth_bloc.dart';
 import 'package:startlink/features/profile/data/models/profile_model.dart';
 import 'package:startlink/features/profile/domain/entities/innovator_profile.dart';
 import 'package:startlink/features/profile/domain/repositories/profile_repository.dart';
-import 'package:startlink/features/profile/presentation/bloc/innovator_profile_bloc.dart';
-import 'package:startlink/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:startlink/features/profile/presentation/edit_innovator_profile.dart';
+import 'package:startlink/features/profile/presentation/bloc/role_profile_event.dart';
+import 'package:startlink/features/profile/presentation/bloc/role_profile_state.dart';
+import 'package:startlink/features/profile/presentation/bloc/unified_role_profile_bloc.dart';
 import 'package:startlink/features/trust/presentation/bloc/trust_score_bloc.dart';
 import 'package:startlink/features/verification/presentation/bloc/verification_bloc.dart';
 import 'package:startlink/features/verification/presentation/widgets/verification_badge_row.dart';
@@ -30,9 +31,9 @@ class InnovatorProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (ctx) =>
-          InnovatorProfileBloc(repository: ctx.read<ProfileRepository>())
-            ..add(LoadInnovatorProfile(profile.id)),
+      create: (ctx) => RoleProfileBloc(
+        repository: ctx.read<ProfileRepository>(),
+      )..add(LoadRoleProfile(profileId: profile.id, role: 'innovator')),
       child: _InnovatorProfileBody(
         profile: profile,
         isCurrentUser: isCurrentUser,
@@ -69,9 +70,8 @@ class _InnovatorProfileBodyState extends State<_InnovatorProfileBody> {
   }
 
   Future<void> _refresh() async {
-    context.read<ProfileBloc>().add(FetchProfile());
-    context.read<InnovatorProfileBloc>().add(
-      LoadInnovatorProfile(widget.profile.id),
+    context.read<RoleProfileBloc>().add(
+      LoadRoleProfile(profileId: widget.profile.id, role: 'innovator'),
     );
     context.read<VerificationBloc>().add(
       FetchVerificationsAndBadges(widget.profile.id),
@@ -84,10 +84,8 @@ class _InnovatorProfileBodyState extends State<_InnovatorProfileBody> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => BlocProvider.value(
-          value: context.read<ProfileBloc>(),
-          child: EditInnovatorProfileScreen(baseProfile: widget.profile),
-        ),
+        builder: (_) =>
+            EditInnovatorProfileScreen(profileId: widget.profile.id),
       ),
     ).then((updated) {
       if (updated == true && mounted) {
@@ -99,9 +97,23 @@ class _InnovatorProfileBodyState extends State<_InnovatorProfileBody> {
   @override
   Widget build(BuildContext context) {
     final p = widget.profile;
-    return BlocBuilder<InnovatorProfileBloc, InnovatorProfileState>(
+    return BlocBuilder<RoleProfileBloc, RoleProfileState>(
       builder: (ctx, state) {
-        final innov = state.profile;
+        final isLoaded = state.baseProfile != null && state.profile is InnovatorProfile;
+
+        if (state.isLoading && !isLoaded) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (state.error != null) {
+          return Center(
+            child: Text('Error: ${state.error}'),
+          );
+        }
+        if (!isLoaded) {
+          return const SizedBox.shrink();
+        }
+
+        final innov = state.profile as InnovatorProfile;
 
         return RefreshIndicator(
           onRefresh: _refresh,
@@ -139,9 +151,9 @@ class _InnovatorProfileBodyState extends State<_InnovatorProfileBody> {
                             color: AppColors.textSecondary,
                             size: 20,
                           ),
-                          onPressed: () => context
-                              .read<AuthBloc>()
-                              .add(AuthLogoutRequested()),
+                          onPressed: () => context.read<AuthBloc>().add(
+                            AuthLogoutRequested(),
+                          ),
                         ),
                       ]
                     : null,
@@ -165,7 +177,8 @@ class _InnovatorProfileBodyState extends State<_InnovatorProfileBody> {
                       // Verification badges
                       BlocBuilder<VerificationBloc, VerificationState>(
                         builder: (_, vs) {
-                          if (vs is VerificationLoaded && vs.badges.isNotEmpty) {
+                          if (vs is VerificationLoaded &&
+                              vs.badges.isNotEmpty) {
                             return _SectionCard(
                               title: 'Verification',
                               icon: Icons.verified_outlined,
@@ -177,13 +190,13 @@ class _InnovatorProfileBodyState extends State<_InnovatorProfileBody> {
                       ),
 
                       if (p.about?.isNotEmpty == true ||
-                          innov?.bio?.isNotEmpty == true) ...[
+                          innov.bio?.isNotEmpty == true) ...[
                         const SizedBox(height: 16),
                         _SectionCard(
                           title: 'About',
                           icon: Icons.person_outline,
                           child: Text(
-                            innov?.bio ?? p.about ?? '',
+                            innov.bio ?? p.about ?? '',
                             style: const TextStyle(
                               color: AppColors.textSecondary,
                               height: 1.55,
@@ -193,12 +206,10 @@ class _InnovatorProfileBodyState extends State<_InnovatorProfileBody> {
                         ),
                       ],
 
-                      if (innov != null) ...[
-                        const SizedBox(height: 16),
-                        _ProfessionalSnapshot(innov: innov),
-                      ],
+                      const SizedBox(height: 16),
+                      _ProfessionalSnapshot(innov: innov),
 
-                      if (p.skills.isNotEmpty || innov?.skills.isNotEmpty == true) ...[
+                      if (p.skills.isNotEmpty || innov.skills.isNotEmpty) ...[
                         const SizedBox(height: 16),
                         _SectionCard(
                           title: 'Skills',
@@ -206,19 +217,20 @@ class _InnovatorProfileBodyState extends State<_InnovatorProfileBody> {
                           child: Wrap(
                             spacing: 8,
                             runSpacing: 6,
-                            children: (innov?.skills ?? p.skills)
-                                .map((s) => _SkillChip(label: s))
-                                .toList(),
+                            children:
+                                (innov.skills.isNotEmpty
+                                        ? innov.skills
+                                        : p.skills)
+                                    .map((s) => _SkillChip(label: s))
+                                    .toList(),
                           ),
                         ),
                       ],
 
-                      if (innov != null) ...[
-                        const SizedBox(height: 16),
-                        _StartupCredibility(innov: innov),
-                        const SizedBox(height: 16),
-                        _CollaborationPreferencesSection(innov: innov),
-                      ],
+                      const SizedBox(height: 16),
+                      _StartupCredibility(innov: innov),
+                      const SizedBox(height: 16),
+                      _CollaborationPreferencesSection(innov: innov),
 
                       if (_hasLinks(p, innov)) ...[
                         const SizedBox(height: 16),
@@ -227,10 +239,26 @@ class _InnovatorProfileBodyState extends State<_InnovatorProfileBody> {
                           icon: Icons.link,
                           child: Column(
                             children: [
-                              _buildLink(Icons.link, 'LinkedIn', innov?.linkedinUrl ?? p.linkedinUrl),
-                              _buildLink(Icons.code, 'GitHub', innov?.githubUrl ?? p.githubUrl),
-                              _buildLink(Icons.language_outlined, 'Portfolio', innov?.portfolioUrl ?? p.portfolioUrl),
-                              _buildLink(Icons.alternate_email, 'X / Twitter', innov?.twitterUrl),
+                              _buildLink(
+                                Icons.link,
+                                'LinkedIn',
+                                innov.linkedinUrl ?? p.linkedinUrl,
+                              ),
+                              _buildLink(
+                                Icons.code,
+                                'GitHub',
+                                innov.githubUrl ?? p.githubUrl,
+                              ),
+                              _buildLink(
+                                Icons.language_outlined,
+                                'Portfolio',
+                                innov.portfolioUrl ?? p.portfolioUrl,
+                              ),
+                              _buildLink(
+                                Icons.alternate_email,
+                                'X / Twitter',
+                                innov.twitterUrl,
+                              ),
                             ],
                           ),
                         ),
@@ -284,14 +312,14 @@ class _InnovatorProfileBodyState extends State<_InnovatorProfileBody> {
     return _LinkRow(icon: icon, label: label, url: url);
   }
 
-  bool _hasLinks(ProfileModel p, InnovatorProfile? innov) =>
+  bool _hasLinks(ProfileModel p, InnovatorProfile innov) =>
       (p.linkedinUrl?.isNotEmpty ?? false) ||
       (p.githubUrl?.isNotEmpty ?? false) ||
       (p.portfolioUrl?.isNotEmpty ?? false) ||
-      (innov?.linkedinUrl?.isNotEmpty ?? false) ||
-      (innov?.githubUrl?.isNotEmpty ?? false) ||
-      (innov?.portfolioUrl?.isNotEmpty ?? false) ||
-      (innov?.twitterUrl?.isNotEmpty ?? false);
+      (innov.linkedinUrl?.isNotEmpty ?? false) ||
+      (innov.githubUrl?.isNotEmpty ?? false) ||
+      (innov.portfolioUrl?.isNotEmpty ?? false) ||
+      (innov.twitterUrl?.isNotEmpty ?? false);
 }
 
 // ── Sub-widgets ─────────────────────────────────────────────────────────────
@@ -396,7 +424,13 @@ class _DataRow extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+          Text(
+            label,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 13,
+            ),
+          ),
           Text(
             value,
             style: TextStyle(
@@ -423,8 +457,10 @@ class _PreferenceTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = active ? AppColors.brandPurple : AppColors.textSecondary.withValues(alpha: 0.3);
-    
+    final color = active
+        ? AppColors.brandPurple
+        : AppColors.textSecondary.withValues(alpha: 0.3);
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(

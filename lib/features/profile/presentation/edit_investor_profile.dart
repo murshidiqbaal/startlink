@@ -4,534 +4,177 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:startlink/core/theme/app_theme.dart';
-import 'package:startlink/features/profile/data/models/investor_profile_model.dart';
-import 'package:startlink/features/profile/data/models/profile_model.dart';
-import 'package:startlink/features/profile/domain/entities/investor_profile.dart';
 import 'package:startlink/features/profile/domain/repositories/profile_repository.dart';
-import 'package:startlink/features/profile/presentation/bloc/investor_profile_bloc.dart';
-import 'package:startlink/features/profile/presentation/bloc/profile_bloc.dart';
+import 'package:startlink/features/profile/presentation/bloc/role_profile_event.dart';
+import 'package:startlink/features/profile/presentation/bloc/unified_role_profile_bloc.dart';
+import 'package:startlink/features/profile/presentation/widgets/profile_edit_framework/controllers/investor_edit_controller.dart';
+import 'package:startlink/features/profile/presentation/widgets/profile_edit_framework/profile_edit_screen_template.dart';
+import 'package:startlink/features/profile/presentation/widgets/profile_shared_widgets.dart';
 
 class EditInvestorProfileScreen extends StatelessWidget {
-  /// The profile's profiles.id — required to fetch/save role row
   final String profileId;
   const EditInvestorProfileScreen({super.key, required this.profileId});
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (ctx) =>
-          InvestorProfileBloc(repository: ctx.read<ProfileRepository>())
-            ..add(LoadInvestorProfile(profileId)),
-      child: _EditInvestorBody(profileId: profileId),
+      create: (context) => RoleProfileBloc(
+        repository: context.read<ProfileRepository>(),
+      )..add(LoadRoleProfile(profileId: profileId, role: 'investor')),
+      child: _EditInvestorForm(profileId: profileId),
     );
   }
 }
 
-class _EditInvestorBody extends StatefulWidget {
+class _EditInvestorForm extends StatefulWidget {
   final String profileId;
-  const _EditInvestorBody({required this.profileId});
+  const _EditInvestorForm({required this.profileId});
+
   @override
-  State<_EditInvestorBody> createState() => _EditInvestorBodyState();
+  State<_EditInvestorForm> createState() => _EditInvestorFormState();
 }
 
-class _EditInvestorBodyState extends State<_EditInvestorBody> {
-  final _formKey = GlobalKey<FormState>();
-
-  final _nameCtrl = TextEditingController();
-  final _aboutCtrl = TextEditingController(); // Base profile "about"
-  
-  final _orgCtrl = TextEditingController();
-  final _focusCtrl = TextEditingController();
-  final _minCtrl = TextEditingController();
-  final _maxCtrl = TextEditingController();
-  final _linkedinCtrl = TextEditingController();
-  final _bioCtrl = TextEditingController(); // Investor-specific bio/philosophy
-  String? _stage;
-
-  bool _populated = false;
-  bool _basePopulated = false;
-
-  @override
-  void dispose() {
-    for (final c in [
-      _nameCtrl,
-      _aboutCtrl,
-      _orgCtrl,
-      _focusCtrl,
-      _minCtrl,
-      _maxCtrl,
-      _linkedinCtrl,
-      _bioCtrl,
-    ]) {
-      c.dispose();
-    }
-    super.dispose();
-  }
-
-  void _populate(InvestorProfileModel m) {
-    if (_populated) return;
-    _populated = true;
-    setState(() {
-      _orgCtrl.text = m.organizationName ?? '';
-      _focusCtrl.text = m.investmentFocus ?? '';
-      _minCtrl.text = m.ticketSizeMin?.toStringAsFixed(0) ?? '';
-      _maxCtrl.text = m.ticketSizeMax?.toStringAsFixed(0) ?? '';
-      _linkedinCtrl.text = m.linkedinUrl ?? '';
-      _bioCtrl.text = m.bio ?? '';
-      _stage = m.preferredStage;
-    });
-  }
-
-  void _populateBase(ProfileModel p) {
-    if (_basePopulated) return;
-    _basePopulated = true;
-    setState(() {
-      _nameCtrl.text = p.fullName ?? '';
-      _aboutCtrl.text = p.about ?? '';
-    });
-  }
-
-  int _calcCompletion() {
-    return InvestorProfileModel.calculateCompletion(
-      organizationName: _noe(_orgCtrl.text),
-      investmentFocus: _noe(_focusCtrl.text),
-      preferredStage: _stage,
-      ticketSizeMin: double.tryParse(_minCtrl.text),
-      ticketSizeMax: double.tryParse(_maxCtrl.text),
-      linkedinUrl: _noe(_linkedinCtrl.text),
-      bio: _noe(_bioCtrl.text),
-    );
-  }
-
-  void _save(InvestorProfile existing, ProfileModel? baseProfile) {
-    if (!(_formKey.currentState?.validate() ?? false)) return;
-
-    // 1. Update Base Profile
-    if (baseProfile != null) {
-      final updatedBase = baseProfile.copyWith(
-        fullName: _noe(_nameCtrl.text),
-        about: _noe(_aboutCtrl.text),
-      );
-      if (updatedBase != baseProfile) {
-        context.read<ProfileBloc>().add(UpdateProfile(updatedBase));
-      }
-    }
-
-    // 2. Update Investor Profile
-    final updated = InvestorProfileModel(
-      profileId: existing.profileId,
-      organizationName: _noe(_orgCtrl.text),
-      investmentFocus: _noe(_focusCtrl.text),
-      ticketSizeMin: double.tryParse(_minCtrl.text),
-      ticketSizeMax: double.tryParse(_maxCtrl.text),
-      preferredStage: _stage,
-      linkedinUrl: _noe(_linkedinCtrl.text),
-      bio: _noe(_bioCtrl.text),
-      profileCompletion: _calcCompletion(),
-      isVerified: existing.isVerified,
-    );
-    context.read<InvestorProfileBloc>().add(
-      SaveInvestorProfile(updated as InvestorProfile),
-    );
-  }
-
-  String? _noe(String v) => v.trim().isEmpty ? null : v.trim();
+class _EditInvestorFormState extends State<_EditInvestorForm> {
+  final _controller = InvestorEditController();
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ProfileBloc, ProfileState>(
-      builder: (context, pState) {
-        if (pState is ProfileLoaded && !_basePopulated) {
-          _populateBase(pState.profile);
-        }
-        final baseProfile = pState is ProfileLoaded ? pState.profile : null;
+    return ProfileEditScreenTemplate(
+      title: 'Edit Investor Profile',
+      profileId: widget.profileId,
+      controller: _controller,
+      buildForm: (context, state) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const ProfileSectionHeader('Personal Information'),
+            ProfileTextField(
+              label: 'Full Name *',
+              icon: Icons.person_outline,
+              controller: _controller.nameCtrl,
+              validator: _req,
+            ),
+            const SizedBox(height: 12),
+            ProfileTextField(
+              label: 'Bio / About',
+              icon: Icons.description_outlined,
+              controller: _controller.aboutCtrl,
+              hint: 'A short intro about yourself…',
+              maxLines: 3,
+            ),
 
-        return BlocConsumer<InvestorProfileBloc, InvestorProfileState>(
-          listener: (ctx, state) {
-            if (state is InvestorProfileLoaded && !_populated) {
-              _populate(state.profile! as InvestorProfileModel);
-            }
-            if (state is InvestorProfileSaved) {
-              ScaffoldMessenger.of(ctx).showSnackBar(
-                const SnackBar(
-                  content: Text('Investor profile saved ✓'),
-                  backgroundColor: AppColors.emerald,
-                ),
-              );
-              Navigator.pop(ctx, true);
-            }
-            if (state is InvestorProfileError) {
-              ScaffoldMessenger.of(ctx).showSnackBar(
-                SnackBar(
-                  content: Text(state.message),
-                  backgroundColor: AppColors.rose,
-                ),
-              );
-            }
-          },
-          builder: (ctx, state) {
-            final isLoading = state is InvestorProfileLoading || pState is ProfileLoading;
-            final isSaving = state is InvestorProfileSaving;
-            final existing = state is InvestorProfileLoaded
-                ? state.profile
-                : InvestorProfileModel(profileId: widget.profileId);
+            const ProfileSectionHeader('Organization'),
+            ProfileTextField(
+              label: 'Organization Name *',
+              icon: Icons.business,
+              controller: _controller.orgCtrl,
+              validator: _req,
+            ),
+            const SizedBox(height: 12),
+            ProfileTextField(
+              label: 'LinkedIn URL',
+              icon: Icons.link,
+              controller: _controller.linkedinCtrl,
+              hint: 'https://linkedin.com/in/…',
+              keyboardType: TextInputType.url,
+            ),
 
-            if (isLoading) {
-              return const Scaffold(
-                backgroundColor: AppColors.background,
-                body: Center(
-                  child: CircularProgressIndicator(color: AppColors.brandPurple),
-                ),
-              );
-            }
+            const ProfileSectionHeader('About Organization'),
+            ProfileTextField(
+              label: 'Strategy / Philosophy',
+              icon: Icons.description,
+              controller: _controller.bioCtrl,
+              hint: 'Tell innovators about your strategy…',
+              maxLines: 4,
+            ),
 
-            return Scaffold(
-              backgroundColor: AppColors.background,
-              appBar: AppBar(
-                backgroundColor: AppColors.background,
-                elevation: 0,
-                title: const Text(
-                  'Edit Investor Profile',
-                  style: TextStyle(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.bold,
+            const ProfileSectionHeader('Investment Focus'),
+            ProfileTextField(
+              label: 'Investment Focus *',
+              icon: Icons.track_changes,
+              controller: _controller.focusCtrl,
+              hint: 'SaaS, Fintech, Health',
+              validator: _req,
+            ),
+            const SizedBox(height: 12),
+            _dropdown(
+              'Preferred Stage',
+              Icons.layers,
+              _controller.stage,
+              ['Pre-Seed', 'Seed', 'Series A', 'Series B', 'Growth'],
+              (v) => setState(() => _controller.stage = v),
+            ),
+
+            const ProfileSectionHeader('Ticket Size'),
+            Row(
+              children: [
+                Expanded(
+                  child: ProfileTextField(
+                    label: 'Min (\$)',
+                    icon: Icons.attach_money,
+                    controller: _controller.minTicketCtrl,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   ),
                 ),
-                leading: IconButton(
-                  icon: const Icon(Icons.close, color: AppColors.textSecondary),
-                  onPressed: () => Navigator.pop(ctx),
-                ),
-                actions: [
-                  Padding(
-                    padding: const EdgeInsets.only(right: 12),
-                    child: isSaving
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: AppColors.brandPurple,
-                            ),
-                          )
-                        : TextButton(
-                            onPressed: () => _save(existing, baseProfile),
-                            style: TextButton.styleFrom(
-                              backgroundColor: AppColors.brandPurple,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 18,
-                                vertical: 8,
-                              ),
-                            ),
-                            child: const Text(
-                              'Save',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                          ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: ProfileTextField(
+                    label: 'Max (\$)',
+                    icon: Icons.attach_money,
+                    controller: _controller.maxTicketCtrl,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   ),
-                ],
-              ),
-              body: Form(
-                key: _formKey,
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
-                  children: [
-                    _CompletionBar(pct: _calcCompletion()),
-                    const SizedBox(height: 24),
-                    
-                    _sectionLabel('Personal Information'),
-                    const SizedBox(height: 12),
-                    _tf(
-                      'Full Name *',
-                      Icons.person_outline,
-                      _nameCtrl,
-                      validator: _req,
-                    ),
-                    const SizedBox(height: 12),
-                    _tf(
-                      'Bio / About',
-                      Icons.description_outlined,
-                      _aboutCtrl,
-                      hint: 'A short intro about yourself…',
-                      maxLines: 3,
-                    ),
-
-                    const SizedBox(height: 24),
-                    _sectionLabel('Organization'),
-                    const SizedBox(height: 12),
-                    _tf(
-                      'Organization Name *',
-                      Icons.business,
-                      _orgCtrl,
-                      validator: _req,
-                    ),
-                    const SizedBox(height: 12),
-                    _tf(
-                      'LinkedIn URL',
-                      Icons.link,
-                      _linkedinCtrl,
-                      hint: 'https://linkedin.com/in/…',
-                      keyboardType: TextInputType.url,
-                    ),
-
-                    const SizedBox(height: 24),
-                    _sectionLabel('About Organization'),
-                    const SizedBox(height: 12),
-                    _tf(
-                      'Strategy / Philosophy',
-                      Icons.description,
-                      _bioCtrl,
-                      hint: 'Tell innovators about your strategy…',
-                      maxLines: 4,
-                    ),
-
-                    const SizedBox(height: 24),
-                    _sectionLabel('Investment Focus'),
-                    const SizedBox(height: 12),
-                    _tf(
-                      'Investment Focus *',
-                      Icons.track_changes,
-                      _focusCtrl,
-                      hint: 'SaaS, Fintech, Health',
-                      validator: _req,
-                    ),
-                    const SizedBox(height: 12),
-                    _ddNullable(
-                      'Preferred Stage',
-                      Icons.layers,
-                      _stage,
-                      ['Pre-Seed', 'Seed', 'Series A', 'Series B', 'Growth'],
-                      (v) => setState(() => _stage = v),
-                    ),
-
-                    const SizedBox(height: 24),
-                    _sectionLabel('Ticket Size'),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _tf(
-                            'Min (\$)',
-                            Icons.attach_money,
-                            _minCtrl,
-                            keyboardType: TextInputType.number,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly,
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: _tf(
-                            'Max (\$)',
-                            Icons.attach_money,
-                            _maxCtrl,
-                            keyboardType: TextInputType.number,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly,
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 40),
-                    SizedBox(
-                      height: 54,
-                      child: isSaving
-                          ? const Center(
-                              child: CircularProgressIndicator(
-                                color: AppColors.brandPurple,
-                              ),
-                            )
-                          : _gradientBtn(
-                              'Save Profile',
-                              () => _save(existing, baseProfile),
-                            ),
-                    ),
-                  ],
                 ),
-              ),
-            );
-          },
+              ],
+            ),
+          ],
         );
       },
     );
   }
 
   String? _req(String? v) => v?.trim().isEmpty == true ? 'Required' : null;
-}
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SHARED WIDGETS
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _CompletionBar extends StatelessWidget {
-  final int pct;
-  const _CompletionBar({required this.pct});
-
-  Color get _c {
-    if (pct < 40) return AppColors.rose;
-    if (pct < 70) return AppColors.amber;
-    return AppColors.emerald;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        color: AppColors.surfaceGlass,
-        border: Border.all(color: _c.withValues(alpha: 0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Text(
-                'Profile Strength',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
-              ),
-              const Spacer(),
-              Text(
-                '$pct%',
-                style: TextStyle(
-                  color: _c,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: LinearProgressIndicator(
-              value: pct / 100,
-              minHeight: 6,
-              backgroundColor: Colors.white.withValues(alpha: 0.07),
-              valueColor: AlwaysStoppedAnimation<Color>(_c),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-Widget _sectionLabel(String text) => Text(
-  text.toUpperCase(),
-  style: const TextStyle(
-    color: AppColors.brandPurple,
-    fontSize: 11,
-    fontWeight: FontWeight.bold,
-    letterSpacing: 1.2,
-  ),
-);
-
-InputDecoration _dec2(String label, IconData icon, {String? hint}) =>
-    InputDecoration(
-      labelText: label,
-      hintText: hint,
-      prefixIcon: Icon(icon, size: 18, color: AppColors.textSecondary),
-      labelStyle: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
-      hintStyle: TextStyle(
-        color: AppColors.textSecondary.withValues(alpha: 0.4),
-      ),
-      filled: true,
-      fillColor: Colors.black.withValues(alpha: 0.25),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide.none,
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.07)),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: AppColors.brandPurple, width: 1.5),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: AppColors.rose),
-      ),
-      focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: AppColors.rose, width: 1.5),
-      ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-    );
-
-Widget _tf(
-  String label,
-  IconData icon,
-  TextEditingController ctrl, {
-  String? hint,
-  int maxLines = 1,
-  TextInputType? keyboardType,
-  List<TextInputFormatter>? inputFormatters,
-  String? Function(String?)? validator,
-}) => TextFormField(
-  controller: ctrl,
-  maxLines: maxLines,
-  keyboardType: keyboardType,
-  inputFormatters: inputFormatters,
-  style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
-  decoration: _dec2(label, icon, hint: hint),
-  validator: validator,
-);
-
-Widget _ddNullable(
-  String label,
-  IconData icon,
-  String? value,
-  List<String> items,
-  ValueChanged<String?> onChanged,
-) => DropdownButtonFormField<String>(
-  value: value,
-  dropdownColor: const Color(0xFF1A1A22),
-  style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
-  decoration: _dec2(label, icon),
-  items: [
-    const DropdownMenuItem<String>(
-      value: null,
-      child: Text('Select…', style: TextStyle(color: AppColors.textSecondary)),
-    ),
-    ...items.map((e) => DropdownMenuItem(value: e, child: Text(e))),
-  ],
-  onChanged: onChanged,
-);
-
-Widget _gradientBtn(String label, VoidCallback? onPressed) => Material(
-  color: Colors.transparent,
-  child: Ink(
-    decoration: BoxDecoration(
-      borderRadius: BorderRadius.circular(14),
-      gradient: const LinearGradient(
-        colors: [AppColors.brandPurple, AppColors.brandCyan],
-        begin: Alignment.centerLeft,
-        end: Alignment.centerRight,
-      ),
-    ),
-  child: InkWell(
-    onTap: onPressed,
-    borderRadius: BorderRadius.circular(14),
-    child: Center(
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-          fontSize: 15,
+  Widget _dropdown(
+    String label,
+    IconData icon,
+    String? value,
+    List<String> items,
+    ValueChanged<String?> onChanged,
+  ) {
+    return DropdownButtonFormField<String>(
+      value: value,
+      dropdownColor: const Color(0xFF1A1A22),
+      style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon, size: 18, color: AppColors.textSecondary),
+        labelStyle: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
+        filled: true,
+        fillColor: Colors.black.withValues(alpha: 0.25),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.07)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: AppColors.brandPurple, width: 1.5),
         ),
       ),
-    ),
-  ),
-  ),
-);
+      items: [
+        const DropdownMenuItem<String>(
+          value: null,
+          child: Text('Select…', style: TextStyle(color: AppColors.textSecondary)),
+        ),
+        ...items.map((e) => DropdownMenuItem(value: e, child: Text(e))),
+      ],
+      onChanged: onChanged,
+    );
+  }
+}

@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:startlink/core/presentation/widgets/startlink_button.dart';
+import 'package:startlink/core/services/supabase_client.dart';
 import 'package:startlink/core/theme/app_theme.dart';
+import 'package:startlink/features/chat/domain/repositories/chat_repository.dart';
+import 'package:startlink/features/chat/presentation/screens/chat_screen.dart';
+import 'package:startlink/features/collaboration/presentation/pages/idea_applications_screen.dart';
+import 'package:startlink/features/collaboration/presentation/widgets/apply_collaboration_dialog.dart';
+import 'package:startlink/features/collaboration/presentation/bloc/collaboration_bloc.dart';
 import 'package:startlink/features/idea/domain/entities/idea.dart';
 import 'package:startlink/features/idea/presentation/idea_post_screen.dart';
 import 'package:startlink/features/idea_dna/domain/repositories/idea_dna_repository.dart';
 import 'package:startlink/features/idea_dna/presentation/bloc/idea_dna_bloc.dart';
 import 'package:startlink/features/idea_dna/presentation/widgets/idea_dna_card.dart';
-import 'package:startlink/features/collaboration/presentation/widgets/apply_collaboration_dialog.dart';
-import 'package:startlink/features/collaboration/presentation/pages/idea_applications_screen.dart';
-import 'package:startlink/core/services/supabase_client.dart';
 
 class IdeaDetailScreen extends StatelessWidget {
   final Idea idea;
@@ -47,10 +50,7 @@ class _IdeaDetailView extends StatelessWidget {
             backgroundColor: AppColors.background,
             flexibleSpace: FlexibleSpaceBar(
               background: idea.coverImageUrl != null
-                  ? Image.network(
-                      idea.coverImageUrl!,
-                      fit: BoxFit.cover,
-                    )
+                  ? Image.network(idea.coverImageUrl!, fit: BoxFit.cover)
                   : Container(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
@@ -168,13 +168,15 @@ class _IdeaDetailView extends StatelessWidget {
                     children: [
                       _StatCard(
                         label: 'Funding Needed',
-                        value: '\$${idea.fundingNeeded?.toStringAsFixed(0) ?? "0"}',
+                        value:
+                            '\$${idea.fundingNeeded?.toStringAsFixed(0) ?? "0"}',
                         icon: Icons.attach_money,
                       ),
                       const SizedBox(width: 12),
                       _StatCard(
                         label: 'Equity Offered',
-                        value: '${idea.equityOffered?.toStringAsFixed(1) ?? "0"}%',
+                        value:
+                            '${idea.equityOffered?.toStringAsFixed(1) ?? "0"}%',
                         icon: Icons.pie_chart_outline,
                       ),
                     ],
@@ -247,7 +249,9 @@ class _IdeaDetailView extends StatelessWidget {
                       if (isOwner) const SizedBox(width: 16),
                       Expanded(
                         child: StartLinkButton(
-                          label: isOwner ? 'View Applications' : 'Apply as Collaborator',
+                          label: isOwner
+                              ? 'View Applications'
+                              : 'Apply as Collaborator',
                           onPressed: () {
                             if (isOwner) {
                               Navigator.push(
@@ -262,8 +266,11 @@ class _IdeaDetailView extends StatelessWidget {
                             } else {
                               showDialog(
                                 context: context,
-                                builder: (context) =>
-                                    ApplyCollaborationDialog(idea: idea),
+                                builder: (dialogContext) => BlocProvider.value(
+                                  value: context.read<CollaborationBloc>(),
+                                  child: ApplyCollaborationDialog(
+                                      idea: idea),
+                                ),
                               );
                             }
                           },
@@ -271,6 +278,9 @@ class _IdeaDetailView extends StatelessWidget {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 16),
+                  // Chat Button (Visible to Owner or Accepted Collaborators)
+                  IdeaChatButton(idea: idea),
                   const SizedBox(height: 40),
                 ],
               ),
@@ -303,7 +313,11 @@ class _Header extends StatelessWidget {
 class _InfoRow extends StatelessWidget {
   final String label, value;
   final IconData icon;
-  const _InfoRow({required this.label, required this.value, required this.icon});
+  const _InfoRow({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -315,13 +329,19 @@ class _InfoRow extends StatelessWidget {
           const SizedBox(width: 10),
           Text(
             '$label:',
-            style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 13,
+            ),
           ),
           const SizedBox(width: 6),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 13,
+              ),
             ),
           ),
         ],
@@ -333,7 +353,11 @@ class _InfoRow extends StatelessWidget {
 class _StatCard extends StatelessWidget {
   final String label, value;
   final IconData icon;
-  const _StatCard({required this.label, required this.value, required this.icon});
+  const _StatCard({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -376,6 +400,7 @@ class _StatCard extends StatelessWidget {
     );
   }
 }
+
 class _TaskBadge extends StatelessWidget {
   final String status;
 
@@ -409,6 +434,80 @@ class _TaskBadge extends StatelessWidget {
           fontSize: 12,
           fontWeight: FontWeight.bold,
           letterSpacing: 1,
+        ),
+      ),
+    );
+  }
+}
+
+class IdeaChatButton extends StatelessWidget {
+  final Idea idea;
+
+  const IdeaChatButton({super.key, required this.idea});
+
+  @override
+  Widget build(BuildContext context) {
+    final currentUserId = SupabaseService.client.auth.currentUser?.id;
+    if (currentUserId == null) return const SizedBox.shrink();
+
+    // The owner is always a team member
+    if (currentUserId == idea.ownerId) {
+      return _buildButton(context);
+    }
+
+    return FutureBuilder<bool>(
+      future: context.read<ChatRepository>().isTeamMember(
+        idea.id,
+        currentUserId,
+      ),
+      builder: (context, snapshot) {
+        if (snapshot.hasData && snapshot.data == true) {
+          return _buildButton(context);
+        }
+        return const SizedBox.shrink();
+      },
+    );
+  }
+
+  Widget _buildButton(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: SizedBox(
+        width: double.infinity,
+        child: OutlinedButton.icon(
+          onPressed: () async {
+            final scaffoldMessenger = ScaffoldMessenger.of(context);
+            try {
+              final chatRepo = context.read<ChatRepository>();
+              final roomId = await chatRepo.getOrCreateRoom(idea.id);
+              
+              if (!context.mounted) return;
+              
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ChatScreen(
+                    roomId: roomId,
+                    ideaTitle: idea.title,
+                  ),
+                ),
+              );
+            } catch (e) {
+              scaffoldMessenger.showSnackBar(
+                SnackBar(content: Text('Error opening chat: $e')),
+              );
+            }
+          },
+          icon: const Icon(Icons.chat_bubble_outline, size: 18),
+          label: const Text('Open Team Chat'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppColors.brandCyan,
+            side: const BorderSide(color: AppColors.brandCyan),
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
         ),
       ),
     );

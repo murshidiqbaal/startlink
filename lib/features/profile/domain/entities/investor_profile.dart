@@ -1,7 +1,7 @@
-import 'package:equatable/equatable.dart';
+import 'package:startlink/features/profile/domain/entities/role_profile.dart';
 
-class InvestorProfile extends Equatable {
-  final String profileId;
+/// Domain entity for the `investor_profiles` Supabase table.
+class InvestorProfile extends RoleProfile {
   final String? investmentFocus;
   final double? ticketSizeMin;
   final double? ticketSizeMax;
@@ -9,11 +9,13 @@ class InvestorProfile extends Equatable {
   final String? organizationName;
   final String? linkedinUrl;
   final String? bio;
-  final int profileCompletion;
   final bool isVerified;
 
   const InvestorProfile({
-    required this.profileId,
+    required super.profileId,
+    super.profileCompletion = 0,
+    super.createdAt,
+    super.updatedAt,
     this.investmentFocus,
     this.ticketSizeMin,
     this.ticketSizeMax,
@@ -21,13 +23,12 @@ class InvestorProfile extends Equatable {
     this.organizationName,
     this.linkedinUrl,
     this.bio,
-    this.profileCompletion = 0,
     this.isVerified = false,
-  });
+  }) : super(role: 'investor');
 
   @override
   List<Object?> get props => [
-    profileId,
+    ...super.props,
     investmentFocus,
     ticketSizeMin,
     ticketSizeMax,
@@ -35,7 +36,6 @@ class InvestorProfile extends Equatable {
     organizationName,
     linkedinUrl,
     bio,
-    profileCompletion,
     isVerified,
   ];
 }

@@ -11,6 +11,7 @@ import 'package:startlink/features/profile/domain/entities/collaborator_profile.
 import 'package:startlink/features/profile/domain/entities/innovator_profile.dart';
 import 'package:startlink/features/profile/domain/entities/investor_profile.dart';
 import 'package:startlink/features/profile/domain/entities/mentor_profile.dart';
+import 'package:startlink/features/profile/domain/entities/role_profile.dart';
 import 'package:startlink/features/profile/domain/repositories/profile_repository.dart';
 import 'package:startlink/features/verification/data/models/verification_models.dart';
 import 'package:startlink/features/verification/domain/entities/user_badge.dart';
@@ -48,7 +49,7 @@ class ProfileRepositoryImpl implements ProfileRepository {
         .eq('id', profileId)
         .maybeSingle();
     if (response == null) {
-       throw Exception('Profile not found');
+      throw Exception('Profile not found');
     }
     return ProfileModel.fromJson(response);
   }
@@ -172,9 +173,16 @@ class ProfileRepositoryImpl implements ProfileRepository {
           .select()
           .eq('profile_id', profileId)
           .maybeSingle();
-      if (response == null) return null;
+
+      if (response == null) {
+        // Automatically create a blank row for the collaborator if not found
+        // ON CONFLICT DO NOTHING is implicit in insert if we don't handle catch but let's be explicit
+        await _supabase.from('collaborator_profiles').insert({'profile_id': profileId});
+        return CollaboratorProfileModel(profileId: profileId);
+      }
       return CollaboratorProfileModel.fromJson(response);
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Repo: Error fetching collaborator profile: $e');
       return null;
     }
   }
@@ -250,6 +258,37 @@ class ProfileRepositoryImpl implements ProfileRepository {
     } catch (e) {
       debugPrint('Repo: Error in submitVerificationRequest: $e');
       rethrow;
+    }
+  }
+
+  @override
+  Future<RoleProfile?> fetchRoleProfile(String profileId, String role) async {
+    switch (role.toLowerCase()) {
+      case 'investor':
+        return fetchInvestorProfile(profileId);
+      case 'mentor':
+        return fetchMentorProfile(profileId);
+      case 'collaborator':
+        return fetchCollaboratorProfile(profileId);
+      case 'innovator':
+        return fetchInnovatorProfile(profileId);
+      default:
+        return null;
+    }
+  }
+
+  @override
+  Future<void> saveRoleProfile(RoleProfile profile) async {
+    if (profile is InvestorProfile) {
+      await upsertInvestorProfile(profile);
+    } else if (profile is MentorProfile) {
+      await upsertMentorProfile(profile);
+    } else if (profile is CollaboratorProfile) {
+      await upsertCollaboratorProfile(profile);
+    } else if (profile is InnovatorProfile) {
+      await upsertInnovatorProfile(profile);
+    } else {
+      throw Exception('Unsupported role profile type: ${profile.runtimeType}');
     }
   }
 }

@@ -5,13 +5,14 @@ import 'package:startlink/core/theme/app_theme.dart';
 import 'package:startlink/features/auth/domain/repository/auth_repository.dart';
 import 'package:startlink/features/profile/data/models/profile_model.dart';
 import 'package:startlink/features/profile/domain/entities/investor_profile.dart';
-import 'package:startlink/features/profile/presentation/bloc/investor_profile_bloc.dart';
-import 'package:startlink/features/profile/presentation/bloc/profile_bloc.dart';
+import 'package:startlink/features/profile/presentation/bloc/role_profile_event.dart';
+import 'package:startlink/features/profile/presentation/bloc/role_profile_state.dart';
+import 'package:startlink/features/profile/presentation/bloc/unified_role_profile_bloc.dart';
 import 'package:startlink/features/profile/presentation/edit_investor_profile.dart';
-import 'package:startlink/features/profile/presentation/secure_resume_page.dart';
-import 'package:startlink/features/verification/domain/entities/user_badge.dart';
 import 'package:startlink/features/verification/presentation/bloc/verification_bloc.dart';
-import 'package:startlink/features/verification/presentation/widgets/verification_status_card.dart';
+import 'package:startlink/features/verification/domain/entities/user_badge.dart';
+import 'package:startlink/features/profile/presentation/widgets/verification_status_card.dart';
+import 'package:startlink/features/profile/presentation/secure_resume_page.dart';
 
 class InvestorProfileScreen extends StatefulWidget {
   final String? userId;
@@ -32,7 +33,9 @@ class _InvestorProfileScreenState extends State<InvestorProfileScreen> {
     final userId =
         widget.userId ?? context.read<AuthRepository>().currentUser?.id;
     if (userId != null) {
-      context.read<InvestorProfileBloc>().add(LoadInvestorProfile(userId));
+      context.read<RoleProfileBloc>().add(
+            LoadRoleProfile(profileId: userId, role: 'investor'),
+          );
       context.read<VerificationBloc>().add(FetchVerificationsAndBadges(userId));
     }
   }
@@ -46,80 +49,67 @@ class _InvestorProfileScreenState extends State<InvestorProfileScreen> {
           IconButton(
             icon: const Icon(Icons.edit),
             onPressed: () {
+              final userId = widget.userId ?? context.read<AuthRepository>().currentUser?.id;
+              if (userId == null) return;
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) =>
-                      const EditInvestorProfileScreen(profileId: ''),
+                  builder: (_) => EditInvestorProfileScreen(profileId: userId),
                 ),
               ).then((_) => _loadProfile());
             },
           ),
         ],
       ),
-      body: BlocBuilder<ProfileBloc, ProfileState>(
-        builder: (context, baseState) {
-          return BlocBuilder<VerificationBloc, VerificationState>(
-            builder: (context, vState) {
-              return BlocBuilder<InvestorProfileBloc, InvestorProfileState>(
-                builder: (context, roleState) {
-                  if (roleState is InvestorProfileLoading ||
-                      baseState is ProfileLoading) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
+      body: BlocBuilder<VerificationBloc, VerificationState>(
+        builder: (context, vState) {
+          return BlocBuilder<RoleProfileBloc, RoleProfileState>(
+            builder: (context, state) {
+              final isLoaded = state.baseProfile != null && state.profile is InvestorProfile;
 
-                  if (roleState is InvestorProfileLoaded &&
-                      baseState is ProfileLoaded) {
-                    if (roleState.profile.profileCompletion == 0) {
-                      return _buildEmptyProfileView(context, roleState.profile.profileId);
-                    }
-                    return _buildBody(
-                      context,
-                      baseState.profile,
-                      roleState.profile,
-                      vState,
-                    );
-                  }
+              if (state.isLoading && !isLoaded) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-                  if (roleState is InvestorProfileError) {
-                    return Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24.0),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.error_outline, size: 48, color: AppColors.rose),
-                            const SizedBox(height: 16),
-                            Text(
-                              roleState.message,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(color: AppColors.textSecondary),
-                            ),
-                            const SizedBox(height: 24),
-                            ElevatedButton(
-                              onPressed: _loadProfile,
-                              child: const Text('Retry'),
-                            ),
-                          ],
+              if (isLoaded) {
+                if (state.completionScore == 0) {
+                  return _buildEmptyProfileView(context, widget.userId ?? '');
+                }
+                return _buildBody(
+                  context,
+                  state.baseProfile!,
+                  state.profile as InvestorProfile,
+                  state.verificationStatus,
+                  vState,
+                );
+              }
+
+              if (state.error != null) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error_outline, size: 48, color: AppColors.rose),
+                        const SizedBox(height: 16),
+                        Text(
+                          state.error!,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: AppColors.textSecondary),
                         ),
-                      ),
-                    );
-                  }
+                        const SizedBox(height: 24),
+                        ElevatedButton(
+                          onPressed: _loadProfile,
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
 
-                  if (roleState is InvestorProfileInitial ||
-                      roleState is InvestorProfileSaving) {
-                    if (roleState is InvestorProfileInitial) _loadProfile();
-                    return const Center(child: CircularProgressIndicator());
-                  }
-
-                  if (roleState is InvestorProfileSaved) {
-                     _loadProfile();
-                     return const Center(child: CircularProgressIndicator());
-                  }
-
-                  return const Center(child: CircularProgressIndicator());
-                },
-              );
+              return const Center(child: CircularProgressIndicator());
             },
           );
         },
@@ -143,11 +133,11 @@ class _InvestorProfileScreenState extends State<InvestorProfileScreen> {
     BuildContext context,
     ProfileModel baseProfile,
     InvestorProfile roleProfile,
+    VerificationStatus verificationStatus,
     VerificationState vState,
   ) {
     final tickets = NumberFormat.compactCurrency(symbol: '\$');
     final badges = vState is VerificationLoaded ? vState.badges : <UserBadge>[];
-    final verification = vState is VerificationLoaded ? vState.getRequestForRole('investor') : null;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
@@ -211,13 +201,10 @@ class _InvestorProfileScreenState extends State<InvestorProfileScreen> {
                     ],
                     const SizedBox(height: 12),
                     VerificationStatusCard(
-                      status: badges.any((b) => b.badgeKey == 'verified_investor')
-                          ? 'Approved'
-                          : (verification?.status ?? 'Not Verified'),
+                      status: verificationStatus,
                       role: 'investor',
-                      onActionPressed: (badges.any((b) => b.badgeKey == 'verified_investor') || verification?.status == 'Pending')
-                          ? null
-                          : () {
+                      onActionPressed: verificationStatus == VerificationStatus.notVerified
+                          ? () {
                               if (roleProfile.profileCompletion < 80) {
                                 Navigator.push(
                                   context,
@@ -236,7 +223,8 @@ class _InvestorProfileScreenState extends State<InvestorProfileScreen> {
                                       ),
                                     );
                               }
-                            },
+                            }
+                          : null,
                     ),
                   ],
                 ),

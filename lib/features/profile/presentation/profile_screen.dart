@@ -3,8 +3,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:startlink/core/theme/app_theme.dart';
-import 'package:startlink/features/profile/domain/repositories/profile_repository.dart';
 import 'package:startlink/features/profile/presentation/bloc/profile_bloc.dart';
+import 'package:startlink/features/profile/presentation/bloc/profile_state.dart';
 import 'package:startlink/features/profile/presentation/collaborator_profile_screen.dart';
 import 'package:startlink/features/profile/presentation/innovator_profile_screen.dart';
 import 'package:startlink/features/profile/presentation/investor_profile_screen.dart';
@@ -16,16 +16,11 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (userId != null) {
-      return BlocProvider(
-        create: (ctx) =>
-            ProfileBloc(profileRepository: ctx.read<ProfileRepository>())
-              ..add(FetchProfileById(userId!)),
-        child: _ProfileDispatcher(userId: userId, isCurrentUser: false),
-      );
-    }
-    // Current user's profile
-    return _ProfileDispatcher(userId: null, isCurrentUser: true);
+    // Shared ProfileBloc is provided by AppShell
+    return _ProfileDispatcher(
+      userId: userId,
+      isCurrentUser: userId == null,
+    );
   }
 }
 

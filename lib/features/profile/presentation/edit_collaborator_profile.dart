@@ -1,352 +1,205 @@
+// lib/features/profile/presentation/edit_collaborator_profile.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:startlink/core/theme/app_theme.dart';
-import 'package:startlink/features/profile/data/models/collaborator_profile_model.dart';
-import 'package:startlink/features/profile/domain/entities/collaborator_profile.dart';
-import 'package:startlink/features/profile/presentation/bloc/collaborator_profile_bloc.dart';
+import 'package:startlink/features/profile/domain/repositories/profile_repository.dart';
+import 'package:startlink/features/profile/presentation/bloc/role_profile_event.dart';
+import 'package:startlink/features/profile/presentation/bloc/unified_role_profile_bloc.dart';
+import 'package:startlink/features/profile/presentation/widgets/profile_edit_framework/controllers/collaborator_edit_controller.dart';
+import 'package:startlink/features/profile/presentation/widgets/profile_edit_framework/profile_edit_screen_template.dart';
+import 'package:startlink/features/profile/presentation/widgets/profile_shared_widgets.dart';
 
-class EditCollaboratorProfileScreen extends StatefulWidget {
-  final CollaboratorProfile profile;
-
-  const EditCollaboratorProfileScreen({super.key, required this.profile});
+class EditCollaboratorProfileScreen extends StatelessWidget {
+  final String profileId;
+  const EditCollaboratorProfileScreen({super.key, required this.profileId});
 
   @override
-  State<EditCollaboratorProfileScreen> createState() =>
-      _EditCollaboratorProfileScreenState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => RoleProfileBloc(
+        repository: context.read<ProfileRepository>(),
+      )..add(LoadRoleProfile(profileId: profileId, role: 'collaborator')),
+      child: _EditCollaboratorForm(profileId: profileId),
+    );
+  }
 }
 
-class _EditCollaboratorProfileScreenState
-    extends State<EditCollaboratorProfileScreen> {
-  late TextEditingController _bioController;
-  late TextEditingController _hourlyRateController;
-  late TextEditingController _experienceController;
-  late TextEditingController _portfolioController;
-  late TextEditingController _githubController;
-  late TextEditingController _linkedinController;
-  late TextEditingController _resumeController;
-  late List<String> _specialties;
-  late List<String> _preferredProjects;
-  String? _availability;
-
-  final List<String> _availabilityOptions = [
-    'Full-time',
-    'Part-time',
-    'Freelance',
-    'Weekends only',
-  ];
+class _EditCollaboratorForm extends StatefulWidget {
+  final String profileId;
+  const _EditCollaboratorForm({required this.profileId});
 
   @override
-  void initState() {
-    super.initState();
-    _bioController = TextEditingController(text: widget.profile.bio);
-    _hourlyRateController = TextEditingController(
-      text: widget.profile.hourlyRate?.toString() ?? '',
-    );
-    _experienceController = TextEditingController(
-      text: widget.profile.experienceYears?.toString() ?? '',
-    );
-    _portfolioController = TextEditingController(text: widget.profile.portfolioUrl);
-    _githubController = TextEditingController(text: widget.profile.githubUrl);
-    _linkedinController = TextEditingController(text: widget.profile.linkedinUrl);
-    _resumeController = TextEditingController(text: widget.profile.resumeUrl);
-    _specialties = List.from(widget.profile.specialties);
-    _preferredProjects = List.from(widget.profile.preferredProjectTypes);
-    _availability = widget.profile.availability;
-  }
+  State<_EditCollaboratorForm> createState() => _EditCollaboratorFormState();
+}
 
-  @override
-  void dispose() {
-    _bioController.dispose();
-    _hourlyRateController.dispose();
-    _experienceController.dispose();
-    _portfolioController.dispose();
-    _githubController.dispose();
-    _linkedinController.dispose();
-    _resumeController.dispose();
-    super.dispose();
-  }
+class _EditCollaboratorFormState extends State<_EditCollaboratorForm> {
+  final _controller = CollaboratorEditController();
 
-  int _calcCompletion() {
-    int score = 0;
-    if (_bioController.text.trim().isNotEmpty) score += 20;
-    if (_specialties.isNotEmpty) score += 20;
-    if (_availability != null) score += 10;
-    if (_experienceController.text.trim().isNotEmpty) score += 10;
-    if (_hourlyRateController.text.trim().isNotEmpty) score += 10;
-    if (_portfolioController.text.trim().isNotEmpty) score += 10;
-    if (_githubController.text.trim().isNotEmpty) score += 10;
-    if (_linkedinController.text.trim().isNotEmpty) score += 10;
-    return score.clamp(0, 100);
-  }
-
-  void _save() {
-    final updatedProfile = CollaboratorProfileModel(
-      profileId: widget.profile.profileId,
-      bio: _bioController.text.trim(),
-      hourlyRate: double.tryParse(_hourlyRateController.text),
-      experienceYears: int.tryParse(_experienceController.text),
-      portfolioUrl: _portfolioController.text.trim(),
-      githubUrl: _githubController.text.trim(),
-      linkedinUrl: _linkedinController.text.trim(),
-      resumeUrl: _resumeController.text.trim(),
-      specialties: List.from(_specialties),
-      preferredProjectTypes: List.from(_preferredProjects),
-      availability: _availability,
-      profileCompletion: _calcCompletion(),
-    );
-
-    context.read<CollaboratorProfileBloc>().add(
-      UpdateCollaboratorProfile(updatedProfile),
-    );
+  void _addTag(TextEditingController ctrl, List<String> list) {
+    final s = ctrl.text.trim();
+    if (s.isNotEmpty && !list.contains(s)) {
+      setState(() {
+        list.add(s);
+        ctrl.clear();
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<CollaboratorProfileBloc, CollaboratorProfileState>(
-      listener: (context, state) {
-        if (state is CollaboratorProfileUpdated) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Profile updated successfully')),
-          );
-          Navigator.pop(context);
-        }
-        if (state is CollaboratorProfileError) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Error: ${state.message}')));
-        }
-      },
-      child: Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          backgroundColor: AppColors.background,
-          title: const Text('Edit Collaborator Profile'),
-          actions: [
-            TextButton(
-              onPressed: _save,
-              child: const Text(
-                'SAVE',
-                style: TextStyle(
-                  color: AppColors.brandCyan,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+    return ProfileEditScreenTemplate(
+      title: 'Edit Collaborator Profile',
+      profileId: widget.profileId,
+      controller: _controller,
+      buildForm: (context, state) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const ProfileSectionHeader('Personal Information'),
+            ProfileTextField(
+              label: 'Full Name *',
+              icon: Icons.person_outline,
+              controller: _controller.nameCtrl,
+              validator: _req,
+            ),
+            const SizedBox(height: 12),
+            ProfileTextField(
+              label: 'Bio / About',
+              icon: Icons.description_outlined,
+              controller: _controller.aboutCtrl,
+              hint: 'A short intro about yourself…',
+              maxLines: 3,
+            ),
+
+            const ProfileSectionHeader('Expertise'),
+            ProfileTagInput(
+              label: 'Specialties',
+              icon: Icons.star_outline,
+              controller: _controller.specInputCtrl,
+              tags: _controller.specialties,
+              onAdd: () => _addTag(_controller.specInputCtrl, _controller.specialties),
+              onRemove: (s) => setState(() => _controller.specialties.remove(s)),
+            ),
+            const SizedBox(height: 12),
+            ProfileTagInput(
+              label: 'Preferred Project Types',
+              icon: Icons.folder_open,
+              controller: _controller.projTypeInputCtrl,
+              tags: _controller.preferredProjectTypes,
+              onAdd: () =>
+                  _addTag(_controller.projTypeInputCtrl, _controller.preferredProjectTypes),
+              onRemove: (s) =>
+                  setState(() => _controller.preferredProjectTypes.remove(s)),
+            ),
+
+            const ProfileSectionHeader('Experience & Rate'),
+            ProfileTextField(
+              label: 'Years of Experience *',
+              icon: Icons.work_outline,
+              controller: _controller.yoeCtrl,
+              keyboardType: TextInputType.number,
+              validator: _req,
+            ),
+            const SizedBox(height: 12),
+            ProfileTextField(
+              label: 'Hourly Rate (\$)',
+              icon: Icons.monetization_on_outlined,
+              controller: _controller.hourlyRateCtrl,
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 12),
+            _dropdown(
+              'Availability',
+              Icons.event_available,
+              _controller.availability,
+              ['Full-time', 'Part-time', 'Freelance', 'Contract'],
+              (v) => setState(() => _controller.availability = v),
+            ),
+
+            const ProfileSectionHeader('Professional Links'),
+            ProfileTextField(
+              label: 'LinkedIn URL',
+              icon: Icons.link,
+              controller: _controller.linkedinUrlCtrl,
+              hint: 'https://linkedin.com/in/…',
+            ),
+            const SizedBox(height: 12),
+            ProfileTextField(
+              label: 'GitHub URL',
+              icon: Icons.code,
+              controller: _controller.githubUrlCtrl,
+              hint: 'https://github.com/…',
+            ),
+            const SizedBox(height: 12),
+            ProfileTextField(
+              label: 'Portfolio URL',
+              icon: Icons.language,
+              controller: _controller.portfolioUrlCtrl,
+              hint: 'https://…',
+            ),
+            const SizedBox(height: 12),
+            ProfileTextField(
+              label: 'Resume URL',
+              icon: Icons.article_outlined,
+              controller: _controller.resumeUrlCtrl,
+              hint: 'Drive/Dropbox link…',
+            ),
+
+            const ProfileSectionHeader('Collaborator Bio'),
+            ProfileTextField(
+              label: 'Detailed Bio',
+              icon: Icons.notes,
+              controller: _controller.bioCtrl,
+              hint: 'Tell us more about your background…',
+              maxLines: 4,
             ),
           ],
-        ),
-        body: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildSectionHeader('Professional Identity'),
-              _buildTextField('Bio', _bioController, maxLines: 4),
-              const SizedBox(height: 20),
-              _buildDropdown(
-                'Availability',
-                _availability,
-                _availabilityOptions,
-                (val) => setState(() => _availability = val),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildTextField(
-                      'Years of Experience',
-                      _experienceController,
-                      keyboardType: TextInputType.number,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildTextField(
-                      'Hourly Rate (\$)',
-                      _hourlyRateController,
-                      keyboardType: TextInputType.number,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 28),
-              _buildSectionHeader('Specialization'),
-              _buildMultiSelect('Specialties', _specialties, [
-                'UI/UX',
-                'Frontend',
-                'Backend',
-                'Mobile',
-                'AI/ML',
-                'Marketing',
-                'Sales',
-                'Quality Assurance',
-                'DevOps',
-                'Cybersecurity',
-              ]),
-              const SizedBox(height: 20),
-              _buildMultiSelect('Project Types', _preferredProjects, [
-                'Web Apps',
-                'Mobile Apps',
-                'SaaS',
-                'Fintech',
-                'EdTech',
-                'Open Source',
-                'E-commerce',
-                'Blockchain',
-              ]),
-              const SizedBox(height: 28),
-              _buildSectionHeader('Online Presence'),
-              _buildTextField('Portfolio URL', _portfolioController,
-                  keyboardType: TextInputType.url),
-              const SizedBox(height: 16),
-              _buildTextField('GitHub URL', _githubController,
-                  keyboardType: TextInputType.url),
-              const SizedBox(height: 16),
-              _buildTextField('LinkedIn URL', _linkedinController,
-                  keyboardType: TextInputType.url),
-              const SizedBox(height: 16),
-              _buildTextField('Resume Link', _resumeController,
-                  keyboardType: TextInputType.url),
-              const SizedBox(height: 40),
-            ],
-          ),
-        ),
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildTextField(
-    String label,
-    TextEditingController controller, {
-    int maxLines = 1,
-    TextInputType? keyboardType,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: controller,
-          maxLines: maxLines,
-          keyboardType: keyboardType,
-          style: const TextStyle(color: Colors.white),
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: AppColors.surfaceGlass,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 12,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+  String? _req(String? v) => v?.trim().isEmpty == true ? 'Required' : null;
 
-  Widget _buildDropdown(
+  Widget _dropdown(
     String label,
+    IconData icon,
     String? value,
-    List<String> options,
-    Function(String?) onChanged,
+    List<String> items,
+    ValueChanged<String?> onChanged,
   ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+    return DropdownButtonFormField<String>(
+      value: value,
+      dropdownColor: const Color(0xFF1A1A22),
+      style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon, size: 18, color: AppColors.textSecondary),
+        labelStyle: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
+        filled: true,
+        fillColor: Colors.black.withValues(alpha: 0.25),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide.none,
         ),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: BoxDecoration(
-            color: AppColors.surfaceGlass,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: value,
-              isExpanded: true,
-              dropdownColor: AppColors.background,
-              items: options
-                  .map(
-                    (o) => DropdownMenuItem(
-                      value: o,
-                      child: Text(
-                        o,
-                        style: const TextStyle(color: Colors.white),
-                      ),
-                    ),
-                  )
-                  .toList(),
-              onChanged: onChanged,
-            ),
-          ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.07)),
         ),
-      ],
-    );
-  }
-
-  Widget _buildMultiSelect(
-    String label,
-    List<String> selected,
-    List<String> options,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: options.map((option) {
-            final isSelected = selected.contains(option);
-            return ChoiceChip(
-              label: Text(option),
-              selected: isSelected,
-              onSelected: (val) {
-                setState(() {
-                  if (val)
-                    selected.add(option);
-                  else
-                    selected.remove(option);
-                });
-              },
-              backgroundColor: AppColors.surfaceGlass,
-              selectedColor: AppColors.brandPurple.withValues(alpha: 0.5),
-              labelStyle: TextStyle(
-                color: isSelected ? Colors.white : AppColors.textSecondary,
-              ),
-            );
-          }).toList(),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16, top: 8),
-      child: Text(
-        title.toUpperCase(),
-        style: const TextStyle(
-          color: AppColors.brandCyan,
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 1.2,
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: AppColors.brandPurple, width: 1.5),
         ),
       ),
+      items: [
+        const DropdownMenuItem<String>(
+          value: null,
+          child: Text('Select…', style: TextStyle(color: AppColors.textSecondary)),
+        ),
+        ...items.map((e) => DropdownMenuItem(value: e, child: Text(e))),
+      ],
+      onChanged: onChanged,
     );
   }
 }

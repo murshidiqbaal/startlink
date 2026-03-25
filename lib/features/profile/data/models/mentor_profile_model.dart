@@ -65,6 +65,20 @@ class MentorProfileModel extends MentorProfile {
     isVerified: isVerified,
   );
 
+  static int calculateCompletion({
+    String? mentorshipFocus,
+    int? yearsOfExperience,
+    String? linkedinUrl,
+    List<String> expertiseDomains = const [],
+  }) {
+    int score = 0;
+    if (mentorshipFocus != null && mentorshipFocus.isNotEmpty) score += 30;
+    if (yearsOfExperience != null && yearsOfExperience > 0) score += 20;
+    if (linkedinUrl != null && linkedinUrl.isNotEmpty) score += 20;
+    if (expertiseDomains.isNotEmpty) score += 30;
+    return score;
+  }
+
   static List<String> _toStrList(dynamic v) =>
       (v as List?)?.map((e) => e.toString()).toList() ?? [];
 }

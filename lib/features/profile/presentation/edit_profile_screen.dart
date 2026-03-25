@@ -5,6 +5,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:startlink/features/profile/data/models/profile_model.dart';
 import 'package:startlink/features/profile/presentation/bloc/profile_bloc.dart';
+import 'package:startlink/features/profile/presentation/bloc/profile_state.dart';
+import 'package:startlink/features/profile/presentation/bloc/profile_event.dart';
 
 class EditProfileScreen extends StatefulWidget {
   final ProfileModel profile;

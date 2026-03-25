@@ -1,9 +1,8 @@
-// lib/features/profile/presentation/widgets/profile_edit_framework/profile_edit_controller.dart
-
 import 'package:flutter/material.dart';
 import 'package:startlink/features/profile/data/models/profile_model.dart';
+import 'package:startlink/features/profile/domain/entities/role_profile.dart';
 
-abstract class ProfileEditController<T> {
+abstract class ProfileEditController<T extends RoleProfile> {
   // Base profile fields (profiles table)
   final nameCtrl = TextEditingController();
   final aboutCtrl = TextEditingController();
@@ -32,5 +31,4 @@ abstract class ProfileEditController<T> {
   }
 
   String? _noe(String v) => v.trim().isEmpty ? null : v.trim();
-  String _eon(String? v) => v ?? '';
 }

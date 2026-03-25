@@ -6,6 +6,8 @@ import 'package:startlink/features/profile/domain/entities/mentor_profile.dart';
 import 'package:startlink/features/profile/domain/repositories/profile_repository.dart';
 import 'package:startlink/features/profile/presentation/bloc/mentor_profile_bloc.dart';
 import 'package:startlink/features/profile/presentation/bloc/profile_bloc.dart';
+import 'package:startlink/features/profile/presentation/bloc/profile_state.dart';
+import 'package:startlink/features/profile/presentation/bloc/profile_event.dart';
 import 'package:startlink/features/verification/presentation/bloc/verification_bloc.dart';
 
 class MentorSetupScreen extends StatelessWidget {

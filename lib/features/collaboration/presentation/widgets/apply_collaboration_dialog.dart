@@ -54,6 +54,7 @@ class _ApplyCollaborationDialogState extends State<ApplyCollaborationDialog> {
         message: _messageController.text.trim(),
       ),
     );
+    Navigator.pop(context);
   }
 
   @override
@@ -96,7 +97,10 @@ class _ApplyCollaborationDialogState extends State<ApplyCollaborationDialog> {
               children: [
                 const Text(
                   'Select your role:',
-                  style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Wrap(
@@ -170,7 +174,7 @@ class _ApplyCollaborationDialogState extends State<ApplyCollaborationDialog> {
             ),
             SizedBox(
               width: 100,
-              height: 44,
+              height: 50,
               child: ElevatedButton(
                 onPressed: isLoading ? null : _submit,
                 style: ElevatedButton.styleFrom(

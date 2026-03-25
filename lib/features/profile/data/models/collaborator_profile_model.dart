@@ -33,21 +33,23 @@ class CollaboratorProfileModel extends CollaboratorProfile {
     );
   }
 
-  factory CollaboratorProfileModel.fromJson(Map<String, dynamic> json) =>
-      CollaboratorProfileModel(
-        profileId: json['profile_id'] as String,
-        specialties: _toStrList(json['specialties']),
-        availability: json['availability'] as String?,
-        experienceYears: (json['experience_years'] as num?)?.toInt(),
-        preferredProjectTypes: _toStrList(json['preferred_project_types']),
-        bio: json['bio'] as String?,
-        portfolioUrl: json['portfolio_url'] as String?,
-        githubUrl: json['github_url'] as String?,
-        linkedinUrl: json['linkedin_url'] as String?,
-        resumeUrl: json['resume_url'] as String?,
-        hourlyRate: (json['hourly_rate'] as num?)?.toDouble(),
-        profileCompletion: (json['profile_completion'] as num?)?.toInt() ?? 0,
-      );
+  factory CollaboratorProfileModel.fromJson(Map<String, dynamic> json) {
+    return CollaboratorProfileModel(
+      profileId: json['profile_id'] as String,
+      specialties: List<String>.from(json['specialties'] ?? []),
+      availability: json['availability'] as String?,
+      experienceYears: (json['experience_years'] as num?)?.toInt(),
+      preferredProjectTypes:
+          List<String>.from(json['preferred_project_types'] ?? []),
+      bio: json['bio'] as String?,
+      portfolioUrl: json['portfolio_url'] as String?,
+      githubUrl: json['github_url'] as String?,
+      linkedinUrl: json['linkedin_url'] as String?,
+      resumeUrl: json['resume_url'] as String?,
+      hourlyRate: (json['hourly_rate'] as num?)?.toDouble(),
+      profileCompletion: (json['profile_completion'] as num?)?.toInt() ?? 0,
+    );
+  }
 
   Map<String, dynamic> toUpsertJson() => {
     'profile_id': profileId,
@@ -91,6 +93,4 @@ class CollaboratorProfileModel extends CollaboratorProfile {
     profileCompletion: profileCompletion ?? this.profileCompletion,
   );
 
-  static List<String> _toStrList(dynamic v) =>
-      (v as List?)?.map((e) => e.toString()).toList() ?? [];
 }
