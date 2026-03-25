@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:startlink/core/services/supabase_client.dart';
 import 'package:startlink/features/idea/data/models/idea_model.dart';
@@ -107,7 +108,8 @@ class IdeaRepositoryImpl implements IdeaRepository {
           .from('ideas')
           .insert(json)
           .select()
-          .single();
+          .maybeSingle();
+      if (response == null) throw Exception('Failed to retrieve created idea ID');
       return response['id'] as String;
     } catch (e) {
       throw Exception('Failed to create idea: $e');
@@ -204,11 +206,17 @@ class IdeaRepositoryImpl implements IdeaRepository {
 
       final response = await _supabase.storage
           .from('idea-assets') // Changed from 'idea-covers'
-          .uploadBinary(fileName, bytes, fileOptions: const FileOptions(upsert: true));
+          .uploadBinary(
+            fileName,
+            bytes,
+            fileOptions: const FileOptions(upsert: true),
+          );
 
       if (response.isEmpty) return null;
 
-      final url = _supabase.storage.from('idea-assets').getPublicUrl(fileName); // Changed from 'idea-covers'
+      final url = _supabase.storage
+          .from('idea-assets')
+          .getPublicUrl(fileName); // Changed from 'idea-covers'
       return url;
     } catch (e) {
       debugPrint('[IdeaRepositoryImpl] uploadCoverImage error: $e');

@@ -8,13 +8,16 @@ import 'package:startlink/features/aura/presentation/bloc/aura_bloc.dart';
 import 'package:startlink/features/aura/presentation/widgets/aura_badge.dart';
 import 'package:startlink/features/auth/bloc/auth_bloc.dart';
 import 'package:startlink/features/profile/data/models/profile_model.dart';
+import 'package:startlink/features/profile/domain/entities/innovator_profile.dart';
+import 'package:startlink/features/profile/domain/repositories/profile_repository.dart';
+import 'package:startlink/features/profile/presentation/bloc/innovator_profile_bloc.dart';
 import 'package:startlink/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:startlink/features/profile/presentation/edit_innovator_profile.dart';
 import 'package:startlink/features/trust/presentation/bloc/trust_score_bloc.dart';
 import 'package:startlink/features/verification/presentation/bloc/verification_bloc.dart';
 import 'package:startlink/features/verification/presentation/widgets/verification_badge_row.dart';
 
-class InnovatorProfileScreen extends StatefulWidget {
+class InnovatorProfileScreen extends StatelessWidget {
   final ProfileModel profile;
   final bool isCurrentUser;
 
@@ -25,10 +28,33 @@ class InnovatorProfileScreen extends StatefulWidget {
   });
 
   @override
-  State<InnovatorProfileScreen> createState() => _InnovatorProfileScreenState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (ctx) =>
+          InnovatorProfileBloc(repository: ctx.read<ProfileRepository>())
+            ..add(LoadInnovatorProfile(profile.id)),
+      child: _InnovatorProfileBody(
+        profile: profile,
+        isCurrentUser: isCurrentUser,
+      ),
+    );
+  }
 }
 
-class _InnovatorProfileScreenState extends State<InnovatorProfileScreen> {
+class _InnovatorProfileBody extends StatefulWidget {
+  final ProfileModel profile;
+  final bool isCurrentUser;
+
+  const _InnovatorProfileBody({
+    required this.profile,
+    required this.isCurrentUser,
+  });
+
+  @override
+  State<_InnovatorProfileBody> createState() => _InnovatorProfileBodyState();
+}
+
+class _InnovatorProfileBodyState extends State<_InnovatorProfileBody> {
   @override
   void initState() {
     super.initState();
@@ -44,6 +70,9 @@ class _InnovatorProfileScreenState extends State<InnovatorProfileScreen> {
 
   Future<void> _refresh() async {
     context.read<ProfileBloc>().add(FetchProfile());
+    context.read<InnovatorProfileBloc>().add(
+      LoadInnovatorProfile(widget.profile.id),
+    );
     context.read<VerificationBloc>().add(
       FetchVerificationsAndBadges(widget.profile.id),
     );
@@ -62,7 +91,7 @@ class _InnovatorProfileScreenState extends State<InnovatorProfileScreen> {
       ),
     ).then((updated) {
       if (updated == true && mounted) {
-        context.read<ProfileBloc>().add(FetchProfile());
+        _refresh();
       }
     });
   }
@@ -70,185 +99,361 @@ class _InnovatorProfileScreenState extends State<InnovatorProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final p = widget.profile;
-    return RefreshIndicator(
-      onRefresh: _refresh,
-      color: AppColors.brandPurple,
-      backgroundColor: AppColors.surfaceGlass,
-      child: CustomScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        slivers: [
-          SliverAppBar(
-            backgroundColor: AppColors.background,
-            pinned: true,
-            expandedHeight: 0,
-            title: Text(
-              widget.isCurrentUser ? 'My Innovator Profile' : 'Innovator Profile',
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            actions: widget.isCurrentUser
-                ? [
-                    IconButton(
-                      icon: const Icon(
-                        Icons.manage_accounts_outlined,
-                        color: AppColors.brandCyan,
-                      ),
-                      tooltip: 'Edit Profile',
-                      onPressed: _goEdit,
-                    ),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.logout,
-                        color: AppColors.textSecondary,
-                        size: 20,
-                      ),
-                      onPressed: () =>
-                          context.read<AuthBloc>().add(AuthLogoutRequested()),
-                    ),
-                  ]
-                : null,
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                   _HeroCard(
-                    profile: p,
-                    isCurrentUser: widget.isCurrentUser,
-                    onEditTap: _goEdit,
+    return BlocBuilder<InnovatorProfileBloc, InnovatorProfileState>(
+      builder: (ctx, state) {
+        final innov = state.profile;
+
+        return RefreshIndicator(
+          onRefresh: _refresh,
+          color: AppColors.brandPurple,
+          backgroundColor: AppColors.surfaceGlass,
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              SliverAppBar(
+                backgroundColor: AppColors.background,
+                pinned: true,
+                expandedHeight: 0,
+                title: Text(
+                  widget.isCurrentUser
+                      ? 'My Innovator Profile'
+                      : 'Innovator Profile',
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.bold,
                   ),
-                  const SizedBox(height: 16),
-
-                  _TrustAuraRow(profileId: p.id),
-                  const SizedBox(height: 16),
-
-                  // Verification badges
-                  BlocBuilder<VerificationBloc, VerificationState>(
-                    builder: (_, vs) {
-                      if (vs is VerificationLoaded && vs.badges.isNotEmpty) {
-                        return _SectionCard(
-                          title: 'Verification',
-                          icon: Icons.verified_outlined,
-                          child: VerificationBadgeRow(badges: vs.badges),
-                        );
-                      }
-                      return const SizedBox.shrink();
-                    },
-                  ),
-
-                  if (p.about?.isNotEmpty == true) ...[
-                    const SizedBox(height: 16),
-                    _SectionCard(
-                      title: 'About',
-                      icon: Icons.person_outline,
-                      child: Text(
-                        p.about!,
-                        style: const TextStyle(
-                          color: AppColors.textSecondary,
-                          height: 1.55,
-                          fontSize: 14,
+                ),
+                actions: widget.isCurrentUser
+                    ? [
+                        IconButton(
+                          icon: const Icon(
+                            Icons.manage_accounts_outlined,
+                            color: AppColors.brandCyan,
+                          ),
+                          tooltip: 'Edit Profile',
+                          onPressed: _goEdit,
                         ),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.logout,
+                            color: AppColors.textSecondary,
+                            size: 20,
+                          ),
+                          onPressed: () => context
+                              .read<AuthBloc>()
+                              .add(AuthLogoutRequested()),
+                        ),
+                      ]
+                    : null,
+              ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _HeroCard(
+                        profile: p,
+                        isCurrentUser: widget.isCurrentUser,
+                        onEditTap: _goEdit,
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 16),
 
-                  if (p.skills.isNotEmpty) ...[
-                    const SizedBox(height: 16),
-                    _SectionCard(
-                      title: 'Skills',
-                      icon: Icons.bolt_outlined,
-                      child: Wrap(
-                        spacing: 8,
-                        runSpacing: 6,
-                        children: p.skills
-                            .map((s) => _SkillChip(label: s))
-                            .toList(),
+                      _TrustAuraRow(profileId: p.id),
+                      const SizedBox(height: 16),
+
+                      // Verification badges
+                      BlocBuilder<VerificationBloc, VerificationState>(
+                        builder: (_, vs) {
+                          if (vs is VerificationLoaded && vs.badges.isNotEmpty) {
+                            return _SectionCard(
+                              title: 'Verification',
+                              icon: Icons.verified_outlined,
+                              child: VerificationBadgeRow(badges: vs.badges),
+                            );
+                          }
+                          return const SizedBox.shrink();
+                        },
                       ),
-                    ),
-                  ],
 
-                  if (_hasLinks(p)) ...[
-                    const SizedBox(height: 16),
-                    _SectionCard(
-                      title: 'Links',
-                      icon: Icons.link,
-                      child: Column(
-                        children: [
-                          if (p.linkedinUrl?.isNotEmpty == true)
-                            _LinkRow(
-                              icon: Icons.link,
-                              label: 'LinkedIn',
-                              url: p.linkedinUrl!,
-                            ),
-                          if (p.githubUrl?.isNotEmpty == true)
-                            _LinkRow(
-                              icon: Icons.code,
-                              label: 'GitHub',
-                              url: p.githubUrl!,
-                            ),
-                          if (p.portfolioUrl?.isNotEmpty == true)
-                            _LinkRow(
-                              icon: Icons.language_outlined,
-                              label: 'Portfolio',
-                              url: p.portfolioUrl!,
-                            ),
-                        ],
-                      ),
-                    ),
-                  ],
-
-                  BlocBuilder<AchievementBloc, AchievementState>(
-                    builder: (_, as_) {
-                      if (as_ is AchievementLoaded &&
-                          as_.achievements.isNotEmpty) {
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 16),
-                          child: _SectionCard(
-                            title: 'Achievements',
-                            icon: Icons.emoji_events_outlined,
-                            child: SizedBox(
-                              height: 110,
-                              child: ListView.separated(
-                                scrollDirection: Axis.horizontal,
-                                itemCount: as_.achievements.length,
-                                separatorBuilder: (_, __) =>
-                                    const SizedBox(width: 12),
-                                itemBuilder: (_, i) => AchievementBadge(
-                                  achievement: as_.achievements[i],
-                                ),
-                              ),
+                      if (p.about?.isNotEmpty == true ||
+                          innov?.bio?.isNotEmpty == true) ...[
+                        const SizedBox(height: 16),
+                        _SectionCard(
+                          title: 'About',
+                          icon: Icons.person_outline,
+                          child: Text(
+                            innov?.bio ?? p.about ?? '',
+                            style: const TextStyle(
+                              color: AppColors.textSecondary,
+                              height: 1.55,
+                              fontSize: 14,
                             ),
                           ),
-                        );
-                      }
-                      return const SizedBox.shrink();
-                    },
-                  ),
+                        ),
+                      ],
 
-                  if (widget.isCurrentUser) ...[
-                    const SizedBox(height: 24),
-                    _EditCta(onTap: _goEdit),
-                  ],
-                ],
+                      if (innov != null) ...[
+                        const SizedBox(height: 16),
+                        _ProfessionalSnapshot(innov: innov),
+                      ],
+
+                      if (p.skills.isNotEmpty || innov?.skills.isNotEmpty == true) ...[
+                        const SizedBox(height: 16),
+                        _SectionCard(
+                          title: 'Skills',
+                          icon: Icons.bolt_outlined,
+                          child: Wrap(
+                            spacing: 8,
+                            runSpacing: 6,
+                            children: (innov?.skills ?? p.skills)
+                                .map((s) => _SkillChip(label: s))
+                                .toList(),
+                          ),
+                        ),
+                      ],
+
+                      if (innov != null) ...[
+                        const SizedBox(height: 16),
+                        _StartupCredibility(innov: innov),
+                        const SizedBox(height: 16),
+                        _CollaborationPreferencesSection(innov: innov),
+                      ],
+
+                      if (_hasLinks(p, innov)) ...[
+                        const SizedBox(height: 16),
+                        _SectionCard(
+                          title: 'Social & Web',
+                          icon: Icons.link,
+                          child: Column(
+                            children: [
+                              _buildLink(Icons.link, 'LinkedIn', innov?.linkedinUrl ?? p.linkedinUrl),
+                              _buildLink(Icons.code, 'GitHub', innov?.githubUrl ?? p.githubUrl),
+                              _buildLink(Icons.language_outlined, 'Portfolio', innov?.portfolioUrl ?? p.portfolioUrl),
+                              _buildLink(Icons.alternate_email, 'X / Twitter', innov?.twitterUrl),
+                            ],
+                          ),
+                        ),
+                      ],
+
+                      BlocBuilder<AchievementBloc, AchievementState>(
+                        builder: (_, as_) {
+                          if (as_ is AchievementLoaded &&
+                              as_.achievements.isNotEmpty) {
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 16),
+                              child: _SectionCard(
+                                title: 'Achievements',
+                                icon: Icons.emoji_events_outlined,
+                                child: SizedBox(
+                                  height: 110,
+                                  child: ListView.separated(
+                                    scrollDirection: Axis.horizontal,
+                                    itemCount: as_.achievements.length,
+                                    separatorBuilder: (_, __) =>
+                                        const SizedBox(width: 12),
+                                    itemBuilder: (_, i) => AchievementBadge(
+                                      achievement: as_.achievements[i],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
+                          return const SizedBox.shrink();
+                        },
+                      ),
+
+                      if (widget.isCurrentUser) ...[
+                        const SizedBox(height: 24),
+                        _EditCta(onTap: _goEdit),
+                      ],
+                    ],
+                  ),
+                ),
               ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLink(IconData icon, String label, String? url) {
+    if (url == null || url.isEmpty) return const SizedBox.shrink();
+    return _LinkRow(icon: icon, label: label, url: url);
+  }
+
+  bool _hasLinks(ProfileModel p, InnovatorProfile? innov) =>
+      (p.linkedinUrl?.isNotEmpty ?? false) ||
+      (p.githubUrl?.isNotEmpty ?? false) ||
+      (p.portfolioUrl?.isNotEmpty ?? false) ||
+      (innov?.linkedinUrl?.isNotEmpty ?? false) ||
+      (innov?.githubUrl?.isNotEmpty ?? false) ||
+      (innov?.portfolioUrl?.isNotEmpty ?? false) ||
+      (innov?.twitterUrl?.isNotEmpty ?? false);
+}
+
+// ── Sub-widgets ─────────────────────────────────────────────────────────────
+
+class _ProfessionalSnapshot extends StatelessWidget {
+  final InnovatorProfile innov;
+  const _ProfessionalSnapshot({required this.innov});
+
+  @override
+  Widget build(BuildContext context) {
+    final showExp = innov.experienceLevel != null;
+    final showStatus = innov.currentStatus != null;
+    final showWork = innov.preferredWorkMode != null;
+
+    if (!showExp && !showStatus && !showWork) return const SizedBox.shrink();
+
+    return _SectionCard(
+      title: 'Professional Snapshot',
+      icon: Icons.insights_outlined,
+      child: Column(
+        children: [
+          if (showExp)
+            _DataRow(label: 'Experience', value: innov.experienceLevel!),
+          if (showStatus)
+            _DataRow(label: 'Current Status', value: innov.currentStatus!),
+          if (showWork)
+            _DataRow(label: 'Preferred Mode', value: innov.preferredWorkMode!),
+        ],
+      ),
+    );
+  }
+}
+
+class _StartupCredibility extends StatelessWidget {
+  final InnovatorProfile innov;
+  const _StartupCredibility({required this.innov});
+
+  @override
+  Widget build(BuildContext context) {
+    return _SectionCard(
+      title: 'Startup Credibility',
+      icon: Icons.rocket_launch_outlined,
+      child: Column(
+        children: [
+          _DataRow(
+            label: 'Building Startup',
+            value: innov.buildingStartup ? 'Yes ✅' : 'No',
+            valueColor: innov.buildingStartup ? AppColors.emerald : null,
+          ),
+          if (innov.buildingStartup && innov.startupName != null)
+            _DataRow(label: 'Startup Name', value: innov.startupName!),
+        ],
+      ),
+    );
+  }
+}
+
+class _CollaborationPreferencesSection extends StatelessWidget {
+  final InnovatorProfile innov;
+  const _CollaborationPreferencesSection({required this.innov});
+
+  @override
+  Widget build(BuildContext context) {
+    return _SectionCard(
+      title: 'Collaboration Prefs',
+      icon: Icons.handshake_outlined,
+      child: Wrap(
+        spacing: 12,
+        runSpacing: 12,
+        children: [
+          _PreferenceTag(
+            label: 'Co-Founder',
+            active: innov.openToCofounder,
+            icon: Icons.people_alt_outlined,
+          ),
+          _PreferenceTag(
+            label: 'Investors',
+            active: innov.openToInvestors,
+            icon: Icons.attach_money,
+          ),
+          _PreferenceTag(
+            label: 'Mentors',
+            active: innov.openToMentors,
+            icon: Icons.school_outlined,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DataRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color? valueColor;
+  const _DataRow({required this.label, required this.value, this.valueColor});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+          Text(
+            value,
+            style: TextStyle(
+              color: valueColor ?? AppColors.textPrimary,
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
             ),
           ),
         ],
       ),
     );
   }
-
-  bool _hasLinks(ProfileModel p) =>
-      (p.linkedinUrl?.isNotEmpty ?? false) ||
-      (p.githubUrl?.isNotEmpty ?? false) ||
-      (p.portfolioUrl?.isNotEmpty ?? false);
 }
 
-// ── Sub-widgets (Internal to this file) ───────────────────────────────────────
+class _PreferenceTag extends StatelessWidget {
+  final String label;
+  final bool active;
+  final IconData icon;
+  const _PreferenceTag({
+    required this.label,
+    required this.active,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = active ? AppColors.brandPurple : AppColors.textSecondary.withValues(alpha: 0.3);
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: color.withValues(alpha: 0.1),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: TextStyle(
+              color: active ? AppColors.textPrimary : AppColors.textSecondary,
+              fontSize: 12,
+              fontWeight: active ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+          if (active) ...[
+            const SizedBox(width: 4),
+            const Icon(Icons.check_circle, size: 12, color: AppColors.emerald),
+          ],
+        ],
+      ),
+    );
+  }
+}
 
 class _HeroCard extends StatelessWidget {
   final ProfileModel profile;
@@ -274,7 +479,7 @@ class _HeroCard extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
         color: AppColors.surfaceGlass,
-        border: Border.all(color: Colors.white.withOpacity(0.07)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
       ),
       child: Column(
         children: [
@@ -391,7 +596,7 @@ class _HeroCard extends StatelessWidget {
             child: LinearProgressIndicator(
               value: profile.profileCompletion / 100,
               minHeight: 6,
-              backgroundColor: Colors.white.withOpacity(0.06),
+              backgroundColor: Colors.white.withValues(alpha: 0.06),
               valueColor: AlwaysStoppedAnimation<Color>(_completionColor),
             ),
           ),
@@ -434,7 +639,7 @@ class _TrustAuraRow extends StatelessWidget {
                     borderRadius: BorderRadius.circular(14),
                     color: AppColors.surfaceGlass,
                     border: Border.all(
-                      color: Colors.white.withOpacity(0.07),
+                      color: Colors.white.withValues(alpha: 0.07),
                     ),
                   ),
                   child: AuraBadge(
@@ -476,7 +681,7 @@ class _SectionCard extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
         color: AppColors.surfaceGlass,
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -523,7 +728,7 @@ class _StatCard extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(14),
         color: AppColors.surfaceGlass,
-        border: Border.all(color: Colors.white.withOpacity(0.07)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
       ),
       child: Row(
         children: [
@@ -593,8 +798,8 @@ class _SkillChip extends StatelessWidget {
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
     decoration: BoxDecoration(
       borderRadius: BorderRadius.circular(20),
-      color: AppColors.brandPurple.withOpacity(0.14),
-      border: Border.all(color: AppColors.brandPurple.withOpacity(0.35)),
+      color: AppColors.brandPurple.withValues(alpha: 0.14),
+      border: Border.all(color: AppColors.brandPurple.withValues(alpha: 0.35)),
     ),
     child: Text(
       label,
@@ -657,12 +862,12 @@ class _EditCta extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           gradient: LinearGradient(
             colors: [
-              AppColors.brandPurple.withOpacity(0.15),
-              AppColors.brandCyan.withOpacity(0.07),
+              AppColors.brandPurple.withValues(alpha: 0.15),
+              AppColors.brandCyan.withValues(alpha: 0.07),
             ],
           ),
           border: Border.all(
-            color: AppColors.brandPurple.withOpacity(0.35),
+            color: AppColors.brandPurple.withValues(alpha: 0.35),
           ),
         ),
         child: const Row(

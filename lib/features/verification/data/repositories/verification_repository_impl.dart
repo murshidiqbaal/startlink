@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:startlink/core/services/supabase_client.dart';
 import 'package:startlink/features/verification/data/models/verification_models.dart';
 import 'package:startlink/features/verification/domain/entities/user_badge.dart';
@@ -103,7 +104,7 @@ class VerificationRepositoryImpl implements VerificationRepository {
         'icon': icon,
       });
     } catch (e) {
-      print('Error awarding badge: $e'); // Fail silent for background logic
+      debugPrint('Error awarding badge: $e'); // Fail silent for background logic
     }
   }
 }

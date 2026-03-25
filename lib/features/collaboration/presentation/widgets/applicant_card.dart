@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:startlink/features/collaboration/domain/entities/collaboration.dart';
+import 'package:startlink/features/collaboration/domain/entities/collaboration_request.dart';
 import 'package:startlink/features/collaboration/presentation/bloc/collaboration_bloc.dart';
 import 'package:startlink/features/profile/presentation/profile_screen.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 class ApplicantCard extends StatelessWidget {
-  final Collaboration collaboration;
+  final CollaborationRequest request;
 
-  const ApplicantCard({super.key, required this.collaboration});
+  const ApplicantCard({super.key, required this.request});
 
   void _updateStatus(BuildContext context, String status) {
     context.read<CollaborationBloc>().add(
       UpdateCollaborationStatus(
-        collaborationId: collaboration.id,
+        collaborationId: request.id,
         status: status,
       ),
     );
@@ -22,6 +22,7 @@ class ApplicantCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final applicant = request.applicant ?? {};
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -35,12 +36,12 @@ class ApplicantCard extends StatelessWidget {
                 Expanded(
                   child: GestureDetector(
                     onTap: () {
-                      if (collaboration.collaboratorId.isNotEmpty) {
+                      if (request.applicantId.isNotEmpty) {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (context) => ProfileScreen(
-                              userId: collaboration.collaboratorId,
+                              userId: request.applicantId,
                             ),
                           ),
                         );
@@ -50,13 +51,13 @@ class ApplicantCard extends StatelessWidget {
                       children: [
                         CircleAvatar(
                           backgroundImage:
-                              collaboration.collaboratorAvatarUrl != null
+                              applicant['avatar_url'] != null
                               ? NetworkImage(
-                                  collaboration.collaboratorAvatarUrl!,
+                                  applicant['avatar_url']!,
                                 )
                               : null,
-                          child: collaboration.collaboratorAvatarUrl == null
-                              ? Text(collaboration.collaboratorName?[0] ?? 'C')
+                          child: applicant['avatar_url'] == null
+                              ? Text(applicant['full_name']?[0] ?? 'A')
                               : null,
                         ),
                         const SizedBox(width: 12),
@@ -65,13 +66,13 @@ class ApplicantCard extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                collaboration.collaboratorName ?? 'Unknown',
+                                applicant['full_name'] ?? 'Unknown',
                                 style: theme.textTheme.titleMedium,
                                 overflow: TextOverflow.ellipsis,
                               ),
-                              if (collaboration.collaboratorHeadline != null)
+                              if (applicant['headline'] != null)
                                 Text(
-                                  collaboration.collaboratorHeadline!,
+                                  applicant['headline']!,
                                   style: theme.textTheme.bodySmall,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -86,7 +87,7 @@ class ApplicantCard extends StatelessWidget {
                 const SizedBox(width: 8),
                 Chip(
                   label: Text(
-                    collaboration.roleApplied,
+                    request.roleApplied,
                     overflow: TextOverflow.ellipsis,
                   ),
                   backgroundColor: theme.colorScheme.primaryContainer,
@@ -94,24 +95,24 @@ class ApplicantCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            Text(collaboration.message, style: theme.textTheme.bodyMedium),
+            Text(request.message ?? '', style: theme.textTheme.bodyMedium),
             const SizedBox(height: 8),
             Text(
-              'Applied ${timeago.format(collaboration.appliedAt)}',
+              'Applied ${timeago.format(request.createdAt)}',
               style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey),
             ),
             const SizedBox(height: 16),
-            if (collaboration.status == 'Pending')
+            if (request.status.toLowerCase() == 'pending')
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   OutlinedButton(
-                    onPressed: () => _updateStatus(context, 'Rejected'),
+                    onPressed: () => _updateStatus(context, 'rejected'),
                     child: const Text('Reject'),
                   ),
                   const SizedBox(width: 8),
                   FilledButton(
-                    onPressed: () => _updateStatus(context, 'Accepted'),
+                    onPressed: () => _updateStatus(context, 'accepted'),
                     child: const Text('Accept'),
                   ),
                 ],
@@ -120,9 +121,9 @@ class ApplicantCard extends StatelessWidget {
               Align(
                 alignment: Alignment.centerRight,
                 child: Text(
-                  collaboration.status,
+                  request.status.toUpperCase(),
                   style: TextStyle(
-                    color: collaboration.status == 'Accepted'
+                    color: request.status.toLowerCase() == 'accepted'
                         ? Colors.green
                         : Colors.red,
                     fontWeight: FontWeight.bold,

@@ -36,7 +36,7 @@ Deno.serve(async (req: Request) => {
             .from("ideas")
             .select("title, description, problem_statement, solution, target_market, current_stage, tags")
             .eq("id", idea_id)
-            .single();
+            .maybeSingle();
 
         if (ideaError || !idea) throw new Error("Idea not found");
 
@@ -138,7 +138,7 @@ JSON FORMAT:
                 updated_at: new Date().toISOString()
             })
             .select()
-            .single();
+            .maybeSingle();
 
         if (insertError) throw insertError;
 

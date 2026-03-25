@@ -1,28 +1,33 @@
 // lib/features/profile/presentation/bloc/innovator_profile_bloc.dart
 
+import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:startlink/features/profile/data/models/innovator_profile_model.dart';
-import 'package:startlink/features/profile/data/models/profile_model.dart';
 import 'package:startlink/features/profile/domain/entities/innovator_profile.dart';
 import 'package:startlink/features/profile/domain/repositories/profile_repository.dart';
 
 // ── Events ────────────────────────────────────────────────────────────────────
 
-abstract class InnovatorProfileEvent {}
+// ── Events ────────────────────────────────────────────────────────────────────
+
+abstract class InnovatorProfileEvent extends Equatable {
+  const InnovatorProfileEvent();
+  @override
+  List<Object?> get props => [];
+}
 
 class LoadInnovatorProfile extends InnovatorProfileEvent {
-  /// Pass profiles.id (NOT auth.users.id)
   final String profileId;
-  LoadInnovatorProfile(this.profileId);
+  const LoadInnovatorProfile(this.profileId);
+  @override
+  List<Object?> get props => [profileId];
 }
 
 class SaveInnovatorProfile extends InnovatorProfileEvent {
   final InnovatorProfile profile;
-
-  /// Optionally pass the base profile to update it simultaneously
-  final ProfileModel? baseProfile;
-
-  SaveInnovatorProfile({required this.profile, this.baseProfile});
+  const SaveInnovatorProfile(this.profile);
+  @override
+  List<Object?> get props => [profile];
 }
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -36,7 +41,7 @@ enum InnovatorProfileStatus {
   failure,
 }
 
-class InnovatorProfileState {
+class InnovatorProfileState extends Equatable {
   final InnovatorProfileStatus status;
   final InnovatorProfile? profile;
   final String? errorMessage;
@@ -48,6 +53,9 @@ class InnovatorProfileState {
     this.errorMessage,
     this.avatarUploading = false,
   });
+
+  @override
+  List<Object?> get props => [status, profile, errorMessage, avatarUploading];
 
   InnovatorProfileState copyWith({
     InnovatorProfileStatus? status,
@@ -107,13 +115,7 @@ class InnovatorProfileBloc
   ) async {
     emit(state.copyWith(status: InnovatorProfileStatus.saving));
     try {
-      // Upsert role-specific table
       await _repo.upsertInnovatorProfile(event.profile);
-
-      // Optionally update base profile in same transaction
-      if (event.baseProfile != null) {
-        await _repo.updateProfile(event.baseProfile!);
-      }
 
       emit(
         state.copyWith(

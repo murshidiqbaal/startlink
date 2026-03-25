@@ -1,6 +1,6 @@
 import 'package:startlink/core/services/supabase_client.dart';
-import 'package:startlink/features/collaboration/data/models/collaboration_model.dart';
-import 'package:startlink/features/collaboration/domain/entities/collaboration.dart';
+import 'package:startlink/features/collaboration/data/models/collaboration_request_model.dart';
+import 'package:startlink/features/collaboration/domain/entities/collaboration_request.dart';
 import 'package:startlink/features/collaboration/domain/repositories/collaboration_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -11,7 +11,7 @@ class CollaborationRepositoryImpl implements CollaborationRepository {
     : _supabase = supabase ?? SupabaseService.client;
 
   @override
-  Future<void> applyForCollaboration({
+  Future<void> applyForIdea({
     required String ideaId,
     required String innovatorId,
     required String roleApplied,
@@ -20,103 +20,118 @@ class CollaborationRepositoryImpl implements CollaborationRepository {
     final user = _supabase.auth.currentUser;
     if (user == null) throw Exception('User not logged in');
 
-    // Prevent applying to own idea
     if (user.id == innovatorId) {
       throw Exception('You cannot apply to your own idea');
     }
 
-    // Check for duplicate application
-    final existing = await _supabase
-        .from('idea_collaborations')
-        .select()
-        .eq('idea_id', ideaId)
-        .eq('collaborator_id', user.id)
-        .maybeSingle();
-
-    if (existing != null) {
-      throw Exception('You have already applied to this idea');
+    try {
+      await _supabase.from('collaboration_requests').insert({
+        'idea_id': ideaId,
+        'applicant_id': user.id,
+        'innovator_id': innovatorId,
+        'role_applied': roleApplied,
+        'message': message,
+        'status': 'pending',
+      });
+    } catch (e) {
+      if (e.toString().contains('unique_application')) {
+        throw Exception('You have already applied for this idea');
+      }
+      rethrow;
     }
-
-    await _supabase.from('idea_collaborations').insert({
-      'idea_id': ideaId,
-      'collaborator_id': user.id,
-      'innovator_id': innovatorId,
-      'role_applied': roleApplied,
-      'message': message,
-      'status': 'Pending',
-      'applied_at': DateTime.now().toIso8601String(),
-      'updated_at': DateTime.now().toIso8601String(),
-    });
   }
 
   @override
-  Future<List<Collaboration>> fetchMyCollaborations() async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) throw Exception('User not logged in');
-
+  Future<List<CollaborationRequest>> getIdeaApplications(String ideaId) async {
     final response = await _supabase
-        .from('idea_collaborations')
-        .select('*, ideas(title)')
-        .eq('collaborator_id', user.id)
-        .order('applied_at', ascending: false);
-
-    return (response as List)
-        .map((json) => CollaborationModel.fromJson(json))
-        .toList();
-  }
-
-  @override
-  Future<List<Collaboration>> fetchCollaborationsForIdea(String ideaId) async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) throw Exception('User not logged in');
-
-    final response = await _supabase
-        .from('idea_collaborations')
-        .select(
-          '*, profiles!idea_collaborations_collaborator_id_fkey(full_name, avatar_url, headline)',
-        )
+        .from('collaboration_requests')
+        .select('''
+          *,
+          ideas(title),
+          applicant:profiles!collaboration_requests_applicant_id_fkey(
+            id,
+            full_name,
+            avatar_url,
+            headline
+          )
+        ''')
         .eq('idea_id', ideaId)
-        .order('applied_at', ascending: false); // Newest first
+        .order('created_at', ascending: false);
 
     return (response as List)
-        .map((json) => CollaborationModel.fromJson(json))
+        .map((json) => CollaborationRequestModel.fromJson(json))
         .toList();
   }
 
   @override
-  Future<void> updateCollaborationStatus({
-    required String collaborationId,
+  Future<void> updateApplicationStatus({
+    required String requestId,
     required String status,
   }) async {
-    final validStatuses = ['Accepted', 'Rejected', 'Withdrawn'];
-    if (!validStatuses.contains(status)) {
-      throw Exception('Invalid status');
-    }
+    final response = await _supabase
+        .from('collaboration_requests')
+        .update({'status': status})
+        .eq('request_id', requestId)
+        .select()
+        .maybeSingle();
 
-    await _supabase
-        .from('idea_collaborations')
-        .update({
-          'status': status,
-          'updated_at': DateTime.now().toIso8601String(),
-        })
-        .eq('id', collaborationId);
+    if (status == 'accepted') {
+      final request = CollaborationRequestModel.fromJson(response!);
+      await _supabase.from('idea_collaborators').upsert({
+        'idea_id': request.ideaId,
+        'user_id': request.applicantId,
+        'role': request.roleApplied,
+      }, onConflict: 'idea_id,user_id');
+    }
   }
 
   @override
-  Future<List<Collaboration>> fetchReceivedCollaborations() async {
+  Future<List<CollaborationRequest>> fetchMyCollaborations() async {
     final user = _supabase.auth.currentUser;
     if (user == null) throw Exception('User not logged in');
 
     final response = await _supabase
-        .from('idea_collaborations')
-        .select(
-          '*, ideas(title), profiles!idea_collaborations_collaborator_id_fkey(full_name, avatar_url, headline)',
-        ) // Join ideas to get title, join profiles to get applicant info
-        .eq('innovator_id', user.id)
-        .order('applied_at', ascending: false);
+        .from('collaboration_requests')
+        .select('''
+          *,
+          ideas(title),
+          innovator:profiles!collaboration_requests_innovator_id_fkey(
+            id,
+            full_name,
+            avatar_url,
+            headline
+          )
+        ''')
+        .eq('applicant_id', user.id)
+        .order('created_at', ascending: false);
 
     return (response as List)
-        .map((json) => CollaborationModel.fromJson(json))
+        .map((json) => CollaborationRequestModel.fromJson(json))
+        .toList();
+  }
+
+  @override
+  Future<List<CollaborationRequest>> fetchReceivedCollaborations() async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) throw Exception('User not logged in');
+
+    final response = await _supabase
+        .from('collaboration_requests')
+        .select('''
+          *,
+          ideas(title),
+          applicant:profiles!collaboration_requests_applicant_id_fkey(
+            id,
+            full_name,
+            avatar_url,
+            headline
+          )
+        ''')
+        .eq('innovator_id', user.id)
+        .order('created_at', ascending: false);
+
+    return (response as List)
+        .map((json) => CollaborationRequestModel.fromJson(json))
         .toList();
   }
 }

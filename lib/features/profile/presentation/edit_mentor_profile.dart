@@ -4,11 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:startlink/core/theme/app_theme.dart';
 import 'package:startlink/features/profile/data/models/mentor_profile_model.dart';
+import 'package:startlink/features/profile/data/models/profile_model.dart';
 import 'package:startlink/features/profile/domain/entities/mentor_profile.dart';
 import 'package:startlink/features/profile/domain/repositories/profile_repository.dart';
-import 'package:startlink/features/profile/presentation/bloc/role_profile_bloc.dart';
-// Re-use field helpers from edit_investor_profile (same file or separate import)
-// For simplicity the helpers are repeated minimally below.
+import 'package:startlink/features/profile/presentation/bloc/mentor_profile_bloc.dart';
+import 'package:startlink/features/profile/presentation/bloc/profile_bloc.dart';
 
 class EditMentorProfileScreen extends StatelessWidget {
   final String profileId;
@@ -35,6 +35,9 @@ class _EditMentorBody extends StatefulWidget {
 class _EditMentorBodyState extends State<_EditMentorBody> {
   final _formKey = GlobalKey<FormState>();
 
+  final _nameCtrl = TextEditingController();
+  final _aboutCtrl = TextEditingController();
+
   final _focusCtrl = TextEditingController();
   final _yoeCtrl = TextEditingController();
   final _linkedinCtrl = TextEditingController();
@@ -45,10 +48,13 @@ class _EditMentorBodyState extends State<_EditMentorBody> {
   List<String> _certifications = [];
 
   bool _populated = false;
+  bool _basePopulated = false;
 
   @override
   void dispose() {
     for (final c in [
+      _nameCtrl,
+      _aboutCtrl,
       _focusCtrl,
       _yoeCtrl,
       _linkedinCtrl,
@@ -72,6 +78,15 @@ class _EditMentorBodyState extends State<_EditMentorBody> {
     });
   }
 
+  void _populateBase(ProfileModel p) {
+    if (_basePopulated) return;
+    _basePopulated = true;
+    setState(() {
+      _nameCtrl.text = p.fullName ?? '';
+      _aboutCtrl.text = p.about ?? '';
+    });
+  }
+
   void _addExpertise() {
     for (final raw in _expertiseInputCtrl.text.split(',')) {
       final s = raw.trim();
@@ -92,8 +107,21 @@ class _EditMentorBodyState extends State<_EditMentorBody> {
     return s;
   }
 
-  void _save(MentorProfile existing) {
+  void _save(MentorProfile existing, ProfileModel? baseProfile) {
     if (!(_formKey.currentState?.validate() ?? false)) return;
+
+    // 1. Update Base Profile
+    if (baseProfile != null) {
+      final updatedBase = baseProfile.copyWith(
+        fullName: _noe(_nameCtrl.text),
+        about: _noe(_aboutCtrl.text),
+      );
+      if (updatedBase != baseProfile) {
+        context.read<ProfileBloc>().add(UpdateProfile(updatedBase));
+      }
+    }
+
+    // 2. Update Mentor Profile
     final updated = MentorProfileModel(
       profileId: existing.profileId,
       expertiseDomains: _expertise,
@@ -113,143 +141,171 @@ class _EditMentorBodyState extends State<_EditMentorBody> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocConsumer<MentorProfileBloc, MentorProfileState>(
-      listener: (ctx, state) {
-        if (state is MentorProfileLoaded && !_populated)
-          _populate(state.profile! as MentorProfileModel);
-        if (state is MentorProfileSaved) {
-          ScaffoldMessenger.of(ctx).showSnackBar(
-            const SnackBar(
-              content: Text('Mentor profile saved ✓'),
-              backgroundColor: AppColors.emerald,
-            ),
-          );
-          Navigator.pop(ctx, true);
+    return BlocBuilder<ProfileBloc, ProfileState>(
+      builder: (context, pState) {
+        if (pState is ProfileLoaded && !_basePopulated) {
+          _populateBase(pState.profile);
         }
-        if (state is MentorProfileError) {
-          ScaffoldMessenger.of(ctx).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: AppColors.rose,
-            ),
-          );
-        }
-      },
-      builder: (ctx, state) {
-        final isLoading = state is MentorProfileLoading;
-        final isSaving = state is MentorProfileSaving;
-        final existing = state is MentorProfileLoaded
-            ? state.profile
-            : MentorProfileModel(profileId: widget.profileId);
+        final baseProfile = pState is ProfileLoaded ? pState.profile : null;
 
-        if (isLoading) {
-          return const Scaffold(
-            backgroundColor: AppColors.background,
-            body: Center(
-              child: CircularProgressIndicator(color: AppColors.brandPurple),
-            ),
-          );
-        }
-
-        return Scaffold(
-          backgroundColor: AppColors.background,
-          appBar: _editAppBar(
-            ctx,
-            'Edit Mentor Profile',
-            isSaving,
-            () => _save(existing),
-          ),
-          body: Form(
-            key: _formKey,
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
-              children: [
-                _MentorCompletionBar(pct: _calcCompletion()),
-                const SizedBox(height: 24),
-
-                _MentorSectionLabel('Expertise Domains'),
-                const SizedBox(height: 12),
-                _ChipTagInput(
-                  label: 'Add domains (comma separated)',
-                  icon: Icons.psychology_outlined,
-                  controller: _expertiseInputCtrl,
-                  tags: _expertise,
-                  onAdd: _addExpertise,
-                  onRemove: (s) => setState(() => _expertise.remove(s)),
+        return BlocConsumer<MentorProfileBloc, MentorProfileState>(
+          listener: (ctx, state) {
+            if (state is MentorProfileLoaded && !_populated) {
+              _populate(state.profile! as MentorProfileModel);
+            }
+            if (state is MentorProfileSaved) {
+              ScaffoldMessenger.of(ctx).showSnackBar(
+                const SnackBar(
+                  content: Text('Mentor profile saved ✓'),
+                  backgroundColor: AppColors.emerald,
                 ),
+              );
+              Navigator.pop(ctx, true);
+            }
+            if (state is MentorProfileError) {
+              ScaffoldMessenger.of(ctx).showSnackBar(
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: AppColors.rose,
+                ),
+              );
+            }
+          },
+          builder: (ctx, state) {
+            final isLoading = state is MentorProfileLoading || pState is ProfileLoading;
+            final isSaving = state is MentorProfileSaving;
+            final existing = state is MentorProfileLoaded
+                ? state.profile
+                : MentorProfileModel(profileId: widget.profileId);
 
-                const SizedBox(height: 20),
-                _MentorSectionLabel('Experience & Focus'),
-                const SizedBox(height: 12),
-                _MentorTF(
-                  'Years of Experience *',
-                  Icons.work_outline,
-                  _yoeCtrl,
-                  keyboardType: TextInputType.number,
-                  validator: (v) =>
-                      v?.trim().isEmpty == true ? 'Required' : null,
+            if (isLoading) {
+              return const Scaffold(
+                backgroundColor: AppColors.background,
+                body: Center(
+                  child: CircularProgressIndicator(color: AppColors.brandPurple),
                 ),
-                const SizedBox(height: 12),
-                _MentorTF(
-                  'Mentorship Focus *',
-                  Icons.lightbulb_outline,
-                  _focusCtrl,
-                  hint: 'Startups, Career growth, Tech leadership',
-                  maxLines: 3,
-                  validator: (v) =>
-                      v?.trim().isEmpty == true ? 'Required' : null,
-                ),
+              );
+            }
 
-                const SizedBox(height: 20),
-                _MentorSectionLabel('Links'),
-                const SizedBox(height: 12),
-                _MentorTF(
-                  'LinkedIn URL *',
-                  Icons.link,
-                  _linkedinCtrl,
-                  hint: 'https://linkedin.com/in/…',
-                  keyboardType: TextInputType.url,
-                  validator: (v) =>
-                      v?.trim().isEmpty == true ? 'Required' : null,
-                ),
+            return Scaffold(
+              backgroundColor: AppColors.background,
+              appBar: _editAppBar(
+                ctx,
+                'Edit Mentor Profile',
+                isSaving,
+                () => _save(existing, baseProfile),
+              ),
+              body: Form(
+                key: _formKey,
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
+                  children: [
+                    _MentorCompletionBar(pct: _calcCompletion()),
+                    const SizedBox(height: 24),
 
-                const SizedBox(height: 20),
-                _MentorSectionLabel('Certifications (optional)'),
-                const SizedBox(height: 12),
-                _ChipTagInput(
-                  label: 'Add certifications',
-                  icon: Icons.verified_outlined,
-                  controller: _certCtrl,
-                  tags: _certifications,
-                  onAdd: () {
-                    final s = _certCtrl.text.trim();
-                    if (s.isNotEmpty) {
-                      setState(() {
-                        _certifications.add(s);
-                        _certCtrl.clear();
-                      });
-                    }
-                  },
-                  onRemove: (s) => setState(() => _certifications.remove(s)),
-                ),
+                    _MentorSectionLabel('Personal Information'),
+                    const SizedBox(height: 12),
+                    _MentorTF(
+                      'Full Name *',
+                      Icons.person_outline,
+                      _nameCtrl,
+                      validator: (v) => v?.trim().isEmpty == true ? 'Required' : null,
+                    ),
+                    const SizedBox(height: 12),
+                    _MentorTF(
+                      'Bio / About',
+                      Icons.description_outlined,
+                      _aboutCtrl,
+                      hint: 'A short intro about yourself…',
+                      maxLines: 3,
+                    ),
 
-                const SizedBox(height: 40),
-                SizedBox(
-                  height: 54,
-                  child: isSaving
-                      ? const Center(
-                          child: CircularProgressIndicator(
-                            color: AppColors.brandPurple,
-                          ),
-                        )
-                      : _MentorGradientBtn(
-                          label: 'Save Profile',
-                          onPressed: () => _save(existing),
-                        ),
+                    const SizedBox(height: 24),
+                    _MentorSectionLabel('Expertise Domains'),
+                    const SizedBox(height: 12),
+                    _ChipTagInput(
+                      label: 'Add domains (comma separated)',
+                      icon: Icons.psychology_outlined,
+                      controller: _expertiseInputCtrl,
+                      tags: _expertise,
+                      onAdd: _addExpertise,
+                      onRemove: (s) => setState(() => _expertise.remove(s)),
+                    ),
+
+                    const SizedBox(height: 20),
+                    _MentorSectionLabel('Experience & Focus'),
+                    const SizedBox(height: 12),
+                    _MentorTF(
+                      'Years of Experience *',
+                      Icons.work_outline,
+                      _yoeCtrl,
+                      keyboardType: TextInputType.number,
+                      validator: (v) =>
+                          v?.trim().isEmpty == true ? 'Required' : null,
+                    ),
+                    const SizedBox(height: 12),
+                    _MentorTF(
+                      'Mentorship Focus *',
+                      Icons.lightbulb_outline,
+                      _focusCtrl,
+                      hint: 'Startups, Career growth, Tech leadership',
+                      maxLines: 3,
+                      validator: (v) =>
+                          v?.trim().isEmpty == true ? 'Required' : null,
+                    ),
+
+                    const SizedBox(height: 20),
+                    _MentorSectionLabel('Links'),
+                    const SizedBox(height: 12),
+                    _MentorTF(
+                      'LinkedIn URL *',
+                      Icons.link,
+                      _linkedinCtrl,
+                      hint: 'https://linkedin.com/in/…',
+                      keyboardType: TextInputType.url,
+                      validator: (v) =>
+                          v?.trim().isEmpty == true ? 'Required' : null,
+                    ),
+
+                    const SizedBox(height: 20),
+                    _MentorSectionLabel('Certifications (optional)'),
+                    const SizedBox(height: 12),
+                    _ChipTagInput(
+                      label: 'Add certifications',
+                      icon: Icons.verified_outlined,
+                      controller: _certCtrl,
+                      tags: _certifications,
+                      onAdd: () {
+                        final s = _certCtrl.text.trim();
+                        if (s.isNotEmpty) {
+                          setState(() {
+                            _certifications.add(s);
+                            _certCtrl.clear();
+                          });
+                        }
+                      },
+                      onRemove: (s) => setState(() => _certifications.remove(s)),
+                    ),
+
+                    const SizedBox(height: 40),
+                    SizedBox(
+                      height: 54,
+                      child: isSaving
+                          ? const Center(
+                              child: CircularProgressIndicator(
+                                color: AppColors.brandPurple,
+                              ),
+                            )
+                          : _MentorGradientBtn(
+                              label: 'Save Profile',
+                              onPressed: () => _save(existing, baseProfile),
+                            ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );

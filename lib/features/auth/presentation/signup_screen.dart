@@ -186,7 +186,7 @@ class _SignupScreenState extends State<SignupScreen>
                             ),
                             const SizedBox(height: 16),
                             DropdownButtonFormField<String>(
-                              initialValue: _selectedRole,
+                              value: _selectedRole,
                               dropdownColor: const Color(0xFF283593),
                               style: const TextStyle(color: Colors.white),
                               decoration: InputDecoration(

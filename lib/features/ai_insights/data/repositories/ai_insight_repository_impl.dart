@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:startlink/core/services/supabase_client.dart';
 import 'package:startlink/features/ai_insights/domain/entities/ai_insight.dart';
 import 'package:startlink/features/ai_insights/domain/repositories/ai_insight_repository.dart';
@@ -19,18 +20,18 @@ class AIInsightRepositoryImpl implements AIInsightRepository {
             'ai_investment_summary, ai_strengths, ai_risks, ai_market_potential, ai_execution_risk, target_market, current_stage, tags',
           )
           .eq('id', ideaId)
-          .single();
+          .maybeSingle();
 
       // 2. Fetch Investor Profile for Fit Calculation
       final investorData = await _supabase
           .from('profiles')
           .select()
           .eq('id', investorId)
-          .single();
+          .maybeSingle();
 
       // 3. Calculate Personal Fit (Client-side logic for MVP as requested to be abstracted)
       // In a real app, this might be an Edge Function call if the logic is complex/proprietary.
-      final fit = _calculateInvestorFit(ideaData, investorData);
+      final fit = _calculateInvestorFit(ideaData!, investorData!);
 
       return AIInsight(
         ideaId: ideaId,
@@ -44,7 +45,7 @@ class AIInsightRepositoryImpl implements AIInsightRepository {
       );
     } catch (e) {
       // Graceful degradation: return empty insight or rethrow if strict
-      print('Error fetching AI insights: $e');
+      debugPrint('Error fetching AI insights: $e');
       return AIInsight(ideaId: ideaId);
     }
   }

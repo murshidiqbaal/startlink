@@ -19,15 +19,17 @@ class CollaborationModel extends Collaboration {
 
   factory CollaborationModel.fromJson(Map<String, dynamic> json) {
     return CollaborationModel(
-      id: json['id'] as String,
+      id: json['request_id'] as String,
       ideaId: json['idea_id'] as String,
       collaboratorId: json['collaborator_id'] as String,
       innovatorId: json['innovator_id'] as String,
       roleApplied: json['role_applied'] as String,
       message: json['message'] as String,
       status: json['status'] as String,
-      appliedAt: DateTime.parse(json['applied_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
+      appliedAt: DateTime.tryParse(json['applied_at'] as String? ?? '') ??
+          DateTime.now(),
+      updatedAt: DateTime.tryParse(json['updated_at'] as String? ?? '') ??
+          DateTime.now(),
       // Handle potential joins or expanded views if Supabase returns joined data
       ideaTitle: json['ideas'] != null ? json['ideas']['title'] : null,
       collaboratorName: json['profiles'] != null
@@ -44,7 +46,7 @@ class CollaborationModel extends Collaboration {
 
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
+      'request_id': id,
       'idea_id': ideaId,
       'collaborator_id': collaboratorId,
       'innovator_id': innovatorId,

@@ -21,7 +21,7 @@ class AchievementBadge extends StatelessWidget {
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: Colors.amber.withOpacity(0.2),
+            color: Colors.amber.withValues(alpha: 0.2),
             border: Border.all(color: Colors.amber),
           ),
           child: const Icon(Icons.emoji_events, size: 16, color: Colors.amber),
@@ -35,10 +35,10 @@ class AchievementBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.amber.withOpacity(0.3)),
+        border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
         boxShadow: [
           BoxShadow(
-            color: Colors.amber.withOpacity(0.1),
+            color: Colors.amber.withValues(alpha: 0.1),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),

@@ -55,6 +55,11 @@ import 'package:startlink/features/trust/presentation/bloc/trust_score_bloc.dart
 import 'package:startlink/features/verification/data/repositories/verification_repository_impl.dart';
 import 'package:startlink/features/verification/domain/repositories/verification_repository.dart';
 import 'package:startlink/features/verification/presentation/bloc/verification_bloc.dart';
+import 'package:startlink/features/profile/presentation/bloc/innovator_profile_bloc.dart';
+import 'package:startlink/features/profile/presentation/bloc/collaborator_profile_bloc.dart';
+import 'package:startlink/features/admin/presentation/bloc/admin_verification_bloc.dart';
+import 'package:startlink/features/admin/domain/repositories/admin_repository.dart';
+import 'package:startlink/features/admin/data/repositories/admin_repository_impl.dart';
 
 class App extends StatelessWidget {
   const App({super.key});
@@ -107,6 +112,9 @@ class App extends StatelessWidget {
         ),
         RepositoryProvider<CoFounderRepository>(
           create: (context) => CoFounderRepositoryImpl(),
+        ),
+        RepositoryProvider<AdminRepository>(
+          create: (context) => AdminRepositoryImpl(),
         ),
         RepositoryProvider<IdeaDnaRepository>(
           create: (context) => IdeaDnaRepositoryImpl(),
@@ -183,6 +191,21 @@ class App extends StatelessWidget {
           BlocProvider<CoFounderBloc>(
             create: (context) =>
                 CoFounderBloc(repository: context.read<CoFounderRepository>()),
+          ),
+          BlocProvider<InnovatorProfileBloc>(
+            create: (context) => InnovatorProfileBloc(
+              repository: context.read<ProfileRepository>(),
+            ),
+          ),
+          BlocProvider<CollaboratorProfileBloc>(
+            create: (context) => CollaboratorProfileBloc(
+              repository: context.read<ProfileRepository>(),
+            ),
+          ),
+          BlocProvider<AdminVerificationBloc>(
+            create: (context) => AdminVerificationBloc(
+              repository: context.read<AdminVerificationRepository>(),
+            ),
           ),
         ],
         child: const AppView(),

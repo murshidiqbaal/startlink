@@ -98,7 +98,7 @@ class _TimelineItem extends StatelessWidget {
                   color: _getEventColor(
                     context,
                     log.eventType,
-                  ).withOpacity(0.2),
+                  ).withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                 ),
                 child: Center(
@@ -113,7 +113,7 @@ class _TimelineItem extends StatelessWidget {
                 Expanded(
                   child: Container(
                     width: 2,
-                    color: Theme.of(context).dividerColor.withOpacity(0.5),
+                    color: Theme.of(context).dividerColor.withValues(alpha: 0.5),
                   ),
                 ),
             ],

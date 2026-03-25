@@ -25,13 +25,13 @@ class EmptyState extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Theme.of(
                   context,
-                ).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.lightbulb_outline,
                 size: 48,
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
               ),
             ),
             const SizedBox(height: 16),
@@ -39,7 +39,7 @@ class EmptyState extends StatelessWidget {
               message,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
             const SizedBox(height: 24),
@@ -52,7 +52,7 @@ class EmptyState extends StatelessWidget {
                 foregroundColor: Theme.of(context).colorScheme.primary,
                 elevation: 0,
                 side: BorderSide(
-                  color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
                 ),
               ),
             ),

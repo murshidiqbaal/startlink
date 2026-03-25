@@ -88,7 +88,7 @@ class _VerificationList extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.inbox_outlined, size: 64, color: AppColors.textSecondary.withOpacity(0.5)),
+            Icon(Icons.inbox_outlined, size: 64, color: AppColors.textSecondary.withValues(alpha: 0.5)),
             const SizedBox(height: 16),
             Text(
               'No $status requests',
@@ -124,10 +124,10 @@ class _VerificationCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surfaceGlass,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -141,7 +141,7 @@ class _VerificationCard extends StatelessWidget {
             Row(
               children: [
                 CircleAvatar(
-                  backgroundColor: AppColors.brandPurple.withOpacity(0.1),
+                  backgroundColor: AppColors.brandPurple.withValues(alpha: 0.1),
                   child: Text(
                     (item.fullName ?? item.role)[0].toUpperCase(),
                     style: const TextStyle(color: AppColors.brandPurple, fontWeight: FontWeight.bold),
@@ -281,9 +281,9 @@ class _StatusChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.5)),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
       ),
       child: Text(
         status,

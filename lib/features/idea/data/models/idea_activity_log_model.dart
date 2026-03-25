@@ -23,7 +23,8 @@ class IdeaActivityLogModel extends IdeaActivityLog {
       title: json['title'] as String,
       description: json['description'] as String?,
       metadata: json['metadata'] as Map<String, dynamic>? ?? {},
-      createdAt: DateTime.parse(json['created_at'] as String),
+      createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ??
+          DateTime.now(),
     );
   }
 

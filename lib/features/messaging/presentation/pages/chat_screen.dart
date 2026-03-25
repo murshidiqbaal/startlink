@@ -260,7 +260,7 @@ class _InputBar extends StatelessWidget {
         color: cs.surface,
         boxShadow: [
           BoxShadow(
-            color: cs.shadow.withOpacity(0.07),
+            color: cs.shadow.withValues(alpha: 0.07),
             blurRadius: 8,
             offset: const Offset(0, -2),
           ),
@@ -434,7 +434,7 @@ class _Bubble extends StatelessWidget {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: cs.shadow.withOpacity(0.06),
+                    color: cs.shadow.withValues(alpha: 0.06),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
@@ -460,7 +460,7 @@ class _Bubble extends StatelessWidget {
                         DateFormat('HH:mm').format(message.createdAt),
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: isMe
-                              ? cs.onPrimary.withOpacity(0.65)
+                              ? cs.onPrimary.withValues(alpha: 0.65)
                               : cs.outline,
                           fontSize: 10,
                         ),
@@ -472,7 +472,7 @@ class _Bubble extends StatelessWidget {
                               ? Icons.done_all_rounded
                               : Icons.done_rounded,
                           size: 14,
-                          color: cs.onPrimary.withOpacity(0.65),
+                          color: cs.onPrimary.withValues(alpha: 0.65),
                         ),
                       ],
                     ],

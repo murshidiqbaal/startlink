@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:startlink/core/services/supabase_client.dart';
 import 'package:startlink/features/aura/domain/entities/aura_activity.dart';
 import 'package:startlink/features/aura/domain/repositories/aura_repository.dart';
@@ -28,7 +29,7 @@ class AuraRepositoryImpl implements AuraRepository {
       );
     } catch (e) {
       // Log error but generally don't block user flow for gamification failure
-      print('Aura award failed: $e');
+      debugPrint('Aura award failed: $e');
     }
   }
 
@@ -38,9 +39,9 @@ class AuraRepositoryImpl implements AuraRepository {
         .from('profiles')
         .select('aura_points')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
-    return response['aura_points'] as int? ?? 0;
+    return response?['aura_points'] as int? ?? 0;
   }
 
   @override
@@ -96,34 +97,33 @@ class AuraRepositoryImpl implements AuraRepository {
           .from('profiles')
           .select('is_verified, profile_completion')
           .eq('id', userId)
-          .single();
+          .maybeSingle();
 
-      final ideasCountResponse = await _supabase
+      final ideasResponse = await _supabase
           .from('ideas')
-          .select('id') // Select ID just to count
-          .eq('user_id', userId)
-          .count();
+          .select('id')
+          .eq('owner_id', userId);
+
+      final ideaCount = (ideasResponse as List).length;
 
       final historyResponse = await _supabase
           .from('user_aura')
           .select('reason, points')
           .eq('profile_id', userId);
 
-      final history = List<Map<String, dynamic>>.from(historyResponse);
-      final count = ideasCountResponse
-          .count; // Assuming count() returns count in Postgrest response wrapper or we use count option
+      final history = List<Map<String, dynamic>>.from(historyResponse as List);
 
       // 2. Define Rules & Calculate Expected Points
       const int pointsPerIdea = 50;
       const int pointsForVerification = 500;
       const int pointsForProfileComp = 100;
 
-      int expectedIdeaPoints = count * pointsPerIdea;
-      int expectedVerificationPoints = (profileResponse['is_verified'] == true)
+      int expectedIdeaPoints = ideaCount * pointsPerIdea;
+      int expectedVerificationPoints = (profileResponse?['is_verified'] == true)
           ? pointsForVerification
           : 0;
       int expectedProfilePoints =
-          ((profileResponse['profile_completion'] ?? 0) >= 80)
+          ((profileResponse?['profile_completion'] ?? 0) >= 80)
           ? pointsForProfileComp
           : 0;
 
@@ -178,7 +178,7 @@ class AuraRepositoryImpl implements AuraRepository {
         );
       }
     } catch (e) {
-      print('Error syncing retroactive points: $e');
+      debugPrint('Error syncing retroactive points: $e');
     }
   }
 }

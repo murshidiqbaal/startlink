@@ -14,7 +14,7 @@ class IdeaActivityRepositoryImpl implements IdeaActivityRepository {
   Future<List<IdeaActivityLog>> getActivityLogs(String ideaId) async {
     try {
       final response = await _supabase
-          .from('idea_activity_log')
+          .from('idea_activity_logs')
           .select()
           .eq('idea_id', ideaId)
           .order('created_at', ascending: false);
@@ -48,7 +48,7 @@ class IdeaActivityRepositoryImpl implements IdeaActivityRepository {
         'metadata': metadata ?? {},
       };
 
-      await _supabase.from('idea_activity_log').insert(log);
+      await _supabase.from('idea_activity_logs').insert(log);
     } catch (e) {
       throw Exception('Failed to log activity: $e');
     }

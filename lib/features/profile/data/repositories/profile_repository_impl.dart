@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:startlink/core/services/supabase_client.dart';
 import 'package:startlink/features/profile/data/models/collaborator_profile_model.dart';
 import 'package:startlink/features/profile/data/models/innovator_profile_model.dart';
@@ -11,6 +12,9 @@ import 'package:startlink/features/profile/domain/entities/innovator_profile.dar
 import 'package:startlink/features/profile/domain/entities/investor_profile.dart';
 import 'package:startlink/features/profile/domain/entities/mentor_profile.dart';
 import 'package:startlink/features/profile/domain/repositories/profile_repository.dart';
+import 'package:startlink/features/verification/data/models/verification_models.dart';
+import 'package:startlink/features/verification/domain/entities/user_badge.dart';
+import 'package:startlink/features/verification/domain/entities/user_verification.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ProfileRepositoryImpl implements ProfileRepository {
@@ -28,7 +32,11 @@ class ProfileRepositoryImpl implements ProfileRepository {
         .from('profiles')
         .select()
         .eq('id', userId)
-        .single();
+        .maybeSingle();
+    if (response == null) {
+      // Return a default profile model if not found
+      return ProfileModel(id: userId, userId: userId);
+    }
     return ProfileModel.fromJson(response);
   }
 
@@ -38,7 +46,10 @@ class ProfileRepositoryImpl implements ProfileRepository {
         .from('profiles')
         .select()
         .eq('id', profileId)
-        .single();
+        .maybeSingle();
+    if (response == null) {
+       throw Exception('Profile not found');
+    }
     return ProfileModel.fromJson(response);
   }
 
@@ -70,7 +81,8 @@ class ProfileRepositoryImpl implements ProfileRepository {
           .from('innovator_profiles')
           .select()
           .eq('profile_id', profileId)
-          .single();
+          .maybeSingle();
+      if (response == null) return null;
       return InnovatorProfileModel.fromJson(response);
     } catch (_) {
       return null;
@@ -88,10 +100,18 @@ class ProfileRepositoryImpl implements ProfileRepository {
     try {
       final response = await _supabase
           .from('investor_profiles')
-          .select()
+          .select('*, profiles(about)')
           .eq('profile_id', profileId)
-          .single();
-      return InvestorProfileModel.fromJson(response);
+          .maybeSingle();
+
+      if (response == null) return null;
+
+      final json = Map<String, dynamic>.from(response);
+      if (json['profiles'] != null) {
+        json['bio'] = json['profiles']['about'];
+      }
+
+      return InvestorProfileModel.fromJson(json);
     } catch (_) {
       return null;
     }
@@ -101,6 +121,19 @@ class ProfileRepositoryImpl implements ProfileRepository {
   Future<void> upsertInvestorProfile(InvestorProfile profile) async {
     final model = InvestorProfileModel.fromEntity(profile);
     await _supabase.from('investor_profiles').upsert(model.toUpsertJson());
+
+    // Sync bio to the profiles table
+    if (profile.bio != null) {
+      await _supabase
+          .from('profiles')
+          .update({'about': profile.bio})
+          .eq('id', profile.profileId);
+    }
+
+    // Automatic Verification Trigger
+    if (profile.profileCompletion >= 80) {
+      await createVerificationRequest(profile.profileId, 'investor');
+    }
   }
 
   @override
@@ -110,7 +143,8 @@ class ProfileRepositoryImpl implements ProfileRepository {
           .from('mentor_profiles')
           .select()
           .eq('profile_id', profileId)
-          .single();
+          .maybeSingle();
+      if (response == null) return null;
       return MentorProfileModel.fromJson(response);
     } catch (_) {
       return null;
@@ -121,6 +155,11 @@ class ProfileRepositoryImpl implements ProfileRepository {
   Future<void> upsertMentorProfile(MentorProfile profile) async {
     final model = MentorProfileModel.fromEntity(profile);
     await _supabase.from('mentor_profiles').upsert(model.toUpsertJson());
+
+    // Automatic Verification Trigger
+    if (profile.profileCompletion >= 80) {
+      await createVerificationRequest(profile.profileId, 'mentor');
+    }
   }
 
   @override
@@ -132,7 +171,8 @@ class ProfileRepositoryImpl implements ProfileRepository {
           .from('collaborator_profiles')
           .select()
           .eq('profile_id', profileId)
-          .single();
+          .maybeSingle();
+      if (response == null) return null;
       return CollaboratorProfileModel.fromJson(response);
     } catch (_) {
       return null;
@@ -143,5 +183,73 @@ class ProfileRepositoryImpl implements ProfileRepository {
   Future<void> upsertCollaboratorProfile(CollaboratorProfile profile) async {
     final model = CollaboratorProfileModel.fromEntity(profile);
     await _supabase.from('collaborator_profiles').upsert(model.toUpsertJson());
+  }
+
+  // ── Verification & Badges ──────────────────────────────────────────────────
+
+  @override
+  Future<UserVerification?> fetchUserVerification(
+    String userId,
+    String role,
+  ) async {
+    final response = await _supabase
+        .from('user_verifications')
+        .select()
+        .eq('profile_id', userId)
+        .eq('role', role)
+        .maybeSingle();
+
+    if (response == null) return null;
+    return UserVerificationModel.fromJson(response);
+  }
+
+  @override
+  Future<List<UserBadge>> fetchUserBadges(String userId) async {
+    final response = await _supabase
+        .from('user_badges')
+        .select()
+        .eq('profile_id', userId);
+
+    return (response as List).map((e) => UserBadgeModel.fromJson(e)).toList();
+  }
+
+  @override
+  Future<void> createVerificationRequest(String profileId, String role) async {
+    await submitVerificationRequest(profileId, role, 'profile_verification');
+  }
+
+  @override
+  Future<void> submitVerificationRequest(
+    String userId,
+    String role,
+    String type,
+  ) async {
+    try {
+      debugPrint('Repo: Checking existing request for $userId ($role)');
+      // Check if a request already exists to prevent duplicates
+      final existing = await _supabase
+          .from('user_verifications')
+          .select()
+          .eq('profile_id', userId)
+          .eq('role', role)
+          .maybeSingle();
+
+      if (existing != null) {
+        debugPrint('Repo: Verification request already exists');
+        return; // Don't throw for auto-trigger
+      }
+
+      debugPrint('Repo: Inserting into user_verifications...');
+      await _supabase.from('user_verifications').insert({
+        'profile_id': userId,
+        'role': role,
+        'verification_type': type,
+        'status': 'Pending',
+      });
+      debugPrint('Repo: Insert successful');
+    } catch (e) {
+      debugPrint('Repo: Error in submitVerificationRequest: $e');
+      rethrow;
+    }
   }
 }

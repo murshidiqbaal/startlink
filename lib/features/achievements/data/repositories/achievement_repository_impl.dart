@@ -38,7 +38,7 @@ class AchievementRepositoryImpl implements AchievementRepository {
         .from('profiles')
         .select()
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
     // 2. Rule Engine Logic (Client-side for MVP, ideally Server-side)
     if (eventKey == 'publish_idea') {
@@ -70,7 +70,7 @@ class AchievementRepositoryImpl implements AchievementRepository {
     }
 
     if (eventKey == 'profile_complete' &&
-        (profile['profile_completion'] ?? 0) >= 80) {
+        (profile?['profile_completion'] ?? 0) >= 80) {
       await _award(
         userId,
         'profile_complete',

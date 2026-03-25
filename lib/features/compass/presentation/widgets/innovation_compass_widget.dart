@@ -60,7 +60,7 @@ class _CompassView extends StatelessWidget {
                 colors: [
                   Theme.of(
                     context,
-                  ).colorScheme.primaryContainer.withOpacity(0.4),
+                  ).colorScheme.primaryContainer.withValues(alpha: 0.4),
                   Theme.of(context).colorScheme.surface,
                 ],
                 begin: Alignment.topLeft,
@@ -68,7 +68,7 @@ class _CompassView extends StatelessWidget {
               ),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
               ),
             ),
             padding: const EdgeInsets.all(16),
@@ -119,7 +119,7 @@ class _RecommendationTile extends StatelessWidget {
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 4,
                   offset: const Offset(0, 2),
                 ),

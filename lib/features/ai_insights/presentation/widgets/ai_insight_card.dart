@@ -31,7 +31,7 @@ class AIInsightCard extends StatelessWidget {
             decoration: BoxDecoration(
               color: Theme.of(
                 context,
-              ).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+              ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(16),
             ),
             child: const CircularProgressIndicator(),
@@ -46,7 +46,7 @@ class AIInsightCard extends StatelessWidget {
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.grey.withOpacity(0.2)),
+              border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
             ),
             child: Column(
               children: [
@@ -103,10 +103,10 @@ class AIInsightCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.purple.withOpacity(0.3)), // AI Theme
+        border: Border.all(color: Colors.purple.withValues(alpha: 0.3)), // AI Theme
         boxShadow: [
           BoxShadow(
-            color: Colors.purple.withOpacity(0.05),
+            color: Colors.purple.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -187,7 +187,7 @@ class AIInsightCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.purple.withOpacity(0.05),
+                color: Colors.purple.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
@@ -268,7 +268,7 @@ class AIInsightCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(

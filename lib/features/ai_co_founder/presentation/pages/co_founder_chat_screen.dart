@@ -156,7 +156,7 @@ class _ChatTabState extends State<_ChatTab> {
           Icon(
             Icons.psychology,
             size: 64,
-            color: AppColors.brandCyan.withOpacity(0.5),
+            color: AppColors.brandCyan.withValues(alpha: 0.5),
           ),
           const SizedBox(height: 16),
           const Text(
@@ -370,7 +370,7 @@ class _MessageBubble extends StatelessWidget {
         ),
         decoration: BoxDecoration(
           color: isUser
-              ? AppColors.brandCyan.withOpacity(0.2)
+              ? AppColors.brandCyan.withValues(alpha: 0.2)
               : AppColors.surfaceGlass,
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(16),
@@ -380,7 +380,7 @@ class _MessageBubble extends StatelessWidget {
           ),
           border: Border.all(
             color: isUser
-                ? AppColors.brandCyan.withOpacity(0.3)
+                ? AppColors.brandCyan.withValues(alpha: 0.3)
                 : Colors.white10,
           ),
         ),

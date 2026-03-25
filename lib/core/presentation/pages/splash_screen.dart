@@ -150,7 +150,7 @@ class _SplashScreenState extends State<SplashScreen>
               height: 300,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.purple.withOpacity(0.15),
+                color: Colors.purple.withValues(alpha: 0.15),
               ),
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
@@ -168,7 +168,7 @@ class _SplashScreenState extends State<SplashScreen>
               height: 300,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.cyan.withOpacity(0.1),
+                color: Colors.cyan.withValues(alpha: 0.1),
               ),
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
@@ -207,15 +207,15 @@ class _SplashScreenState extends State<SplashScreen>
                                   shape: BoxShape.circle,
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.cyanAccent.withOpacity(
-                                        0.3 * _glowPulse.value,
+                                      color: Colors.cyanAccent.withValues(
+                                        alpha: 0.3 * _glowPulse.value,
                                       ),
                                       blurRadius: 40,
                                       spreadRadius: 10,
                                     ),
                                     BoxShadow(
-                                      color: Colors.purple.withOpacity(
-                                        0.2 * _glowPulse.value,
+                                      color: Colors.purple.withValues(
+                                        alpha: 0.2 * _glowPulse.value,
                                       ),
                                       blurRadius: 60,
                                       spreadRadius: 20,
@@ -242,7 +242,7 @@ class _SplashScreenState extends State<SplashScreen>
                                 borderRadius: BorderRadius.circular(24),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.3),
+                                    color: Colors.black.withValues(alpha: 0.3),
                                     blurRadius: 10,
                                     offset: const Offset(0, 4),
                                   ),
@@ -282,7 +282,7 @@ class _SplashScreenState extends State<SplashScreen>
                                 letterSpacing: 1.5,
                                 shadows: [
                                   BoxShadow(
-                                    color: Colors.cyanAccent.withOpacity(0.3),
+                                    color: Colors.cyanAccent.withValues(alpha: 0.3),
                                     blurRadius: 20,
                                     offset: const Offset(0, 0),
                                   ),

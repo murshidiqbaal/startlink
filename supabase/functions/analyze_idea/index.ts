@@ -35,7 +35,7 @@
 //             .from("ideas")
 //             .select("title, description, problem_statement, target_market, current_stage, tags")
 //             .eq("id", ideaId)
-//             .single();
+//             .maybeSingle();
 
 //         if (error || !idea) throw new Error("Idea not found");
 

@@ -1,6 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:startlink/features/collaboration/domain/entities/collaboration.dart';
+import 'package:startlink/features/collaboration/domain/entities/collaboration_request.dart';
 import 'package:startlink/features/collaboration/domain/repositories/collaboration_repository.dart';
 
 part 'collaboration_event.dart';
@@ -10,11 +11,13 @@ class CollaborationBloc extends Bloc<CollaborationEvent, CollaborationState> {
   final CollaborationRepository _repository;
 
   CollaborationBloc({required CollaborationRepository repository})
-    : _repository = repository,
-      super(CollaborationInitial()) {
+      : _repository = repository,
+        super(CollaborationInitial()) {
     on<ApplyCollaboration>(_onApplyCollaboration);
+    on<LoadIdeaApplications>(_onLoadIdeaApplications);
+    on<AcceptCollaborationRequest>(_onAcceptCollaborationRequest);
+    on<RejectCollaborationRequest>(_onRejectCollaborationRequest);
     on<FetchMyCollaborations>(_onFetchMyCollaborations);
-    on<FetchCollaborationsForIdea>(_onFetchCollaborationsForIdea);
     on<FetchReceivedCollaborations>(_onFetchReceivedCollaborations);
     on<UpdateCollaborationStatus>(_onUpdateCollaborationStatus);
   }
@@ -23,18 +26,61 @@ class CollaborationBloc extends Bloc<CollaborationEvent, CollaborationState> {
     ApplyCollaboration event,
     Emitter<CollaborationState> emit,
   ) async {
+    debugPrint('DEBUG: CollaborationBloc received ApplyCollaboration event');
     emit(CollaborationLoading());
     try {
-      await _repository.applyForCollaboration(
+      await _repository.applyForIdea(
         ideaId: event.ideaId,
         innovatorId: event.innovatorId,
         roleApplied: event.roleApplied,
         message: event.message,
       );
-      emit(
-        const CollaborationActionSuccess('Application submitted successfully!'),
+      emit(const CollaborationApplied('Application submitted successfully!'));
+    } catch (e) {
+      emit(CollaborationError(e.toString()));
+    }
+  }
+
+  Future<void> _onLoadIdeaApplications(
+    LoadIdeaApplications event,
+    Emitter<CollaborationState> emit,
+  ) async {
+    emit(CollaborationLoading());
+    try {
+      final applications = await _repository.getIdeaApplications(event.ideaId);
+      emit(CollaborationLoaded(applications));
+    } catch (e) {
+      emit(CollaborationError(e.toString()));
+    }
+  }
+
+  Future<void> _onAcceptCollaborationRequest(
+    AcceptCollaborationRequest event,
+    Emitter<CollaborationState> emit,
+  ) async {
+    emit(CollaborationLoading());
+    try {
+      await _repository.updateApplicationStatus(
+        requestId: event.requestId,
+        status: 'accepted',
       );
-      // No default refresh here as context varies
+      emit(const CollaborationActionSuccess('Application accepted!'));
+    } catch (e) {
+      emit(CollaborationError(e.toString()));
+    }
+  }
+
+  Future<void> _onRejectCollaborationRequest(
+    RejectCollaborationRequest event,
+    Emitter<CollaborationState> emit,
+  ) async {
+    emit(CollaborationLoading());
+    try {
+      await _repository.updateApplicationStatus(
+        requestId: event.requestId,
+        status: 'rejected',
+      );
+      emit(const CollaborationActionSuccess('Application rejected!'));
     } catch (e) {
       emit(CollaborationError(e.toString()));
     }
@@ -46,8 +92,8 @@ class CollaborationBloc extends Bloc<CollaborationEvent, CollaborationState> {
   ) async {
     emit(CollaborationLoading());
     try {
-      final collaborations = await _repository.fetchMyCollaborations();
-      emit(CollaborationLoaded(collaborations));
+      final applications = await _repository.fetchMyCollaborations();
+      emit(CollaborationLoaded(applications));
     } catch (e) {
       emit(CollaborationError(e.toString()));
     }
@@ -59,23 +105,8 @@ class CollaborationBloc extends Bloc<CollaborationEvent, CollaborationState> {
   ) async {
     emit(CollaborationLoading());
     try {
-      final collaborations = await _repository.fetchReceivedCollaborations();
-      emit(CollaborationLoaded(collaborations));
-    } catch (e) {
-      emit(CollaborationError(e.toString()));
-    }
-  }
-
-  Future<void> _onFetchCollaborationsForIdea(
-    FetchCollaborationsForIdea event,
-    Emitter<CollaborationState> emit,
-  ) async {
-    emit(CollaborationLoading());
-    try {
-      final collaborations = await _repository.fetchCollaborationsForIdea(
-        event.ideaId,
-      );
-      emit(CollaborationLoaded(collaborations));
+      final applications = await _repository.fetchReceivedCollaborations();
+      emit(CollaborationLoaded(applications));
     } catch (e) {
       emit(CollaborationError(e.toString()));
     }
@@ -85,18 +116,13 @@ class CollaborationBloc extends Bloc<CollaborationEvent, CollaborationState> {
     UpdateCollaborationStatus event,
     Emitter<CollaborationState> emit,
   ) async {
-    // Preserve current list if possible or just show loading overlay
-    // For simplicity, emit loading then success
     emit(CollaborationLoading());
     try {
-      await _repository.updateCollaborationStatus(
-        collaborationId: event.collaborationId,
-        status: event.status,
+      await _repository.updateApplicationStatus(
+        requestId: event.collaborationId,
+        status: event.status.toLowerCase(),
       );
       emit(const CollaborationActionSuccess('Status updated successfully'));
-      // We might want to refresh the list depending on context (Idea or My Lists)
-      // Since this action is usually done by Innovator viewing Idea applicants, we can't easily guess which list to refresh without more context
-      // But typically the UI will listen to success and then request a refresh.
     } catch (e) {
       emit(CollaborationError(e.toString()));
     }

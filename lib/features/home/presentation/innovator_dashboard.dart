@@ -168,7 +168,7 @@ class InnovatorHome extends StatelessWidget {
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                AppColors.brandPurple.withOpacity(0.15),
+                AppColors.brandPurple.withValues(alpha: 0.15),
                 AppColors.background,
               ],
               begin: Alignment.topCenter,
@@ -365,7 +365,7 @@ class InnovatorHome extends StatelessWidget {
         delegate: SliverChildBuilderDelegate(
           (_, __) => Shimmer.fromColors(
             baseColor: AppColors.surfaceGlass,
-            highlightColor: AppColors.surfaceGlass.withOpacity(0.5),
+            highlightColor: AppColors.surfaceGlass.withValues(alpha: 0.5),
             child: Container(
               height: 120,
               margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
@@ -457,7 +457,7 @@ class _FeatureCompactCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
               borderGradient: LinearGradient(
                 colors: [
-                  AppColors.brandCyan.withOpacity(0.3),
+                  AppColors.brandCyan.withValues(alpha: 0.3),
                   Colors.transparent,
                 ],
                 begin: Alignment.topLeft,

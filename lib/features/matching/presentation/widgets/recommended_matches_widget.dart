@@ -66,9 +66,9 @@ class _MatchesView extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.blue.withOpacity(0.1),
+        color: Colors.blue.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.blue.withOpacity(0.3)),
+        border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -108,7 +108,7 @@ class _MatchCard extends StatelessWidget {
       elevation: 0,
       color: Theme.of(
         context,
-      ).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+      ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
       margin: const EdgeInsets.only(bottom: 8),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
@@ -154,7 +154,7 @@ class _MatchCard extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: _getScoreColor(
                               match.matchScore,
-                            ).withOpacity(0.2),
+                            ).withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(

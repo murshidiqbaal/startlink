@@ -28,7 +28,8 @@ class MessageModel {
       content: json['content'] as String,
       isRead: (json['is_read'] as bool?) ?? false,
       // Convert to local time for display
-      createdAt: DateTime.parse(json['created_at'] as String).toLocal(),
+      createdAt: DateTime.tryParse(json['created_at'] as String? ?? '')?.toLocal() ??
+          DateTime.now(),
     );
   }
 

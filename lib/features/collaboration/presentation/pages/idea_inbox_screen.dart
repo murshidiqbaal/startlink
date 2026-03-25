@@ -89,7 +89,7 @@ class IdeaInboxScreen extends StatelessWidget {
                       ),
                       child: Center(
                         child: Text(
-                          thread.title.substring(0, 1),
+                          thread.title.isNotEmpty ? thread.title[0] : '?',
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,

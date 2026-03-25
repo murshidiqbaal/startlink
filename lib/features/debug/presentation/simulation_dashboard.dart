@@ -56,8 +56,8 @@ class _SimulationDashboardState extends State<SimulationDashboard> {
                 margin: const EdgeInsets.only(bottom: 20),
                 decoration: BoxDecoration(
                   color: _statusMessage!.startsWith('Error')
-                      ? AppColors.rose.withOpacity(0.2)
-                      : AppColors.emerald.withOpacity(0.2),
+                      ? AppColors.rose.withValues(alpha: 0.2)
+                      : AppColors.emerald.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
                     color: _statusMessage!.startsWith('Error')
@@ -166,7 +166,7 @@ class _SimulationDashboardState extends State<SimulationDashboard> {
       color: AppColors.surfaceGlass,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.white.withOpacity(0.1)),
+        side: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: ListTile(
         leading: Container(
@@ -198,7 +198,7 @@ class _SimulationDashboardState extends State<SimulationDashboard> {
     return Text(
       text,
       style: TextStyle(
-        color: AppColors.textSecondary.withOpacity(0.6),
+        color: AppColors.textSecondary.withValues(alpha: 0.6),
         fontSize: 12,
         fontStyle: FontStyle.italic,
       ),

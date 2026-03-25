@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:startlink/core/theme/app_theme.dart';
 import 'package:startlink/features/auth/bloc/role_bloc.dart';
 import 'package:startlink/features/collaboration/presentation/bloc/collaboration_bloc.dart';
 import 'package:startlink/features/collaboration/presentation/widgets/applicant_card.dart';
@@ -57,22 +58,31 @@ class _CollaborationScreenState extends State<CollaborationScreen>
       ),
       body: BlocConsumer<CollaborationBloc, CollaborationState>(
         listener: (context, state) {
-          if (state is CollaborationActionSuccess) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text(state.message)));
-            _fetchData(); // Refresh list after action
+          if (state is CollaborationActionSuccess ||
+              state is CollaborationApplied) {
+            String message = '';
+            if (state is CollaborationActionSuccess) message = state.message;
+            if (state is CollaborationApplied) message = state.message;
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(message),
+                backgroundColor: AppColors.emerald,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+            _fetchData(); // Refresh list after action or new application
           }
         },
         builder: (context, state) {
           if (state is CollaborationLoading) {
             return const Center(child: CircularProgressIndicator());
           } else if (state is CollaborationLoaded) {
-            final pending = state.collaborations
-                .where((c) => c.status == 'Pending')
+            final pending = state.applications
+                .where((c) => c.status == 'pending')
                 .toList();
-            final history = state.collaborations
-                .where((c) => c.status != 'Pending')
+            final history = state.applications
+                .where((c) => c.status != 'pending')
                 .toList();
 
             return TabBarView(
@@ -102,9 +112,9 @@ class _CollaborationScreenState extends State<CollaborationScreen>
       itemBuilder: (context, index) {
         final item = items[index];
         if (isInnovator) {
-          return ApplicantCard(collaboration: item);
+          return ApplicantCard(request: item);
         } else {
-          return CollaborationCard(collaboration: item);
+          return CollaborationCard(request: item);
         }
       },
     );

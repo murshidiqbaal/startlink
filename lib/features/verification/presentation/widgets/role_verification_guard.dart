@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:startlink/features/verification/presentation/bloc/verification_bloc.dart';
-import 'package:startlink/features/verification/presentation/pages/investor_setup_screen.dart';
-import 'package:startlink/features/verification/presentation/pages/mentor_setup_screen.dart';
+import 'package:startlink/features/profile/presentation/edit_investor_profile.dart';
+import 'package:startlink/features/profile/presentation/edit_mentor_profile.dart';
 import 'package:startlink/features/verification/presentation/pages/verification_pending_screen.dart';
 
 class RoleVerificationGuard extends StatelessWidget {
@@ -37,11 +37,11 @@ class RoleVerificationGuard extends StatelessWidget {
             return VerificationPendingScreen(verification: request);
           }
 
-          // 3. No request yet, show setup screen
+          // 3. No request yet, show setup (Edit) screen
           if (role.toLowerCase() == 'investor') {
-            return const InvestorSetupScreen();
+            return EditInvestorProfileScreen(profileId: state.profileId);
           } else if (role.toLowerCase() == 'mentor') {
-            return const MentorSetupScreen();
+            return EditMentorProfileScreen(profileId: state.profileId);
           }
         }
 

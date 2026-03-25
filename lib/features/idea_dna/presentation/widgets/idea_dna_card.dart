@@ -36,14 +36,14 @@ class IdeaDnaCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface.withOpacity(0.8),
+        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.8),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withOpacity(0.1),
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -214,7 +214,7 @@ class IdeaDnaCard extends StatelessWidget {
                         height: 3,
                         child: LinearProgressIndicator(
                           value: m.value / 100,
-                          backgroundColor: color.withOpacity(0.1),
+                          backgroundColor: color.withValues(alpha: 0.1),
                           valueColor: AlwaysStoppedAnimation(color),
                         ),
                       ),

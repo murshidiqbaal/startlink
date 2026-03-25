@@ -7,6 +7,9 @@ import 'package:startlink/features/idea/presentation/idea_post_screen.dart';
 import 'package:startlink/features/idea_dna/domain/repositories/idea_dna_repository.dart';
 import 'package:startlink/features/idea_dna/presentation/bloc/idea_dna_bloc.dart';
 import 'package:startlink/features/idea_dna/presentation/widgets/idea_dna_card.dart';
+import 'package:startlink/features/collaboration/presentation/widgets/apply_collaboration_dialog.dart';
+import 'package:startlink/features/collaboration/presentation/pages/idea_applications_screen.dart';
+import 'package:startlink/core/services/supabase_client.dart';
 
 class IdeaDetailScreen extends StatelessWidget {
   final Idea idea;
@@ -31,6 +34,9 @@ class _IdeaDetailView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final currentUserId = SupabaseService.client.auth.currentUser?.id;
+    final isOwner = currentUserId == idea.ownerId;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: CustomScrollView(
@@ -49,7 +55,7 @@ class _IdeaDetailView extends StatelessWidget {
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            AppColors.brandPurple.withOpacity(0.3),
+                            AppColors.brandPurple.withValues(alpha: 0.3),
                             AppColors.background,
                           ],
                           begin: Alignment.topCenter,
@@ -195,7 +201,7 @@ class _IdeaDetailView extends StatelessWidget {
                           color: AppColors.surfaceGlass,
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: Colors.white.withOpacity(0.1),
+                            color: Colors.white.withValues(alpha: 0.1),
                           ),
                         ),
                         child: Text(
@@ -213,35 +219,54 @@ class _IdeaDetailView extends StatelessWidget {
                   // Actions
                   Row(
                     children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    IdeaPostScreen(idea: idea),
+                      if (isOwner)
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      IdeaPostScreen(idea: idea),
+                                ),
+                              );
+                            },
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.textPrimary,
+                              side: BorderSide(
+                                color: Colors.white.withValues(alpha: 0.2),
                               ),
-                            );
-                          },
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.textPrimary,
-                            side: BorderSide(
-                              color: Colors.white.withOpacity(0.2),
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+                            child: const Text('Edit Idea'),
                           ),
-                          child: const Text('Edit Idea'),
                         ),
-                      ),
-                      const SizedBox(width: 16),
+                      if (isOwner) const SizedBox(width: 16),
                       Expanded(
                         child: StartLinkButton(
-                          label: 'Manage Request',
-                          onPressed: () {},
+                          label: isOwner ? 'View Applications' : 'Apply as Collaborator',
+                          onPressed: () {
+                            if (isOwner) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => IdeaApplicationsScreen(
+                                    ideaId: idea.id,
+                                    ideaTitle: idea.title,
+                                  ),
+                                ),
+                              );
+                            } else {
+                              showDialog(
+                                context: context,
+                                builder: (context) =>
+                                    ApplyCollaborationDialog(idea: idea),
+                              );
+                            }
+                          },
                         ),
                       ),
                     ],
@@ -318,7 +343,7 @@ class _StatCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.surfaceGlass,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withOpacity(0.05)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -373,9 +398,9 @@ class _TaskBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Text(
         status.toUpperCase(),

@@ -22,10 +22,9 @@ class UserVerificationModel extends UserVerification {
       role: json['role'],
       verificationType: json['verification_type'],
       status: json['status'],
-      verifiedAt: json['verified_at'] != null
-          ? DateTime.parse(json['verified_at'])
-          : null,
-      createdAt: DateTime.parse(json['created_at']),
+      verifiedAt: DateTime.tryParse(json['verified_at'] as String? ?? '')?.toLocal(),
+      createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ??
+          DateTime.now(),
       fullName: profile != null ? profile['full_name'] : null,
       email: profile != null ? profile['email'] : null,
     );
@@ -64,7 +63,8 @@ class UserBadgeModel extends UserBadge {
       badgeLabel: json['badge_label'],
       badgeDescription: json['badge_description'],
       icon: json['icon'],
-      awardedAt: DateTime.parse(json['awarded_at']),
+      awardedAt: DateTime.tryParse(json['awarded_at'] as String? ?? '') ??
+          DateTime.now(),
       name: json['name'],
     );
   }

@@ -3,7 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:startlink/core/theme/app_theme.dart';
 import 'package:startlink/features/profile/data/models/collaborator_profile_model.dart';
 import 'package:startlink/features/profile/domain/entities/collaborator_profile.dart';
-import 'package:startlink/features/profile/presentation/bloc/role_profile_bloc.dart';
+import 'package:startlink/features/profile/presentation/bloc/collaborator_profile_bloc.dart';
 
 class EditCollaboratorProfileScreen extends StatefulWidget {
   final CollaboratorProfile profile;
@@ -20,6 +20,10 @@ class _EditCollaboratorProfileScreenState
   late TextEditingController _bioController;
   late TextEditingController _hourlyRateController;
   late TextEditingController _experienceController;
+  late TextEditingController _portfolioController;
+  late TextEditingController _githubController;
+  late TextEditingController _linkedinController;
+  late TextEditingController _resumeController;
   late List<String> _specialties;
   late List<String> _preferredProjects;
   String? _availability;
@@ -41,6 +45,10 @@ class _EditCollaboratorProfileScreenState
     _experienceController = TextEditingController(
       text: widget.profile.experienceYears?.toString() ?? '',
     );
+    _portfolioController = TextEditingController(text: widget.profile.portfolioUrl);
+    _githubController = TextEditingController(text: widget.profile.githubUrl);
+    _linkedinController = TextEditingController(text: widget.profile.linkedinUrl);
+    _resumeController = TextEditingController(text: widget.profile.resumeUrl);
     _specialties = List.from(widget.profile.specialties);
     _preferredProjects = List.from(widget.profile.preferredProjectTypes);
     _availability = widget.profile.availability;
@@ -51,19 +59,40 @@ class _EditCollaboratorProfileScreenState
     _bioController.dispose();
     _hourlyRateController.dispose();
     _experienceController.dispose();
+    _portfolioController.dispose();
+    _githubController.dispose();
+    _linkedinController.dispose();
+    _resumeController.dispose();
     super.dispose();
+  }
+
+  int _calcCompletion() {
+    int score = 0;
+    if (_bioController.text.trim().isNotEmpty) score += 20;
+    if (_specialties.isNotEmpty) score += 20;
+    if (_availability != null) score += 10;
+    if (_experienceController.text.trim().isNotEmpty) score += 10;
+    if (_hourlyRateController.text.trim().isNotEmpty) score += 10;
+    if (_portfolioController.text.trim().isNotEmpty) score += 10;
+    if (_githubController.text.trim().isNotEmpty) score += 10;
+    if (_linkedinController.text.trim().isNotEmpty) score += 10;
+    return score.clamp(0, 100);
   }
 
   void _save() {
     final updatedProfile = CollaboratorProfileModel(
       profileId: widget.profile.profileId,
-      bio: _bioController.text,
+      bio: _bioController.text.trim(),
       hourlyRate: double.tryParse(_hourlyRateController.text),
       experienceYears: int.tryParse(_experienceController.text),
+      portfolioUrl: _portfolioController.text.trim(),
+      githubUrl: _githubController.text.trim(),
+      linkedinUrl: _linkedinController.text.trim(),
+      resumeUrl: _resumeController.text.trim(),
       specialties: List.from(_specialties),
       preferredProjectTypes: List.from(_preferredProjects),
       availability: _availability,
-      profileCompletion: widget.profile.profileCompletion,
+      profileCompletion: _calcCompletion(),
     );
 
     context.read<CollaboratorProfileBloc>().add(
@@ -110,6 +139,7 @@ class _EditCollaboratorProfileScreenState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              _buildSectionHeader('Professional Identity'),
               _buildTextField('Bio', _bioController, maxLines: 4),
               const SizedBox(height: 20),
               _buildDropdown(
@@ -138,7 +168,8 @@ class _EditCollaboratorProfileScreenState
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 28),
+              _buildSectionHeader('Specialization'),
               _buildMultiSelect('Specialties', _specialties, [
                 'UI/UX',
                 'Frontend',
@@ -147,6 +178,9 @@ class _EditCollaboratorProfileScreenState
                 'AI/ML',
                 'Marketing',
                 'Sales',
+                'Quality Assurance',
+                'DevOps',
+                'Cybersecurity',
               ]),
               const SizedBox(height: 20),
               _buildMultiSelect('Project Types', _preferredProjects, [
@@ -156,7 +190,23 @@ class _EditCollaboratorProfileScreenState
                 'Fintech',
                 'EdTech',
                 'Open Source',
+                'E-commerce',
+                'Blockchain',
               ]),
+              const SizedBox(height: 28),
+              _buildSectionHeader('Online Presence'),
+              _buildTextField('Portfolio URL', _portfolioController,
+                  keyboardType: TextInputType.url),
+              const SizedBox(height: 16),
+              _buildTextField('GitHub URL', _githubController,
+                  keyboardType: TextInputType.url),
+              const SizedBox(height: 16),
+              _buildTextField('LinkedIn URL', _linkedinController,
+                  keyboardType: TextInputType.url),
+              const SizedBox(height: 16),
+              _buildTextField('Resume Link', _resumeController,
+                  keyboardType: TextInputType.url),
+              const SizedBox(height: 40),
             ],
           ),
         ),
@@ -274,7 +324,7 @@ class _EditCollaboratorProfileScreenState
                 });
               },
               backgroundColor: AppColors.surfaceGlass,
-              selectedColor: AppColors.brandPurple.withOpacity(0.5),
+              selectedColor: AppColors.brandPurple.withValues(alpha: 0.5),
               labelStyle: TextStyle(
                 color: isSelected ? Colors.white : AppColors.textSecondary,
               ),
@@ -282,6 +332,21 @@ class _EditCollaboratorProfileScreenState
           }).toList(),
         ),
       ],
+    );
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16, top: 8),
+      child: Text(
+        title.toUpperCase(),
+        style: const TextStyle(
+          color: AppColors.brandCyan,
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 1.2,
+        ),
+      ),
     );
   }
 }

@@ -87,12 +87,12 @@ class InvestorIdeaDetailScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Theme.of(
                     context,
-                  ).colorScheme.primaryContainer.withOpacity(0.1),
+                  ).colorScheme.primaryContainer.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: Theme.of(
                       context,
-                    ).colorScheme.primary.withOpacity(0.2),
+                    ).colorScheme.primary.withValues(alpha: 0.2),
                   ),
                 ),
                 child: Column(

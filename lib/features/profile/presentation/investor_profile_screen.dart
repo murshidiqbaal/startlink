@@ -11,6 +11,7 @@ import 'package:startlink/features/profile/presentation/edit_investor_profile.da
 import 'package:startlink/features/profile/presentation/secure_resume_page.dart';
 import 'package:startlink/features/verification/domain/entities/user_badge.dart';
 import 'package:startlink/features/verification/presentation/bloc/verification_bloc.dart';
+import 'package:startlink/features/verification/presentation/widgets/verification_status_card.dart';
 
 class InvestorProfileScreen extends StatefulWidget {
   final String? userId;
@@ -69,6 +70,9 @@ class _InvestorProfileScreenState extends State<InvestorProfileScreen> {
 
                   if (roleState is InvestorProfileLoaded &&
                       baseState is ProfileLoaded) {
+                    if (roleState.profile.profileCompletion == 0) {
+                      return _buildEmptyProfileView(context, roleState.profile.profileId);
+                    }
                     return _buildBody(
                       context,
                       baseState.profile,
@@ -78,13 +82,41 @@ class _InvestorProfileScreenState extends State<InvestorProfileScreen> {
                   }
 
                   if (roleState is InvestorProfileError) {
-                    return Center(child: Text(roleState.message));
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24.0),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.error_outline, size: 48, color: AppColors.rose),
+                            const SizedBox(height: 16),
+                            Text(
+                              roleState.message,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(color: AppColors.textSecondary),
+                            ),
+                            const SizedBox(height: 24),
+                            ElevatedButton(
+                              onPressed: _loadProfile,
+                              child: const Text('Retry'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
                   }
 
-                  if (roleState is InvestorProfileInitial) {
-                    _loadProfile();
+                  if (roleState is InvestorProfileInitial ||
+                      roleState is InvestorProfileSaving) {
+                    if (roleState is InvestorProfileInitial) _loadProfile();
                     return const Center(child: CircularProgressIndicator());
                   }
+
+                  if (roleState is InvestorProfileSaved) {
+                     _loadProfile();
+                     return const Center(child: CircularProgressIndicator());
+                  }
+
                   return const Center(child: CircularProgressIndicator());
                 },
               );
@@ -114,6 +146,8 @@ class _InvestorProfileScreenState extends State<InvestorProfileScreen> {
     VerificationState vState,
   ) {
     final tickets = NumberFormat.compactCurrency(symbol: '\$');
+    final badges = vState is VerificationLoaded ? vState.badges : <UserBadge>[];
+    final verification = vState is VerificationLoaded ? vState.getRequestForRole('investor') : null;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
@@ -147,7 +181,9 @@ class _InvestorProfileScreenState extends State<InvestorProfileScreen> {
                         : null,
                     child: baseProfile.avatarUrl == null
                         ? Text(
-                            baseProfile.fullName?.substring(0, 1) ?? 'I',
+                            baseProfile.initials.isNotEmpty
+                                ? baseProfile.initials[0]
+                                : 'I',
                             style: const TextStyle(fontSize: 24),
                           )
                         : null,
@@ -173,13 +209,58 @@ class _InvestorProfileScreenState extends State<InvestorProfileScreen> {
                         ),
                       ),
                     ],
-                    const SizedBox(height: 8),
-                    _buildVerificationRow(vState),
+                    const SizedBox(height: 12),
+                    VerificationStatusCard(
+                      status: badges.any((b) => b.badgeKey == 'verified_investor')
+                          ? 'Approved'
+                          : (verification?.status ?? 'Not Verified'),
+                      role: 'investor',
+                      onActionPressed: (badges.any((b) => b.badgeKey == 'verified_investor') || verification?.status == 'Pending')
+                          ? null
+                          : () {
+                              if (roleProfile.profileCompletion < 80) {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => EditInvestorProfileScreen(
+                                      profileId: roleProfile.profileId,
+                                    ),
+                                  ),
+                                ).then((_) => _loadProfile());
+                              } else {
+                                context.read<VerificationBloc>().add(
+                                      RequestVerification(
+                                        roleProfile.profileId,
+                                        'investor',
+                                        'profile_verification',
+                                      ),
+                                    );
+                              }
+                            },
+                    ),
                   ],
                 ),
               ),
             ],
           ),
+
+          if (roleProfile.bio != null) ...[
+            const SizedBox(height: 24),
+            Text(
+              'BIO',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: AppColors.textSecondary,
+                letterSpacing: 1.2,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              roleProfile.bio!,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                height: 1.5,
+              ),
+            ),
+          ],
 
           const SizedBox(height: 32),
 
@@ -243,25 +324,16 @@ class _InvestorProfileScreenState extends State<InvestorProfileScreen> {
             context,
             title: 'Verification & Badges',
             icon: Icons.verified_user,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (vState is VerificationLoaded &&
-                    vState.badges.isNotEmpty) ...[
-                  Wrap(
+            child: badges.isNotEmpty
+                ? Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: vState.badges
-                        .map((b) => _BadgeChip(badge: b))
-                        .toList(),
-                  ),
-                ] else
-                  const Text(
+                    children: badges.map((b) => _BadgeChip(badge: b)).toList(),
+                  )
+                : const Text(
                     'No badges earned yet.',
                     style: TextStyle(color: Colors.grey),
                   ),
-              ],
-            ),
           ),
 
           const SizedBox(height: 16),
@@ -276,42 +348,74 @@ class _InvestorProfileScreenState extends State<InvestorProfileScreen> {
     );
   }
 
-  Widget _buildVerificationRow(VerificationState state) {
-    bool isVerified = false;
-    String statusStr = 'Not Verified';
-    Color color = AppColors.rose;
-
-    if (state is VerificationLoaded) {
-      if (state.isRoleVerified('investor')) {
-        isVerified = true;
-        statusStr = 'Verified Investor';
-        color = AppColors.emerald;
-      } else {
-        final req = state.getRequestForRole('investor');
-        if (req != null) {
-          statusStr = req.status;
-          color = req.status == 'Pending' ? AppColors.amber : AppColors.rose;
-        }
-      }
-    }
-
-    return Row(
-      children: [
-        Icon(
-          isVerified ? Icons.verified : Icons.error_outline,
-          size: 16,
-          color: color,
+  Widget _buildEmptyProfileView(BuildContext context, String profileId) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceGlass,
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.brandPurple.withValues(alpha: 0.2), width: 2),
+              ),
+              child: const Icon(
+                Icons.person_add_outlined,
+                size: 64,
+                color: AppColors.brandPurple,
+              ),
+            ),
+            const SizedBox(height: 32),
+            const Text(
+              'No Investor Profile Yet',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Create your profile to start connecting with innovators and exploring investment opportunities.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                color: AppColors.textSecondary,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 40),
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => EditInvestorProfileScreen(profileId: profileId),
+                    ),
+                  ).then((_) => _loadProfile());
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.brandPurple,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: const Text(
+                  'Create Investor Profile',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: 4),
-        Text(
-          statusStr,
-          style: TextStyle(
-            color: color,
-            fontSize: 13,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
+      ),
     );
   }
 
@@ -327,7 +431,7 @@ class _InvestorProfileScreenState extends State<InvestorProfileScreen> {
       decoration: BoxDecoration(
         color: AppColors.surfaceGlass,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -363,9 +467,9 @@ class _BadgeChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.brandPurple.withOpacity(0.1),
+        color: AppColors.brandPurple.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.brandPurple.withOpacity(0.3)),
+        border: Border.all(color: AppColors.brandPurple.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

@@ -83,7 +83,7 @@ class _CollaboratorProfileContent extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildHeroHeader(),
+                _buildHeroHeader(collabProfile),
                 const SizedBox(height: 24),
                 _buildSection(
                   title: 'Specialties',
@@ -151,6 +151,28 @@ class _CollaboratorProfileContent extends StatelessWidget {
                     ],
                   ),
                 ),
+                const SizedBox(height: 16),
+                _buildSection(
+                  title: 'Links & Resources',
+                  icon: Icons.link,
+                  child: Column(
+                    children: [
+                      if (collabProfile.portfolioUrl?.isNotEmpty ?? false)
+                        _LinkRow(icon: Icons.language, label: 'Portfolio', url: collabProfile.portfolioUrl!),
+                      if (collabProfile.githubUrl?.isNotEmpty ?? false)
+                        _LinkRow(icon: Icons.code, label: 'GitHub', url: collabProfile.githubUrl!),
+                      if (collabProfile.linkedinUrl?.isNotEmpty ?? false)
+                        _LinkRow(icon: Icons.link, label: 'LinkedIn', url: collabProfile.linkedinUrl!),
+                      if (collabProfile.resumeUrl?.isNotEmpty ?? false)
+                        _LinkRow(icon: Icons.description, label: 'Resume', url: collabProfile.resumeUrl!),
+                      if ((collabProfile.portfolioUrl?.isEmpty ?? true) &&
+                          (collabProfile.githubUrl?.isEmpty ?? true) &&
+                          (collabProfile.linkedinUrl?.isEmpty ?? true) &&
+                          (collabProfile.resumeUrl?.isEmpty ?? true))
+                        const Text('No links added', style: TextStyle(color: AppColors.textSecondary)),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: 32),
                 if (isCurrentUser)
                   SizedBox(
@@ -174,27 +196,64 @@ class _CollaboratorProfileContent extends StatelessWidget {
     );
   }
 
-  Widget _buildHeroHeader() {
-    return Row(
+  Widget _buildHeroHeader(CollaboratorProfile profile) {
+    final completion = profile.profileCompletion;
+    final color = completion < 40 ? AppColors.rose : (completion < 70 ? AppColors.amber : AppColors.emerald);
+
+    return Column(
       children: [
-        CircleAvatar(
-          radius: 40,
-          backgroundImage: baseProfile.avatarUrl != null ? NetworkImage(baseProfile.avatarUrl!) : null,
-          child: baseProfile.avatarUrl == null ? Text(baseProfile.initials, style: const TextStyle(fontSize: 24)) : null,
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                baseProfile.fullName ?? 'Anonymous Collaborator',
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+        Row(
+          children: [
+            CircleAvatar(
+              radius: 40,
+              backgroundImage: baseProfile.avatarUrl != null ? NetworkImage(baseProfile.avatarUrl!) : null,
+              child: baseProfile.avatarUrl == null ? Text(baseProfile.initials, style: const TextStyle(fontSize: 24)) : null,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    baseProfile.fullName ?? 'Anonymous Collaborator',
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    baseProfile.headline ?? 'Ready to collaborate',
+                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
+                  ),
+                ],
               ),
-              const SizedBox(height: 4),
-              Text(
-                baseProfile.headline ?? 'Ready to collaborate',
-                style: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceGlass,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white10),
+          ),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  const Text('Profile Strength', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                  const Spacer(),
+                  Text('$completion%', style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13)),
+                ],
+              ),
+              const SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: completion / 100,
+                  backgroundColor: Colors.white12,
+                  valueColor: AlwaysStoppedAnimation<Color>(color),
+                  minHeight: 6,
+                ),
               ),
             ],
           ),
@@ -246,8 +305,43 @@ class _CollaboratorProfileContent extends StatelessWidget {
         ),
       ),
     ).then((_) {
-      context.read<CollaboratorProfileBloc>().add(FetchCollaboratorProfile(baseProfile.id));
+      if (context.mounted) {
+        context.read<CollaboratorProfileBloc>().add(FetchCollaboratorProfile(baseProfile.id));
+      }
     });
+  }
+}
+
+class _LinkRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String url;
+  const _LinkRow({required this.icon, required this.label, required this.url});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: AppColors.brandCyan),
+          const SizedBox(width: 12),
+          Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+          const Spacer(),
+          Flexible(
+            child: Text(
+              url.replaceAll('https://', '').replaceAll('http://', ''),
+              style: const TextStyle(
+                color: AppColors.brandCyan,
+                fontSize: 12,
+                decoration: TextDecoration.underline,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -261,9 +355,9 @@ class _Chip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Text(label, style: TextStyle(color: Colors.white, fontSize: 12)),
     );

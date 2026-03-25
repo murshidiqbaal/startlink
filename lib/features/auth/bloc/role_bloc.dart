@@ -49,10 +49,8 @@ class RoleBloc extends Bloc<RoleEvent, RoleState> {
     // 1. Try to get role from Supabase User Metadata (Source of Truth)
     try {
       final user = _authRepository.currentUser;
-      if (user != null &&
-          user.userMetadata != null &&
-          user.userMetadata!['role'] != null) {
-        final serverRole = user.userMetadata!['role'] as String;
+      final serverRole = user?.userMetadata?['role'] as String?;
+      if (serverRole != null) {
         _settingsBox.put('active_role', serverRole);
         emit(RoleState(serverRole));
         return;

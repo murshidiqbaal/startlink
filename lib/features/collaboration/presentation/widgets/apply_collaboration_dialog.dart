@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:startlink/core/presentation/widgets/space_0/aura_overlay.dart';
+import 'package:startlink/core/theme/app_theme.dart';
 import 'package:startlink/features/collaboration/presentation/bloc/collaboration_bloc.dart';
 import 'package:startlink/features/idea/domain/entities/idea.dart';
 
@@ -15,7 +17,7 @@ class ApplyCollaborationDialog extends StatefulWidget {
 
 class _ApplyCollaborationDialogState extends State<ApplyCollaborationDialog> {
   final _messageController = TextEditingController();
-  String _selectedRole = 'Developer'; // Default or make dynamic
+  String _selectedRole = 'Developer';
   final List<String> _roles = [
     'Developer',
     'Designer',
@@ -35,8 +37,10 @@ class _ApplyCollaborationDialogState extends State<ApplyCollaborationDialog> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Please enter a message explaining why you want to join.',
+            'Keep it professional. Explain why you are the best fit!',
           ),
+          backgroundColor: AppColors.rose,
+          behavior: SnackBarBehavior.floating,
         ),
       );
       return;
@@ -50,56 +54,152 @@ class _ApplyCollaborationDialogState extends State<ApplyCollaborationDialog> {
         message: _messageController.text.trim(),
       ),
     );
-    Navigator.of(context).pop();
   }
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text('Apply to ${widget.idea.title}'),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Select Role:'),
-            Wrap(
-              spacing: 8.0,
-              children: _roles.map((role) {
-                return ChoiceChip(
-                  label: Text(role),
-                  selected: _selectedRole == role,
-                  onSelected: (selected) {
-                    if (selected) {
-                      setState(() {
-                        _selectedRole = role;
-                      });
-                    }
-                  },
-                );
-              }).toList(),
+    return BlocConsumer<CollaborationBloc, CollaborationState>(
+      listener: (context, state) {
+        if (state is CollaborationApplied) {
+          AuraOverlay.show(context, state.message);
+          Navigator.of(context).pop();
+        } else if (state is CollaborationError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: AppColors.rose,
+              behavior: SnackBarBehavior.floating,
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _messageController,
-              decoration: const InputDecoration(
-                labelText: 'Message',
-                hintText: 'Why do you want to collaborate?',
-                border: OutlineInputBorder(),
+          );
+        }
+      },
+      builder: (context, state) {
+        final isLoading = state is CollaborationLoading;
+
+        return AlertDialog(
+          backgroundColor: AppColors.surfaceGlass,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+            side: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+          ),
+          title: Text(
+            'Apply to ${widget.idea.title}',
+            style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Select your role:',
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8.0,
+                  runSpacing: 8.0,
+                  children: _roles.map((role) {
+                    final isSelected = _selectedRole == role;
+                    return ChoiceChip(
+                      label: Text(
+                        role,
+                        style: TextStyle(
+                          color: isSelected
+                              ? Colors.white
+                              : AppColors.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                      selected: isSelected,
+                      onSelected: isLoading
+                          ? null
+                          : (selected) {
+                              if (selected) {
+                                setState(() => _selectedRole = role);
+                              }
+                            },
+                      selectedColor: AppColors.brandPurple,
+                      backgroundColor: Colors.white.withValues(alpha: 0.05),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(
+                          color: isSelected
+                              ? AppColors.brandPurple
+                              : Colors.white.withValues(alpha: 0.1),
+                        ),
+                      ),
+                      showCheckmark: false,
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 24),
+                TextField(
+                  controller: _messageController,
+                  enabled: !isLoading,
+                  style: const TextStyle(color: AppColors.textPrimary),
+                  decoration: InputDecoration(
+                    labelText: 'Pitch yourself',
+                    hintText: 'I would love to join because...',
+                    hintStyle: TextStyle(
+                      color: AppColors.textSecondary.withValues(alpha: 0.4),
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide(
+                        color: Colors.white.withValues(alpha: 0.1),
+                      ),
+                    ),
+                  ),
+                  maxLines: 4,
+                  maxLength: 300,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isLoading ? null : () => Navigator.of(context).pop(),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: AppColors.textSecondary),
               ),
-              maxLines: 4,
-              maxLength: 300,
+            ),
+            SizedBox(
+              width: 100,
+              height: 44,
+              child: ElevatedButton(
+                onPressed: isLoading ? null : _submit,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.brandPurple,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text(
+                        'Apply',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+              ),
             ),
           ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        ElevatedButton(onPressed: _submit, child: const Text('Apply')),
-      ],
+        );
+      },
     );
   }
 }

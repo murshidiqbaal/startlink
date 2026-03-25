@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:startlink/core/services/supabase_client.dart';
 import 'package:startlink/features/idea/domain/entities/idea.dart';
 import 'package:startlink/features/matching/data/models/idea_match_model.dart';
@@ -98,7 +99,7 @@ class MatchingRepositoryImpl implements MatchingRepository {
       }
     } catch (e) {
       // Log error but don't block flow
-      print('Matching generation failed: $e');
+      debugPrint('Matching generation failed: $e');
     }
   }
 }

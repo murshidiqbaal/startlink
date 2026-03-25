@@ -47,8 +47,9 @@ class AdminVerificationRepositoryImpl implements AdminVerificationRepository {
         .from('user_verifications')
         .select()
         .eq('id', verificationId)
-        .single();
+        .maybeSingle();
 
+    if (verificationData == null) return;
     final role = verificationData['role'] as String?;
 
     // 2. Update status in user_verifications
@@ -67,10 +68,11 @@ class AdminVerificationRepositoryImpl implements AdminVerificationRepository {
           'profile_id': profileId,
           'badge_key': 'verified_investor',
           'badge_label': 'Verified Investor',
+          'name': 'Verified Investor',
           'badge_description': 'Approved investor on the platform',
           'icon': 'shield_check',
         });
-        
+
         await _supabase
             .from('investor_profiles')
             .update({'is_verified': true})
@@ -80,6 +82,7 @@ class AdminVerificationRepositoryImpl implements AdminVerificationRepository {
           'profile_id': profileId,
           'badge_key': 'verified_mentor',
           'badge_label': 'Verified Mentor',
+          'name': 'Verified Mentor',
           'badge_description': 'Approved mentor on the platform',
           'icon': 'verified',
         });
@@ -99,10 +102,10 @@ class AdminVerificationRepositoryImpl implements AdminVerificationRepository {
         .from('user_verifications')
         .select()
         .eq('id', verificationId)
-        .single();
+        .maybeSingle();
 
-    final role = verificationData['role'] as String?;
-    final profileId = verificationData['profile_id'] as String;
+    final role = verificationData?['role'] as String?;
+    final profileId = verificationData?['profile_id'] as String?;
 
     // 2. Update status in user_verifications
     await _supabase
@@ -114,7 +117,7 @@ class AdminVerificationRepositoryImpl implements AdminVerificationRepository {
         .eq('id', verificationId);
 
     // 3. Ensure profile is NOT verified (in case it was previously)
-    if (role != null) {
+    if (role != null && profileId != null) {
       if (role.toLowerCase() == 'investor') {
         await _supabase
             .from('investor_profiles')

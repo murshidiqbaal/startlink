@@ -42,8 +42,8 @@ class InvestorIdeaCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
           color: isBoosted
-              ? Colors.amber.withOpacity(0.5)
-              : Theme.of(context).colorScheme.outline.withOpacity(0.1),
+              ? Colors.amber.withValues(alpha: 0.5)
+              : Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
           width: isBoosted ? 1.5 : 1,
         ),
       ),
@@ -110,7 +110,7 @@ class InvestorIdeaCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: Theme.of(
                       context,
-                    ).colorScheme.primaryContainer.withOpacity(0.1),
+                    ).colorScheme.primaryContainer.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
@@ -160,7 +160,7 @@ class InvestorIdeaCard extends StatelessWidget {
               const SizedBox(height: 16),
               Divider(
                 height: 1,
-                color: Theme.of(context).dividerColor.withOpacity(0.1),
+                color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
               ),
               const SizedBox(height: 8),
 
@@ -212,7 +212,7 @@ class InvestorIdeaCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         border: Border.all(
-          color: Theme.of(context).dividerColor.withOpacity(0.2),
+          color: Theme.of(context).dividerColor.withValues(alpha: 0.2),
         ),
         borderRadius: BorderRadius.circular(20),
       ),

@@ -33,7 +33,7 @@ class VerificationPendingScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(28),
                 decoration: BoxDecoration(
-                  color: (isRejected ? AppColors.rose : AppColors.brandPurple).withOpacity(0.1),
+                  color: (isRejected ? AppColors.rose : AppColors.brandPurple).withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -72,7 +72,7 @@ class VerificationPendingScreen extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: AppColors.surfaceGlass,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.rose.withOpacity(0.3)),
+                    border: Border.all(color: AppColors.rose.withValues(alpha: 0.3)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

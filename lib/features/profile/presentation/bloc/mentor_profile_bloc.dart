@@ -43,6 +43,20 @@ class MentorProfileLoaded extends MentorProfileState {
   List<Object> get props => [profile];
 }
 
+class MentorProfileSaving extends MentorProfileState {
+  final MentorProfile profile;
+  const MentorProfileSaving(this.profile);
+  @override
+  List<Object> get props => [profile];
+}
+
+class MentorProfileSaved extends MentorProfileState {
+  final MentorProfile profile;
+  const MentorProfileSaved(this.profile);
+  @override
+  List<Object> get props => [profile];
+}
+
 class MentorProfileError extends MentorProfileState {
   final String message;
   const MentorProfileError(this.message);
@@ -85,11 +99,14 @@ class MentorProfileBloc extends Bloc<MentorProfileEvent, MentorProfileState> {
     SaveMentorProfile event,
     Emitter<MentorProfileState> emit,
   ) async {
-    emit(MentorProfileLoading());
+    final prev = state;
+    emit(MentorProfileSaving(event.profile));
     try {
       await _repository.upsertMentorProfile(event.profile);
+      emit(MentorProfileSaved(event.profile));
       emit(MentorProfileLoaded(event.profile));
     } catch (e) {
+      if (prev is MentorProfileLoaded) emit(prev);
       emit(MentorProfileError(e.toString()));
     }
   }

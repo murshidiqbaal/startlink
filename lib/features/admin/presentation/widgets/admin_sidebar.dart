@@ -20,7 +20,7 @@ class AdminSidebar extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surfaceGlass,
         border: Border(
-          right: BorderSide(color: Colors.white.withOpacity(0.05)),
+          right: BorderSide(color: Colors.white.withValues(alpha: 0.05)),
         ),
       ),
       child: Column(
@@ -162,10 +162,10 @@ class _SidebarItem extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12),
           margin: const EdgeInsets.only(bottom: 4),
           decoration: BoxDecoration(
-            color: isSelected ? AppColors.brandCyan.withOpacity(0.1) : null,
+            color: isSelected ? AppColors.brandCyan.withValues(alpha: 0.1) : null,
             borderRadius: BorderRadius.circular(12),
             border: isSelected
-                ? Border.all(color: AppColors.brandCyan.withOpacity(0.3))
+                ? Border.all(color: AppColors.brandCyan.withValues(alpha: 0.3))
                 : null,
           ),
           child: Row(

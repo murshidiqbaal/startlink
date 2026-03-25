@@ -30,9 +30,9 @@ class ConversationModel {
       otherUserName: json['other_user_name'] as String? ?? 'Unknown',
       otherUserAvatar: json['other_user_avatar'] as String?,
       lastMessage: json['last_message'] as String? ?? '',
-      lastMessageAt: DateTime.parse(
-        json['last_message_at'] as String,
-      ).toLocal(),
+      lastMessageAt: DateTime.tryParse(json['last_message_at'] as String? ?? '')
+              ?.toLocal() ??
+          DateTime.now(),
       unreadCount: (json['unread_count'] as num?)?.toInt() ?? 0,
     );
   }

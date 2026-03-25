@@ -8,6 +8,7 @@ import 'package:startlink/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:startlink/features/profile/presentation/edit_mentor_profile.dart';
 import 'package:startlink/features/verification/domain/entities/user_badge.dart';
 import 'package:startlink/features/verification/presentation/bloc/verification_bloc.dart';
+import 'package:startlink/features/verification/presentation/widgets/verification_status_card.dart';
 
 class MentorProfileScreen extends StatefulWidget {
   final String? userId;
@@ -43,10 +44,12 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
           IconButton(
             icon: const Icon(Icons.edit),
             onPressed: () {
+              final userId = widget.userId ?? context.read<AuthRepository>().currentUser?.id;
+              if (userId == null) return;
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => const EditMentorProfileScreen(profileId: ''),
+                  builder: (_) => EditMentorProfileScreen(profileId: userId),
                 ),
               ).then((_) => _loadProfile());
             },
@@ -66,6 +69,9 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
 
                   if (roleState is MentorProfileLoaded &&
                       baseState is ProfileLoaded) {
+                    if (roleState.profile.profileCompletion == 0) {
+                      return _buildEmptyProfileView(context, roleState.profile.profileId);
+                    }
                     return _buildBody(
                       context,
                       baseState.profile,
@@ -75,7 +81,28 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
                   }
 
                   if (roleState is MentorProfileError) {
-                    return Center(child: Text(roleState.message));
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24.0),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.error_outline, size: 48, color: AppColors.rose),
+                            const SizedBox(height: 16),
+                            Text(
+                              roleState.message,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(color: AppColors.textSecondary),
+                            ),
+                            const SizedBox(height: 24),
+                            ElevatedButton(
+                              onPressed: _loadProfile,
+                              child: const Text('Retry'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
                   }
 
                   if (roleState is MentorProfileInitial) {
@@ -130,7 +157,9 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
                         : null,
                     child: baseProfile.avatarUrl == null
                         ? Text(
-                            baseProfile.fullName?.substring(0, 1) ?? 'M',
+                            baseProfile.initials.isNotEmpty
+                                ? baseProfile.initials[0]
+                                : 'M',
                             style: const TextStyle(fontSize: 24),
                           )
                         : null,
@@ -147,8 +176,33 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
                       style: Theme.of(context).textTheme.headlineSmall
                           ?.copyWith(fontWeight: FontWeight.bold),
                     ),
-                    const SizedBox(height: 4),
-                    _buildVerificationRow(vState),
+                    const SizedBox(height: 8),
+                    VerificationStatusCard(
+                      status: (vState is VerificationLoaded && vState.isRoleVerified('mentor'))
+                          ? 'Approved'
+                          : (vState is VerificationLoaded ? (vState.getRequestForRole('mentor')?.status ?? 'Not Verified') : 'Not Verified'),
+                      role: 'mentor',
+                      onActionPressed: (vState is VerificationLoaded && (vState.isRoleVerified('mentor') || vState.getRequestForRole('mentor')?.status == 'Pending'))
+                          ? null
+                          : () {
+                              if (roleProfile.profileCompletion < 80) {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => EditMentorProfileScreen(profileId: roleProfile.profileId),
+                                  ),
+                                ).then((_) => _loadProfile());
+                              } else {
+                                context.read<VerificationBloc>().add(
+                                      RequestVerification(
+                                        roleProfile.profileId,
+                                        'mentor',
+                                        'profile_verification',
+                                      ),
+                                    );
+                              }
+                            },
+                    ),
                     const SizedBox(height: 8),
                     Row(
                       children: [
@@ -175,29 +229,6 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
 
           const SizedBox(height: 24),
 
-          if (roleProfile.profileCompletion < 80)
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          const EditMentorProfileScreen(profileId: ''),
-                    ),
-                  ).then((_) => _loadProfile());
-                },
-                icon: const Icon(Icons.warning_amber_rounded),
-                label: const Text('Complete Profile to be Listed'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.amber,
-                ),
-              ),
-            ),
-
-          if (roleProfile.profileCompletion < 80) const SizedBox(height: 24),
-
           _buildSectionHeader(context, 'About & Focus'),
           Text(
             roleProfile.mentorshipFocus ?? 'Add your mentorship focus...',
@@ -215,7 +246,7 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
                   (e) => Chip(
                     label: Text(e),
                     backgroundColor: AppColors.surfaceGlass,
-                    side: BorderSide(color: Colors.white.withOpacity(0.05)),
+                    side: BorderSide(color: Colors.white.withValues(alpha: 0.05)),
                   ),
                 )
                 .toList(),
@@ -256,45 +287,6 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
     );
   }
 
-  Widget _buildVerificationRow(VerificationState state) {
-    bool isVerified = false;
-    String statusStr = 'Not Verified';
-    Color color = AppColors.rose;
-
-    if (state is VerificationLoaded) {
-      if (state.isRoleVerified('mentor')) {
-        isVerified = true;
-        statusStr = 'Verified Mentor';
-        color = AppColors.emerald;
-      } else {
-        final req = state.getRequestForRole('mentor');
-        if (req != null) {
-          statusStr = req.status;
-          color = req.status == 'Pending' ? AppColors.amber : AppColors.rose;
-        }
-      }
-    }
-
-    return Row(
-      children: [
-        Icon(
-          isVerified ? Icons.verified : Icons.error_outline,
-          size: 16,
-          color: color,
-        ),
-        const SizedBox(width: 4),
-        Text(
-          statusStr,
-          style: TextStyle(
-            color: color,
-            fontSize: 13,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildSectionHeader(BuildContext context, String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
@@ -303,6 +295,77 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
         style: Theme.of(context).textTheme.labelLarge?.copyWith(
           color: AppColors.brandPurple,
           letterSpacing: 1.1,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyProfileView(BuildContext context, String profileId) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceGlass,
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.brandPurple.withValues(alpha: 0.2), width: 2),
+              ),
+              child: const Icon(
+                Icons.person_add_outlined,
+                size: 64,
+                color: AppColors.brandPurple,
+              ),
+            ),
+            const SizedBox(height: 32),
+            const Text(
+              'No Mentor Profile Yet',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Create your mentor profile to share your expertise, guide innovators, and help shape the next big thing.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                color: AppColors.textSecondary,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 40),
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => EditMentorProfileScreen(profileId: profileId),
+                    ),
+                  ).then((_) => _loadProfile());
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.brandPurple,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: const Text(
+                  'Create Mentor Profile',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -318,9 +381,9 @@ class _BadgeChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.brandPurple.withOpacity(0.1),
+        color: AppColors.brandPurple.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.brandPurple.withOpacity(0.3)),
+        border: Border.all(color: AppColors.brandPurple.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

@@ -8,6 +8,7 @@ class InvestorProfile extends Equatable {
   final String? preferredStage;
   final String? organizationName;
   final String? linkedinUrl;
+  final String? bio;
   final int profileCompletion;
   final bool isVerified;
 
@@ -19,6 +20,7 @@ class InvestorProfile extends Equatable {
     this.preferredStage,
     this.organizationName,
     this.linkedinUrl,
+    this.bio,
     this.profileCompletion = 0,
     this.isVerified = false,
   });
@@ -32,6 +34,7 @@ class InvestorProfile extends Equatable {
     preferredStage,
     organizationName,
     linkedinUrl,
+    bio,
     profileCompletion,
     isVerified,
   ];

@@ -129,7 +129,7 @@ class MessageRepository {
           'content': content.trim(),
         })
         .select()
-        .single();
+        .maybeSingle();
 
     return MessageModel.fromJson(data as Map<String, dynamic>);
   }

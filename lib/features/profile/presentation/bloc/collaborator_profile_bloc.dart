@@ -43,14 +43,26 @@ class CollaboratorProfileLoaded extends CollaboratorProfileState {
   List<Object?> get props => [profile];
 }
 
+class CollaboratorProfileUpdating extends CollaboratorProfileState {
+  final CollaboratorProfile profile;
+  const CollaboratorProfileUpdating(this.profile);
+  @override
+  List<Object?> get props => [profile];
+}
+
+class CollaboratorProfileUpdated extends CollaboratorProfileState {
+  final CollaboratorProfile profile;
+  const CollaboratorProfileUpdated(this.profile);
+  @override
+  List<Object?> get props => [profile];
+}
+
 class CollaboratorProfileError extends CollaboratorProfileState {
   final String message;
   const CollaboratorProfileError(this.message);
   @override
   List<Object?> get props => [message];
 }
-
-class CollaboratorProfileUpdated extends CollaboratorProfileState {}
 
 // --- Bloc ---
 class CollaboratorProfileBloc
@@ -92,13 +104,14 @@ class CollaboratorProfileBloc
     UpdateCollaboratorProfile event,
     Emitter<CollaboratorProfileState> emit,
   ) async {
-    emit(CollaboratorProfileLoading());
+    final prev = state;
+    emit(CollaboratorProfileUpdating(event.profile));
     try {
       await repository.upsertCollaboratorProfile(event.profile);
-      emit(CollaboratorProfileUpdated());
-      // Re-fetch or pass back
+      emit(CollaboratorProfileUpdated(event.profile));
       emit(CollaboratorProfileLoaded(event.profile));
     } catch (e) {
+      if (prev is CollaboratorProfileLoaded) emit(prev);
       emit(CollaboratorProfileError(e.toString()));
     }
   }

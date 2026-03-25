@@ -9,9 +9,15 @@ class InvestorProfileModel extends InvestorProfile {
     super.preferredStage,
     super.organizationName,
     super.linkedinUrl,
+    super.bio,
     super.profileCompletion = 0,
     super.isVerified = false,
+    this.createdAt,
+    this.updatedAt,
   });
+
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
 
   factory InvestorProfileModel.fromEntity(InvestorProfile entity) {
     return InvestorProfileModel(
@@ -22,6 +28,7 @@ class InvestorProfileModel extends InvestorProfile {
       preferredStage: entity.preferredStage,
       organizationName: entity.organizationName,
       linkedinUrl: entity.linkedinUrl,
+      bio: entity.bio,
       profileCompletion: entity.profileCompletion,
       isVerified: entity.isVerified,
     );
@@ -36,8 +43,11 @@ class InvestorProfileModel extends InvestorProfile {
         preferredStage: json['preferred_stage'] as String?,
         organizationName: json['organization_name'] as String?,
         linkedinUrl: json['linkedin_url'] as String?,
+        bio: json['bio'] as String?,
         profileCompletion: (json['profile_completion'] as num?)?.toInt() ?? 0,
         isVerified: (json['is_verified'] as bool?) ?? false,
+        createdAt: DateTime.tryParse(json['created_at'] as String? ?? ''),
+        updatedAt: DateTime.tryParse(json['updated_at'] as String? ?? ''),
       );
 
   Map<String, dynamic> toUpsertJson() => {
@@ -50,6 +60,25 @@ class InvestorProfileModel extends InvestorProfile {
     'linkedin_url': linkedinUrl,
     'profile_completion': profileCompletion,
   };
+
+  static int calculateCompletion({
+    String? investmentFocus,
+    double? ticketSizeMin,
+    double? ticketSizeMax,
+    String? preferredStage,
+    String? organizationName,
+    String? linkedinUrl,
+    String? bio,
+  }) {
+    int score = 0;
+    if (investmentFocus != null && investmentFocus.isNotEmpty) score += 20;
+    if (ticketSizeMin != null && ticketSizeMax != null) score += 20;
+    if (preferredStage != null && preferredStage.isNotEmpty) score += 20;
+    if (organizationName != null && organizationName.isNotEmpty) score += 15;
+    if (linkedinUrl != null && linkedinUrl.isNotEmpty) score += 15;
+    if (bio != null && bio.isNotEmpty) score += 10;
+    return score;
+  }
 
   InvestorProfileModel copyWith({
     String? investmentFocus,
@@ -67,6 +96,7 @@ class InvestorProfileModel extends InvestorProfile {
     preferredStage: preferredStage ?? this.preferredStage,
     organizationName: organizationName ?? this.organizationName,
     linkedinUrl: linkedinUrl ?? this.linkedinUrl,
+    bio: bio ?? this.bio,
     profileCompletion: profileCompletion ?? this.profileCompletion,
     isVerified: isVerified,
   );

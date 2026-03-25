@@ -127,14 +127,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                   currentAvatarUrl.isNotEmpty
                               ? NetworkImage(currentAvatarUrl)
                               : null,
-                          child:
-                              currentAvatarUrl == null ||
+                          child: currentAvatarUrl == null ||
                                   currentAvatarUrl.isEmpty
                               ? Text(
-                                  widget.profile.fullName
-                                          ?.substring(0, 1)
-                                          .toUpperCase() ??
-                                      'U',
+                                  widget.profile.initials.isNotEmpty
+                                      ? widget.profile.initials[0]
+                                      : 'U',
                                   style: const TextStyle(
                                     fontSize: 32,
                                     fontWeight: FontWeight.bold,

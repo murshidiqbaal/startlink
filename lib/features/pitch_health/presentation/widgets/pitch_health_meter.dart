@@ -64,7 +64,7 @@ class _MeterView extends StatelessWidget {
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(30),
-            border: Border.all(color: color.withOpacity(0.3)),
+            border: Border.all(color: color.withValues(alpha: 0.3)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -75,7 +75,7 @@ class _MeterView extends StatelessWidget {
                 height: 100,
                 width: 10,
                 decoration: BoxDecoration(
-                  color: Colors.grey.withOpacity(0.2),
+                  color: Colors.grey.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(5),
                 ),
                 alignment: Alignment.bottomCenter,
@@ -89,7 +89,7 @@ class _MeterView extends StatelessWidget {
                     gradient: LinearGradient(
                       begin: Alignment.bottomCenter,
                       end: Alignment.topCenter,
-                      colors: [color.withOpacity(0.7), color],
+                      colors: [color.withValues(alpha: 0.7), color],
                     ),
                   ),
                 ),

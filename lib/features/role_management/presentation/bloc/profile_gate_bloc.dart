@@ -20,8 +20,10 @@ class ProfileGateBloc extends Bloc<ProfileGateEvent, ProfileGateState> {
   ) async {
     emit(ProfileGateLoading());
     try {
-      // fetchProfileById throws exception if not found because of .single()
-      final baseProfile = await _profileRepository.fetchProfileById(event.userId);
+      // fetchProfileById throws exception if not found because of .maybeSingle()
+      final baseProfile = await _profileRepository.fetchProfileById(
+        event.userId,
+      );
 
       int completion = 0;
       List<String> missing = []; // Simplified missing fields logic

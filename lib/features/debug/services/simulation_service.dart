@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
@@ -66,7 +67,7 @@ class SimulationService {
       final title = '${_pickOne(_titles)} ${i + 1}';
       await _supabase.from('ideas').insert({
         'id': _randomId(),
-        'author_id': userId,
+        'owner_id': userId,
         'title': title,
         'description':
             'A revolutionary solution for $title. We address key pain points using advanced technology.',
@@ -96,7 +97,7 @@ class SimulationService {
     final ideas = await _supabase
         .from('ideas')
         .select('id')
-        .eq('author_id', userId);
+        .eq('owner_id', userId);
     if (ideas.isEmpty) throw Exception('Post some ideas first!');
 
     for (int i = 0; i < count; i++) {
@@ -113,7 +114,7 @@ class SimulationService {
           // 'avatar_url': 'https://i.pravatar.cc/150?u=$fakeUserId',
         });
       } catch (e) {
-        print('Could not create fake profile (expected if stricter FK): $e');
+        debugPrint('Could not create fake profile (expected if stricter FK): $e');
         // If we can't create a profile, we can't really simulate a request from "someone else"
         // effectively unless we reuse the current user (which is weird) or have seeded users.
         // Let's assume for a "Test Context" we might have disabled FK or have a way.
@@ -123,15 +124,15 @@ class SimulationService {
 
       // Create Request
       final ideaId = _pickOne(ideas)['id'];
-      await _supabase.from('collaborations').insert({
+      await _supabase.from('collaboration_requests').insert({
         'id': _randomId(),
         'idea_id': ideaId,
         'applicant_id': fakeUserId,
-        'owner_id': userId,
-        'status': 'Pending',
+        'innovator_id': userId,
+        'status': 'pending',
         'message':
             'I would love to help with this! I have experience in ${_pickOne(_skills)}.',
-        'role_requested': 'Developer',
+        'role_applied': 'Developer',
         'created_at': DateTime.now().toIso8601String(),
       });
     }
@@ -145,7 +146,7 @@ class SimulationService {
     final ideas = await _supabase
         .from('ideas')
         .select('id')
-        .eq('author_id', userId);
+        .eq('owner_id', userId);
     if (ideas.isEmpty) throw Exception('Post some ideas first!');
 
     final fakeInvestorId = _randomId();
@@ -180,7 +181,7 @@ class SimulationService {
     final ideas = await _supabase
         .from('ideas')
         .select('id')
-        .eq('author_id', userId);
+        .eq('owner_id', userId);
     if (ideas.isEmpty) throw Exception('Post some ideas first!');
 
     final ideaId = _pickOne(ideas)['id'];

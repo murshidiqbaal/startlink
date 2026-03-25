@@ -4,7 +4,7 @@ abstract class CollaborationEvent extends Equatable {
   const CollaborationEvent();
 
   @override
-  List<Object> get props => [];
+  List<Object?> get props => [];
 }
 
 class ApplyCollaboration extends CollaborationEvent {
@@ -21,19 +21,37 @@ class ApplyCollaboration extends CollaborationEvent {
   });
 
   @override
-  List<Object> get props => [ideaId, innovatorId, roleApplied, message];
+  List<Object?> get props => [ideaId, innovatorId, roleApplied, message];
+}
+
+class LoadIdeaApplications extends CollaborationEvent {
+  final String ideaId;
+
+  const LoadIdeaApplications(this.ideaId);
+
+  @override
+  List<Object?> get props => [ideaId];
+}
+
+class AcceptCollaborationRequest extends CollaborationEvent {
+  final String requestId;
+
+  const AcceptCollaborationRequest(this.requestId);
+
+  @override
+  List<Object?> get props => [requestId];
+}
+
+class RejectCollaborationRequest extends CollaborationEvent {
+  final String requestId;
+
+  const RejectCollaborationRequest(this.requestId);
+
+  @override
+  List<Object?> get props => [requestId];
 }
 
 class FetchMyCollaborations extends CollaborationEvent {}
-
-class FetchCollaborationsForIdea extends CollaborationEvent {
-  final String ideaId;
-
-  const FetchCollaborationsForIdea(this.ideaId);
-
-  @override
-  List<Object> get props => [ideaId];
-}
 
 class FetchReceivedCollaborations extends CollaborationEvent {}
 
@@ -47,5 +65,5 @@ class UpdateCollaborationStatus extends CollaborationEvent {
   });
 
   @override
-  List<Object> get props => [collaborationId, status];
+  List<Object?> get props => [collaborationId, status];
 }

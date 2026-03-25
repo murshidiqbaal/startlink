@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:startlink/core/services/supabase_client.dart';
 import 'package:startlink/features/compass/data/models/compass_recommendation_model.dart';
 import 'package:startlink/features/compass/domain/entities/compass_recommendation.dart';
@@ -57,7 +58,7 @@ class CompassRepositoryImpl implements CompassRepository {
         await _supabase.from('user_compass_recommendations').insert(toInsert);
       }
     } catch (e) {
-      print('Failed to recalculate compass: $e');
+      debugPrint('Failed to recalculate compass: $e');
     }
   }
 }

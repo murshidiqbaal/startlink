@@ -67,7 +67,7 @@ class _IdeaInboxScreenState extends State<IdeaInboxScreen> {
                     Icon(
                       Icons.cloud_off_rounded,
                       size: 56,
-                      color: cs.error.withOpacity(0.7),
+                      color: cs.error.withValues(alpha: 0.7),
                     ),
                     const SizedBox(height: 16),
                     Text(
@@ -171,7 +171,7 @@ class _EmptyInbox extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: cs.primaryContainer.withOpacity(0.4),
+                color: cs.primaryContainer.withValues(alpha: 0.4),
                 shape: BoxShape.circle,
               ),
               child: Icon(Icons.forum_outlined, size: 56, color: cs.primary),

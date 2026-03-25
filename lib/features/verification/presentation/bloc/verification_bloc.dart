@@ -60,10 +60,12 @@ class VerificationLoading extends VerificationState {}
 class VerificationLoaded extends VerificationState {
   final List<UserVerification> verifications;
   final List<UserBadge> badges;
+  final String profileId;
 
   const VerificationLoaded({
     this.verifications = const [],
     this.badges = const [],
+    required this.profileId,
   });
 
   bool get isProfileVerified =>
@@ -85,7 +87,7 @@ class VerificationLoaded extends VerificationState {
   }
 
   @override
-  List<Object> get props => [verifications, badges];
+  List<Object> get props => [verifications, badges, profileId];
 }
 
 class VerificationError extends VerificationState {
@@ -104,7 +106,7 @@ class VerificationBloc extends Bloc<VerificationEvent, VerificationState> {
       _ruleEngine = VerificationRuleEngine(repository),
       super(VerificationInitial()) {
     on<FetchVerificationsAndBadges>(_onFetch);
-    on<RequestVerification>(_onRequest);
+    on<RequestVerification>(_onSubmitRequest);
     on<CheckBadgeRules>(_onCheckRules);
   }
 
@@ -116,13 +118,19 @@ class VerificationBloc extends Bloc<VerificationEvent, VerificationState> {
     try {
       final verifications = await _repository.getVerifications(event.profileId);
       final badges = await _repository.getBadges(event.profileId);
-      emit(VerificationLoaded(verifications: verifications, badges: badges));
+      emit(
+        VerificationLoaded(
+          verifications: verifications,
+          badges: badges,
+          profileId: event.profileId,
+        ),
+      );
     } catch (e) {
       emit(VerificationError(e.toString()));
     }
   }
 
-  Future<void> _onRequest(
+  Future<void> _onSubmitRequest(
     RequestVerification event,
     Emitter<VerificationState> emit,
   ) async {

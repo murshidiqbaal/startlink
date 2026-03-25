@@ -59,6 +59,7 @@ class CollaboratorProfileModel extends CollaboratorProfile {
     'portfolio_url': portfolioUrl,
     'github_url': githubUrl,
     'linkedin_url': linkedinUrl,
+    'resume_url': resumeUrl,
     'hourly_rate': hourlyRate,
     'profile_completion': profileCompletion,
   };

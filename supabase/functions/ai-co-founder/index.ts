@@ -26,7 +26,7 @@ Deno.serve(async (req: Request) => {
                 .from("ideas")
                 .select("title, description, problem_statement, target_market, current_stage")
                 .eq("id", context_id)
-                .single();
+                .maybeSingle();
 
             if (idea && !error) {
                 contextData = `

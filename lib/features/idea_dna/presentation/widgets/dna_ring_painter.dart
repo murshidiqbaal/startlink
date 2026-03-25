@@ -20,7 +20,7 @@ class DnaRingPainter extends CustomPainter {
 
     // Background Ring
     final bgPaint = Paint()
-      ..color = color.withOpacity(0.1)
+      ..color = color.withValues(alpha: 0.1)
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth;
 

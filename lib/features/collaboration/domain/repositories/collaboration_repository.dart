@@ -1,24 +1,22 @@
-import 'package:startlink/features/collaboration/domain/entities/collaboration.dart';
+import 'package:startlink/features/collaboration/domain/entities/collaboration_request.dart';
 
 abstract class CollaborationRepository {
-  Future<void> applyForCollaboration({
+  Future<void> applyForIdea({
     required String ideaId,
     required String innovatorId,
     required String roleApplied,
     required String message,
   });
 
-  Future<List<Collaboration>> fetchMyCollaborations(); // For Collaborators
+  Future<List<CollaborationRequest>> getIdeaApplications(String ideaId);
 
-  Future<List<Collaboration>> fetchCollaborationsForIdea(
-    String ideaId,
-  ); // For Innovators
-
-  Future<void> updateCollaborationStatus({
-    required String collaborationId,
+  Future<void> updateApplicationStatus({
+    required String requestId,
     required String status,
   });
 
-  Future<List<Collaboration>>
-  fetchReceivedCollaborations(); // For Innovators to see all applications
+  // Keep compatibility for existing BLoC logic if needed, 
+  // but these should eventually be migrated to the new system.
+  Future<List<CollaborationRequest>> fetchMyCollaborations();
+  Future<List<CollaborationRequest>> fetchReceivedCollaborations();
 }

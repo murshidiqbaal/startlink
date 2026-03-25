@@ -185,18 +185,8 @@ class _EditInnovatorBodyState extends State<_EditInnovatorBody> {
 
     final completion = _calcCompletion();
 
-    final updatedBase = widget.baseProfile.copyWith(
-      fullName: _fullNameCtrl.text.trim(),
-      headline: _headlineCtrl.text.trim(),
-      location: _locationCtrl.text.trim(),
-      about: _aboutCtrl.text.trim(),
-      role: _role,
-      skills: List.from(_skills),
-      linkedinUrl: _noe(_linkedinCtrl.text),
-      githubUrl: _noe(_githubCtrl.text),
-      portfolioUrl: _noe(_portfolioCtrl.text),
-      profileCompletion: completion,
-    );
+    // Base profile update should be handled by ProfileBloc separately if needed
+    // or we can add it back to InnovatorProfileBloc later if required.
 
     final roleModel = InnovatorProfileModel(
       profileId: existing.profileId,
@@ -218,7 +208,7 @@ class _EditInnovatorBodyState extends State<_EditInnovatorBody> {
     );
 
     context.read<InnovatorProfileBloc>().add(
-      SaveInnovatorProfile(profile: roleModel, baseProfile: updatedBase),
+      SaveInnovatorProfile(roleModel),
     );
   }
 
@@ -908,7 +898,7 @@ class _GlassToggle extends StatelessWidget {
           Switch(
             value: value,
             onChanged: onChanged,
-            activeColor: AppColors.brandPurple,
+            activeThumbColor: AppColors.brandPurple,
             trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
           ),

@@ -16,8 +16,8 @@ class VerificationStatusChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: isVerified
-            ? Colors.green.withOpacity(0.1)
-            : Colors.amber.withOpacity(0.1),
+            ? Colors.green.withValues(alpha: 0.1)
+            : Colors.amber.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(4),
         border: Border.all(color: isVerified ? Colors.green : Colors.amber),
       ),
