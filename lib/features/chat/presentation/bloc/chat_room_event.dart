@@ -1,4 +1,3 @@
-// lib/features/chat/presentation/bloc/chat_room_event.dart
 import 'package:equatable/equatable.dart';
 
 abstract class ChatRoomEvent extends Equatable {
@@ -8,22 +7,21 @@ abstract class ChatRoomEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-class LoadMessages extends ChatRoomEvent {
-  final String ideaId;
-  final String groupId;
-  const LoadMessages(this.ideaId, this.groupId);
+class LoadTeamMessages extends ChatRoomEvent {
+  final String teamId;
+  const LoadTeamMessages(this.teamId);
 
   @override
-  List<Object?> get props => [ideaId, groupId];
+  List<Object?> get props => [teamId];
 }
 
-class SendMessage extends ChatRoomEvent {
-  final String groupId;
+class SendTeamMessage extends ChatRoomEvent {
+  final String teamId;
   final String content;
-  const SendMessage(this.groupId, this.content);
+  const SendTeamMessage(this.teamId, this.content);
 
   @override
-  List<Object?> get props => [groupId, content];
+  List<Object?> get props => [teamId, content];
 }
 
 class ReceiveRealtimeMessage extends ChatRoomEvent {

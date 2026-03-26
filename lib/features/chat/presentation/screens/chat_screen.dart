@@ -24,8 +24,7 @@ class ChatScreen extends StatelessWidget {
     return BlocProvider(
       create: (ctx) => ChatRoomBloc(
         ctx.read<ChatRepository>(),
-        Supabase.instance.client,
-      )..add(LoadMessages(ideaId, groupId)),
+      )..add(LoadTeamMessages(groupId)),
       child: _ChatRoomView(ideaTitle: ideaTitle, groupId: groupId),
     );
   }
@@ -47,7 +46,7 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
   void _sendMessage() {
     final text = _msgCtrl.text.trim();
     if (text.isNotEmpty) {
-        context.read<ChatRoomBloc>().add(SendMessage(widget.groupId, text));
+        context.read<ChatRoomBloc>().add(SendTeamMessage(widget.groupId, text));
       _msgCtrl.clear();
       // Animate smoothly to the very bottom (which is offset 0 on a reversed list)
       if (_scrollCtrl.hasClients) {

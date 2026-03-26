@@ -7,12 +7,12 @@ import 'package:startlink/core/theme/app_theme.dart';
 import 'package:startlink/features/chat/presentation/bloc/chat_room_bloc.dart';
 import 'package:startlink/features/chat/presentation/bloc/chat_room_event.dart';
 import 'package:startlink/features/chat/presentation/bloc/chat_room_state.dart';
-import 'package:startlink/features/chat/domain/entities/message.dart';
+import 'package:startlink/features/chat/domain/entities/team_message.dart';
 import 'package:startlink/features/chat/domain/repositories/chat_repository.dart';
 
 class IdeaChatScreen extends StatelessWidget {
   final String ideaId;
-  final String groupId;
+  final String groupId; // Used as teamId for this legacy screen
   final String ideaTitle;
 
   const IdeaChatScreen({
@@ -27,8 +27,7 @@ class IdeaChatScreen extends StatelessWidget {
     return BlocProvider(
       create: (context) => ChatRoomBloc(
         context.read<ChatRepository>(),
-        Supabase.instance.client,
-      )..add(LoadMessages(ideaId, groupId)),
+      )..add(LoadTeamMessages(groupId)),
       child: _IdeaChatView(ideaTitle: ideaTitle, groupId: groupId),
     );
   }
@@ -51,7 +50,7 @@ class _IdeaChatViewState extends State<_IdeaChatView> {
   void _sendMessage() {
     if (_controller.text.trim().isEmpty) return;
     context.read<ChatRoomBloc>().add(
-          SendMessage(widget.groupId, _controller.text.trim()),
+          SendTeamMessage(widget.groupId, _controller.text.trim()),
         );
     _controller.clear();
     
@@ -87,7 +86,7 @@ class _IdeaChatViewState extends State<_IdeaChatView> {
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
             ),
             const Text(
-              'Public Discussion',
+              'Team Discussion',
               style: TextStyle(fontSize: 10, color: Colors.white54),
             ),
           ],
@@ -135,7 +134,7 @@ class _IdeaChatViewState extends State<_IdeaChatView> {
     );
   }
 
-  Widget _buildMessageBubble(Message msg, bool isMe) {
+  Widget _buildMessageBubble(TeamMessage msg, bool isMe) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Row(

@@ -64,21 +64,53 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   Future<UserResponse> updateRole(String role) async {
     final user = _supabase.auth.currentUser;
     if (user != null) {
-      // Sync to public profiles table
+      // 1. Sync to public profiles table first (this is critical for UI and RLS)
       try {
         await _supabase
             .from('profiles')
             .update({'role': role})
             .eq('id', user.id);
       } catch (e) {
-        // Fail silently or log, but don't block metadata update if profile entry is missing
-        // (though it shouldn't be if triggers worked)
-        debugPrint('Error updating profiles table: $e');
+        debugPrint('AuthRemoteSource: Error updating profiles table: $e');
+        // We continue even if profile update fails, as the Auth metadata is the source of truth for the JWT
       }
     }
 
-    return await _supabase.auth.updateUser(
-      UserAttributes(data: {'role': role}),
-    );
+    // 2. Refresh session if it's stale or if we suspect it might be the cause of 403
+    try {
+      final session = _supabase.auth.currentSession;
+      if (session != null && session.isExpired) {
+        debugPrint('AuthRemoteSource: Session expired, refreshing before update...');
+        await _supabase.auth.refreshSession();
+      }
+    } catch (e) {
+      debugPrint('AuthRemoteSource: Failed to pre-refresh session: $e');
+    }
+
+    // 3. Update Auth Metadata (this refreshes the JWT)
+    try {
+      return await _supabase.auth.updateUser(
+        UserAttributes(data: {'role': role}),
+      );
+    } on AuthException catch (e) {
+      // 4. Handle "session_not_found" specifically
+      if (e.statusCode == '403' || e.message.contains('session_not_found')) {
+        debugPrint('AuthRemoteSource: Session not found (403), attempting recovery refresh...');
+        try {
+          await _supabase.auth.refreshSession();
+          // Retry once after refresh
+          return await _supabase.auth.updateUser(
+            UserAttributes(data: {'role': role}),
+          );
+        } catch (refreshError) {
+          debugPrint('AuthRemoteSource: Recovery refresh failed: $refreshError');
+          rethrow; // If refresh fails, we can't recover
+        }
+      }
+      rethrow;
+    } catch (e) {
+      debugPrint('AuthRemoteSource: Unexpected error in updateRole: $e');
+      rethrow;
+    }
   }
 }

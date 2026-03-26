@@ -1,4 +1,3 @@
-// lib/features/chat/presentation/bloc/chat_list_event.dart
 import 'package:equatable/equatable.dart';
 
 abstract class ChatListEvent extends Equatable {
@@ -8,6 +7,6 @@ abstract class ChatListEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-class LoadInnovatorChatRooms extends ChatListEvent {}
+class LoadInnovatorTeams extends ChatListEvent {}
 
-class LoadCollaboratorChatRooms extends ChatListEvent {}
+class LoadCollaboratorTeams extends ChatListEvent {}

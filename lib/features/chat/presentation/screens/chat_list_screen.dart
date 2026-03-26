@@ -30,9 +30,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
     final role = profileState.baseProfile?.role;
     
     if (role == 'innovator') {
-      context.read<ChatListBloc>().add(LoadInnovatorChatRooms());
+      context.read<ChatListBloc>().add(LoadInnovatorTeams());
     } else {
-      context.read<ChatListBloc>().add(LoadCollaboratorChatRooms());
+      context.read<ChatListBloc>().add(LoadCollaboratorTeams());
     }
   }
 
@@ -57,14 +57,14 @@ class _ChatListScreenState extends State<ChatListScreen> {
             return Center(child: Text("Error: ${state.message}", style: const TextStyle(color: AppColors.rose)));
           }
           if (state is ChatListLoaded) {
-            if (state.rooms.isEmpty) {
+            if (state.teams.isEmpty) {
               return _buildEmptyState();
             }
             return ListView.builder(
               padding: const EdgeInsets.all(16),
-              itemCount: state.rooms.length,
+              itemCount: state.teams.length,
               itemBuilder: (context, index) {
-                final room = state.rooms[index];
+                final room = state.teams[index];
                 return ChatRoomCard(
                   ideaId: room.ideaId,
                   ideaTitle: room.name,

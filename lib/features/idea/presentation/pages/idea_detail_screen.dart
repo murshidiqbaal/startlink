@@ -5,7 +5,8 @@ import 'package:startlink/core/presentation/widgets/startlink_button.dart';
 import 'package:startlink/core/services/supabase_client.dart';
 import 'package:startlink/core/theme/app_theme.dart';
 import 'package:startlink/features/chat/domain/repositories/chat_repository.dart';
-import 'package:startlink/features/collaboration/presentation/pages/idea_chat_screen.dart';
+import 'package:startlink/features/chat/presentation/screens/idea_docket_screen.dart';
+import 'package:startlink/features/chat/presentation/screens/idea_public_chat_screen.dart';
 import 'package:startlink/features/collaboration/presentation/pages/idea_applications_screen.dart';
 import 'package:startlink/features/collaboration/presentation/widgets/apply_collaboration_dialog.dart';
 import 'package:startlink/features/collaboration/presentation/bloc/collaboration_bloc.dart';
@@ -451,48 +452,52 @@ class IdeaChatButton extends StatelessWidget {
     final currentUserId = SupabaseService.client.auth.currentUser?.id;
     if (currentUserId == null) return const SizedBox.shrink();
 
-    // Public chat button accessible to all authenticated users
-    return _buildButton(context);
+    return Column(
+      children: [
+        _buildPublicChatButton(context),
+        _buildTeamDocketButton(context),
+      ],
+    );
   }
 
-  Widget _buildButton(BuildContext context) {
+  Widget _buildPublicChatButton(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
       child: GlassCard(
-        height: 80,
-        borderColor: Colors.white.withValues(alpha: 0.1),
+        height: 70,
+        borderColor: Colors.cyanAccent.withValues(alpha: 0.2),
         child: InkWell(
           onTap: () async {
             final scaffoldMessenger = ScaffoldMessenger.of(context);
             try {
               final chatRepo = context.read<ChatRepository>();
-              final groupId = await chatRepo.getOrCreateGroup(idea.id, type: 'public');
+              final groupId = await chatRepo.getOrCreatePublicGroup(idea.id, idea.title);
               
               if (!context.mounted) return;
               
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => IdeaChatScreen(
-                    ideaId: idea.id,
+                  builder: (_) => IdeaPublicChatScreen(
                     groupId: groupId,
-                    ideaTitle: '${idea.title} (Public)',
+                    ideaId: idea.id,
+                    ideaTitle: idea.title,
                   ),
                 ),
               );
             } catch (e) {
               scaffoldMessenger.showSnackBar(
-                SnackBar(content: Text('Error opening chat: $e')),
+                SnackBar(content: Text('Error opening public discussion: $e')),
               );
             }
           },
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.forum_outlined, color: Colors.cyanAccent),
+              const Icon(Icons.public, color: Colors.cyanAccent),
               const SizedBox(width: 12),
               const Text(
-                'Discuss Idea',
+                'Public Discussion',
                 style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -500,20 +505,55 @@ class IdeaChatButton extends StatelessWidget {
                   letterSpacing: 1.1,
                 ),
               ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.cyanAccent.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: const Text(
-                  'PUBLIC',
-                  style: TextStyle(
-                    color: Colors.cyanAccent,
-                    fontSize: 8,
-                    fontWeight: FontWeight.bold,
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTeamDocketButton(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+      child: GlassCard(
+        height: 70,
+        borderColor: AppColors.brandPurple.withValues(alpha: 0.2),
+        child: InkWell(
+          onTap: () async {
+            final scaffoldMessenger = ScaffoldMessenger.of(context);
+            try {
+              final chatRepo = context.read<ChatRepository>();
+              final teamId = await chatRepo.getOrCreateTeam(idea.id);
+              
+              if (!context.mounted) return;
+              
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => IdeaDocketScreen(
+                    teamId: teamId,
+                    ideaTitle: idea.title,
                   ),
+                ),
+              );
+            } catch (e) {
+              scaffoldMessenger.showSnackBar(
+                SnackBar(content: Text('Error opening team docket: $e')),
+              );
+            }
+          },
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.groups_outlined, color: AppColors.brandPurple),
+              const SizedBox(width: 12),
+              const Text(
+                'Team Private Docket',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  letterSpacing: 1.1,
                 ),
               ),
             ],

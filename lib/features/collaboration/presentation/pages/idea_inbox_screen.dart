@@ -6,7 +6,7 @@ import 'package:startlink/features/chat/presentation/bloc/chat_list_state.dart';
 import 'package:startlink/core/presentation/widgets/anti_gravity/glass_card.dart';
 import 'package:startlink/core/presentation/widgets/anti_gravity/floating_widget.dart';
 import 'package:startlink/core/theme/app_theme.dart';
-import 'package:startlink/features/collaboration/presentation/pages/idea_chat_screen.dart';
+import 'package:startlink/features/chat/presentation/screens/idea_docket_screen.dart';
 
 import 'package:startlink/features/profile/presentation/bloc/unified_role_profile_bloc.dart';
 
@@ -32,9 +32,9 @@ class _IdeaInboxScreenState extends State<IdeaInboxScreen> {
     final role = profileState.baseProfile?.role?.toLowerCase();
     
     if (role == 'innovator') {
-      context.read<ChatListBloc>().add(LoadInnovatorChatRooms());
+      context.read<ChatListBloc>().add(LoadInnovatorTeams());
     } else {
-      context.read<ChatListBloc>().add(LoadCollaboratorChatRooms());
+      context.read<ChatListBloc>().add(LoadCollaboratorTeams());
     }
   }
 
@@ -69,8 +69,8 @@ class _IdeaInboxScreenState extends State<IdeaInboxScreen> {
             return Center(child: Text("Error: ${state.message}", style: const TextStyle(color: Colors.redAccent)));
           }
           if (state is ChatListLoaded) {
-            final threads = state.rooms;
-            if (threads.isEmpty) {
+            final teams = state.teams;
+            if (teams.isEmpty) {
               return const Center(
                 child: Text(
                   "No active idea dockets yet.",
@@ -80,9 +80,9 @@ class _IdeaInboxScreenState extends State<IdeaInboxScreen> {
             }
             return ListView.builder(
               padding: const EdgeInsets.all(20),
-              itemCount: threads.length,
+              itemCount: teams.length,
               itemBuilder: (context, index) {
-                final thread = threads[index];
+                final team = teams[index];
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 16),
                   child: FloatingWidget(
@@ -93,10 +93,9 @@ class _IdeaInboxScreenState extends State<IdeaInboxScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => IdeaChatScreen(
-                              ideaId: thread.ideaId,
-                              groupId: thread.id,
-                              ideaTitle: thread.name,
+                            builder: (_) => IdeaDocketScreen(
+                              teamId: team.id,
+                              ideaTitle: team.name,
                             ),
                           ),
                         );
@@ -117,7 +116,7 @@ class _IdeaInboxScreenState extends State<IdeaInboxScreen> {
                             ),
                             child: Center(
                               child: Text(
-                                thread.name.isNotEmpty ? thread.name[0] : '?',
+                                team.name.isNotEmpty ? team.name[0] : '?',
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
@@ -133,7 +132,7 @@ class _IdeaInboxScreenState extends State<IdeaInboxScreen> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(
-                                  thread.name,
+                                  team.name,
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontWeight: FontWeight.bold,
@@ -142,7 +141,7 @@ class _IdeaInboxScreenState extends State<IdeaInboxScreen> {
                                 ),
                                 const SizedBox(height: 6),
                                 const Text(
-                                  "Tap to open team chat",
+                                  "Tap to open team docket",
                                   style: TextStyle(
                                     color: Colors.white70,
                                     fontSize: 12,

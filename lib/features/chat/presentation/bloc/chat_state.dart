@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
-import 'package:startlink/features/collaboration/domain/entities/idea_team_member.dart';
-import '../../domain/entities/message.dart';
+import '../../domain/entities/team_message.dart';
+import '../../domain/entities/team_member.dart';
 
 abstract class ChatState extends Equatable {
   const ChatState();
@@ -14,8 +14,8 @@ class ChatLoading extends ChatState {}
 
 class ChatLoaded extends ChatState {
   final String roomId;
-  final List<Message> messages;
-  final List<IdeaTeamMember> teamMembers;
+  final List<TeamMessage> messages;
+  final List<TeamMember> teamMembers;
   const ChatLoaded(this.roomId, this.messages, this.teamMembers);
   @override
   List<Object?> get props => [roomId, messages, teamMembers];

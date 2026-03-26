@@ -1,16 +1,22 @@
-import 'package:startlink/features/collaboration/domain/entities/idea_team_member.dart';
-import '../entities/chat_room.dart'; // This file now contains ChatGroup
-import '../entities/message.dart';
+import '../entities/team.dart';
+import '../entities/team_member.dart';
+import '../entities/team_message.dart';
 
 abstract class ChatRepository {
-  Future<List<ChatGroup>> getInnovatorGroups();
-  Future<List<ChatGroup>> getCollaboratorGroups();
-  Future<List<Message>> getMessages(String groupId);
-  Future<Message> sendMessage(String groupId, String message);
+  Future<List<Team>> getInnovatorTeams();
+  Future<List<Team>> getCollaboratorTeams();
+  Future<List<TeamMessage>> getTeamMessages(String teamId);
+  Future<TeamMessage> sendTeamMessage(String teamId, String content);
   
-  // Create or retrieve a group by type ('team' or 'public')
-  Future<String> getOrCreateGroup(String ideaId, {String type = 'team'});
-  Future<List<IdeaTeamMember>> getTeamMembers(String ideaId);
-  Stream<List<Message>> subscribeMessages(String roomId);
-  Future<bool> isTeamMember(String ideaId, String userId);
+  // Create or retrieve a team for an idea
+  Future<String> getOrCreateTeam(String ideaId);
+  Future<List<TeamMember>> getTeamMembers(String teamId);
+  Stream<List<TeamMessage>> subscribeTeamMessages(String teamId);
+  Future<bool> isTeamMember(String teamId, String userId);
+
+  // Public Discussion (using groups/messages tables)
+  Future<String> getOrCreatePublicGroup(String ideaId, String title);
+  Future<List<TeamMessage>> getPublicMessages(String groupId);
+  Future<TeamMessage> sendPublicMessage(String groupId, String content);
+  Stream<List<TeamMessage>> subscribePublicMessages(String groupId);
 }

@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
-import '../../domain/entities/message.dart';
+
+import '../../domain/entities/team_message.dart';
 
 abstract class ChatEvent extends Equatable {
   const ChatEvent();
@@ -22,7 +23,7 @@ class SendMessage extends ChatEvent {
 }
 
 class ReceiveMessage extends ChatEvent {
-  final List<Message> messages;
+  final List<TeamMessage> messages;
   const ReceiveMessage(this.messages);
   @override
   List<Object?> get props => [messages];

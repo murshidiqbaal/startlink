@@ -1,10 +1,11 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:startlink/features/collaboration/domain/entities/idea_team_member.dart';
-import '../../domain/entities/chat_room.dart';
-import '../../domain/entities/message.dart';
+import '../../domain/entities/team.dart';
+import '../../domain/entities/team_member.dart';
+import '../../domain/entities/team_message.dart';
 import '../../domain/repositories/chat_repository.dart';
-import '../models/chat_room_model.dart';
-import '../models/message_model.dart';
+import '../models/team_model.dart';
+import '../models/team_member_model.dart';
+import '../models/team_message_model.dart';
 
 class ChatRepositoryImpl implements ChatRepository {
   final SupabaseClient _supabase;
@@ -13,44 +14,42 @@ class ChatRepositoryImpl implements ChatRepository {
       : _supabase = supabase ?? Supabase.instance.client;
 
   @override
-  Future<List<ChatGroup>> getInnovatorGroups() async {
+  Future<List<Team>> getInnovatorTeams() async {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) return [];
 
     final response = await _supabase
-        .from('groups')
-        .select('*, ideas!inner(*)')
-        .eq('type', 'team')
-        .eq('ideas.owner_id', userId);
+        .from('teams')
+        .select('*, team_members!inner(*)')
+        .eq('team_members.user_id', userId)
+        .eq('team_members.role', 'admin');
 
-    return ChatGroupModel.fromJsonList(response);
+    return TeamModel.fromJsonList(response);
   }
 
   @override
-  Future<List<ChatGroup>> getCollaboratorGroups() async {
+  Future<List<Team>> getCollaboratorTeams() async {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) return [];
 
     final response = await _supabase
-        .from('groups')
-        .select('*, ideas!inner(idea_collaborators!inner(*))')
-        .eq('type', 'team')
-        .eq('ideas.idea_collaborators.user_id', userId)
-        .eq('ideas.idea_collaborators.status', 'Accepted');
+        .from('teams')
+        .select('*, team_members!inner(*)')
+        .eq('team_members.user_id', userId)
+        .eq('team_members.role', 'member');
 
-    return ChatGroupModel.fromJsonList(response);
+    return TeamModel.fromJsonList(response);
   }
 
   @override
-  Future<List<Message>> getMessages(String groupId) async {
+  Future<List<TeamMessage>> getTeamMessages(String teamId) async {
     final response = await _supabase
-        .from('messages')
+        .from('team_messages')
         .select('''
           id,
-          group_id,
+          team_id,
           sender_id,
           content,
-          is_read,
           created_at,
           sender:profiles(
             id,
@@ -58,28 +57,26 @@ class ChatRepositoryImpl implements ChatRepository {
             avatar_url
           )
         ''')
-        .eq('group_id', groupId)
+        .eq('team_id', teamId)
         .order('created_at', ascending: true);
 
-    return MessageModel.fromJsonList(response);
+    return TeamMessageModel.fromJsonList(response);
   }
 
   @override
-  Future<Message> sendMessage(String groupId, String message) async {
+  Future<TeamMessage> sendTeamMessage(String teamId, String content) async {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) throw Exception('User not authenticated');
 
-    final data = await _supabase.from('messages').insert({
-      'group_id': groupId,
+    final data = await _supabase.from('team_messages').insert({
+      'team_id': teamId,
       'sender_id': userId,
-      'content': message,
-      'is_read': false,
+      'content': content,
     }).select('''
       id,
-      group_id,
+      team_id,
       sender_id,
       content,
-      is_read,
       created_at,
       sender:profiles(
         id,
@@ -88,36 +85,115 @@ class ChatRepositoryImpl implements ChatRepository {
       )
     ''').single();
 
-    return MessageModel.fromJson(data);
+    return TeamMessageModel.fromJson(data);
   }
 
   @override
-  Future<String> getOrCreateGroup(String ideaId, {String type = 'team'}) async {
+  Future<String> getOrCreateTeam(String ideaId) async {
+    // Check if team exists
     final existing = await _supabase
-        .from('groups')
+        .from('teams')
         .select('id')
         .eq('idea_id', ideaId)
-        .eq('type', type)
         .maybeSingle();
 
     if (existing != null) {
       return existing['id'] as String;
     }
 
-    // Get idea title for the group name
+    // Get idea owner and title to create the team
     final ideaResponse = await _supabase
         .from('ideas')
-        .select('title')
+        .select('title, owner_id')
         .eq('id', ideaId)
         .single();
+    
     final ideaTitle = ideaResponse['title'] as String;
+    final ownerId = ideaResponse['owner_id'] as String;
+
+    final teamResponse = await _supabase
+        .from('teams')
+        .insert({
+          'idea_id': ideaId,
+          'name': ideaTitle,
+          'created_by': ownerId,
+        })
+        .select('id')
+        .single();
+
+    final teamId = teamResponse['id'] as String;
+
+    // Add owner as admin
+    await _supabase.from('team_members').insert({
+      'team_id': teamId,
+      'user_id': ownerId,
+      'role': 'admin',
+    });
+
+    return teamId;
+  }
+
+  @override
+  Future<List<TeamMember>> getTeamMembers(String teamId) async {
+    final response = await _supabase
+        .from('team_members')
+        .select('''
+          *,
+          profiles:user_id(
+            id,
+            full_name,
+            avatar_url
+          )
+        ''')
+        .eq('team_id', teamId);
+
+    return TeamMemberModel.fromJsonList(response);
+  }
+
+  @override
+  Stream<List<TeamMessage>> subscribeTeamMessages(String teamId) {
+    return _supabase
+        .from('team_messages')
+        .stream(primaryKey: ['id'])
+        .eq('team_id', teamId)
+        .order('created_at', ascending: true)
+        .map((data) => TeamMessageModel.fromJsonList(data));
+  }
+
+  @override
+  Future<bool> isTeamMember(String teamId, String userId) async {
+    final response = await _supabase
+        .from('team_members')
+        .select('id')
+        .eq('team_id', teamId)
+        .eq('user_id', userId)
+        .maybeSingle();
+
+    return response != null;
+  }
+
+  // ── Public Discussion (groups/messages) ──────────────────────────────────
+
+  @override
+  Future<String> getOrCreatePublicGroup(String ideaId, String title) async {
+    // Check for existing group
+    final existing = await _supabase
+        .from('groups')
+        .select('id')
+        .eq('idea_id', ideaId)
+        .eq('type', 'public')
+        .maybeSingle();
+
+    if (existing != null) {
+      return existing['id'] as String;
+    }
 
     final response = await _supabase
         .from('groups')
         .insert({
           'idea_id': ideaId,
-          'type': type,
-          'name': type == 'public' ? '$ideaTitle (Community)' : ideaTitle,
+          'name': title,
+          'type': 'public',
         })
         .select('id')
         .single();
@@ -125,75 +201,53 @@ class ChatRepositoryImpl implements ChatRepository {
     return response['id'] as String;
   }
 
-
-
   @override
-  Future<List<IdeaTeamMember>> getTeamMembers(String ideaId) async {
-    final idea = await _supabase
-        .from('ideas')
-        .select('owner_id, profiles!owner_id(full_name, avatar_url)')
-        .eq('id', ideaId)
-        .single();
-    
-    final collaborators = await _supabase
-        .from('idea_collaborators')
-        .select('user_id, role, profiles!user_id(full_name, avatar_url)')
-        .eq('idea_id', ideaId)
-        .eq('status', 'Accepted');
+  Future<List<TeamMessage>> getPublicMessages(String groupId) async {
+    final response = await _supabase
+        .from('messages')
+        .select('*, profiles!messages_sender_id_fkey(*)')
+        .eq('group_id', groupId)
+        .order('created_at', ascending: true);
 
-    final List<IdeaTeamMember> members = [];
-    
-    if (idea['profiles'] != null) {
-      members.add(IdeaTeamMember(
-        userId: idea['owner_id'] as String,
-        fullName: idea['profiles']['full_name'] as String? ?? 'Idea Owner',
-        avatarUrl: idea['profiles']['avatar_url'] as String?,
-        role: 'Innovator',
-      ));
-    }
-
-    for (var c in collaborators as List) {
-      if (c['profiles'] != null) {
-        members.add(IdeaTeamMember(
-          userId: c['user_id'] as String,
-          fullName: c['profiles']['full_name'] as String? ?? 'Collaborator',
-          avatarUrl: c['profiles']['avatar_url'] as String?,
-          role: c['role'] as String? ?? 'Team Member',
-        ));
-      }
-    }
-
-    return members;
+    return (response as List)
+        .map((json) => TeamMessageModel.fromJson(json))
+        .toList();
   }
 
   @override
-  Stream<List<Message>> subscribeMessages(String groupId) {
+  Future<TeamMessage> sendPublicMessage(String groupId, String content) async {
+    final userId = _supabase.auth.currentUser!.id;
+    final response = await _supabase
+        .from('messages')
+        .insert({
+          'group_id': groupId,
+          'sender_id': userId,
+          'content': content,
+        })
+        .select('*, profiles!messages_sender_id_fkey(*)')
+        .single();
+
+    return TeamMessageModel.fromJson(response);
+  }
+
+  @override
+  Stream<List<TeamMessage>> subscribePublicMessages(String groupId) {
     return _supabase
         .from('messages')
         .stream(primaryKey: ['id'])
         .eq('group_id', groupId)
         .order('created_at', ascending: true)
-        .map((data) => MessageModel.fromJsonList(data));
-  }
-
-  @override
-  Future<bool> isTeamMember(String ideaId, String userId) async {
-    final idea = await _supabase
-        .from('ideas')
-        .select('owner_id')
-        .eq('id', ideaId)
-        .maybeSingle();
-    
-    if (idea != null && idea['owner_id'] == userId) return true;
-
-    final collaborator = await _supabase
-        .from('idea_collaborators')
-        .select()
-        .eq('idea_id', ideaId)
-        .eq('user_id', userId)
-        .eq('status', 'Accepted')
-        .maybeSingle();
-
-    return collaborator != null;
+        .asyncMap((data) async {
+          // Enrich with profile names for real-time
+          // In a real app, you might want to cache profiles
+          final messages = <TeamMessage>[];
+          for (final json in data) {
+             final senderId = json['sender_id'];
+             final profile = await _supabase.from('profiles').select().eq('id', senderId).single();
+             json['profiles'] = profile;
+             messages.add(TeamMessageModel.fromJson(json));
+          }
+          return messages;
+        });
   }
 }
