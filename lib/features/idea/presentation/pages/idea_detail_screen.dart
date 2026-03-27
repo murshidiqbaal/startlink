@@ -5,11 +5,10 @@ import 'package:startlink/core/presentation/widgets/startlink_button.dart';
 import 'package:startlink/core/services/supabase_client.dart';
 import 'package:startlink/core/theme/app_theme.dart';
 import 'package:startlink/features/chat/domain/repositories/chat_repository.dart';
-import 'package:startlink/features/chat/presentation/screens/idea_docket_screen.dart';
 import 'package:startlink/features/chat/presentation/screens/idea_public_chat_screen.dart';
+import 'package:startlink/features/collaboration/presentation/bloc/collaboration_bloc.dart';
 import 'package:startlink/features/collaboration/presentation/pages/idea_applications_screen.dart';
 import 'package:startlink/features/collaboration/presentation/widgets/apply_collaboration_dialog.dart';
-import 'package:startlink/features/collaboration/presentation/bloc/collaboration_bloc.dart';
 import 'package:startlink/features/idea/domain/entities/idea.dart';
 import 'package:startlink/features/idea/presentation/idea_post_screen.dart';
 import 'package:startlink/features/idea_dna/domain/repositories/idea_dna_repository.dart';
@@ -259,9 +258,12 @@ class _IdeaDetailView extends StatelessWidget {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => IdeaApplicationsScreen(
-                                    ideaId: idea.id,
-                                    ideaTitle: idea.title,
+                                  builder: (context) => BlocProvider.value(
+                                    value: context.read<CollaborationBloc>(),
+                                    child: IdeaApplicationsScreen(
+                                      ideaId: idea.id,
+                                      ideaTitle: idea.title,
+                                    ),
                                   ),
                                 ),
                               );
@@ -270,8 +272,7 @@ class _IdeaDetailView extends StatelessWidget {
                                 context: context,
                                 builder: (dialogContext) => BlocProvider.value(
                                   value: context.read<CollaborationBloc>(),
-                                  child: ApplyCollaborationDialog(
-                                      idea: idea),
+                                  child: ApplyCollaborationDialog(idea: idea),
                                 ),
                               );
                             }
@@ -455,7 +456,7 @@ class IdeaChatButton extends StatelessWidget {
     return Column(
       children: [
         _buildPublicChatButton(context),
-        _buildTeamDocketButton(context),
+        // _buildTeamDocketButton(context),
       ],
     );
   }
@@ -471,10 +472,13 @@ class IdeaChatButton extends StatelessWidget {
             final scaffoldMessenger = ScaffoldMessenger.of(context);
             try {
               final chatRepo = context.read<ChatRepository>();
-              final groupId = await chatRepo.getOrCreatePublicGroup(idea.id, idea.title);
-              
+              final groupId = await chatRepo.getOrCreatePublicGroup(
+                idea.id,
+                idea.title,
+              );
+
               if (!context.mounted) return;
-              
+
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -512,54 +516,52 @@ class IdeaChatButton extends StatelessWidget {
     );
   }
 
-  Widget _buildTeamDocketButton(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-      child: GlassCard(
-        height: 70,
-        borderColor: AppColors.brandPurple.withValues(alpha: 0.2),
-        child: InkWell(
-          onTap: () async {
-            final scaffoldMessenger = ScaffoldMessenger.of(context);
-            try {
-              final chatRepo = context.read<ChatRepository>();
-              final teamId = await chatRepo.getOrCreateTeam(idea.id);
-              
-              if (!context.mounted) return;
-              
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => IdeaDocketScreen(
-                    teamId: teamId,
-                    ideaTitle: idea.title,
-                  ),
-                ),
-              );
-            } catch (e) {
-              scaffoldMessenger.showSnackBar(
-                SnackBar(content: Text('Error opening team docket: $e')),
-              );
-            }
-          },
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.groups_outlined, color: AppColors.brandPurple),
-              const SizedBox(width: 12),
-              const Text(
-                'Team Private Docket',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  letterSpacing: 1.1,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  // Widget _buildTeamDocketButton(BuildContext context) {
+  //   return Padding(
+  //     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+  //     child: GlassCard(
+  //       height: 70,
+  //       borderColor: AppColors.brandPurple.withValues(alpha: 0.2),
+  //       child: InkWell(
+  //         onTap: () async {
+  //           final scaffoldMessenger = ScaffoldMessenger.of(context);
+  //           try {
+  //             final chatRepo = context.read<ChatRepository>();
+  //             final teamId = await chatRepo.getOrCreateTeam(idea.id);
+
+  //             if (!context.mounted) return;
+
+  //             Navigator.push(
+  //               context,
+  //               MaterialPageRoute(
+  //                 builder: (_) =>
+  //                     IdeaDocketScreen(teamId: teamId, ideaTitle: idea.title),
+  //               ),
+  //             );
+  //           } catch (e) {
+  //             scaffoldMessenger.showSnackBar(
+  //               SnackBar(content: Text('Error opening team docket: $e')),
+  //             );
+  //           }
+  //         },
+  //         child: Row(
+  //           mainAxisAlignment: MainAxisAlignment.center,
+  //           children: [
+  //             const Icon(Icons.groups_outlined, color: AppColors.brandPurple),
+  //             const SizedBox(width: 12),
+  //             const Text(
+  //               'Team Private Docket',
+  //               style: TextStyle(
+  //                 color: Colors.white,
+  //                 fontWeight: FontWeight.bold,
+  //                 fontSize: 16,
+  //                 letterSpacing: 1.1,
+  //               ),
+  //             ),
+  //           ],
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
 }

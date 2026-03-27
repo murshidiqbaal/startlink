@@ -19,6 +19,8 @@ class Idea {
   final int applicationCount;
 
   final bool isVerified;
+  final String? ownerName;
+  final String? ownerAvatarUrl;
   final String? industry;
   final String? subIndustry;
   final String? businessModel;
@@ -52,6 +54,8 @@ class Idea {
     this.aiSummary,
     this.aiSuggestedCollaborators,
     this.isVerified = false,
+    this.ownerName,
+    this.ownerAvatarUrl,
     this.industry,
     this.subIndustry,
     this.businessModel,
@@ -87,6 +91,8 @@ class Idea {
       aiSummary: aiSummary,
       aiSuggestedCollaborators: aiSuggestedCollaborators,
       isVerified: isVerified,
+      ownerName: ownerName,
+      ownerAvatarUrl: ownerAvatarUrl,
       industry: industry,
       subIndustry: subIndustry,
       businessModel: businessModel,
@@ -125,6 +131,8 @@ class Idea {
           ? List<String>.from(json['ai_suggested_collaborators'])
           : null,
       isVerified: json['is_verified'] ?? false,
+      ownerName: json['profiles']?['full_name'],
+      ownerAvatarUrl: json['profiles']?['avatar_url'],
       industry: json['industry'],
       subIndustry: json['sub_industry'],
       businessModel: json['business_model'],

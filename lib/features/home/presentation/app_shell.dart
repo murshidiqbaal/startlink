@@ -12,9 +12,9 @@ import 'package:startlink/features/profile/presentation/bloc/role_profile_event.
 import 'package:startlink/features/profile/presentation/bloc/unified_role_profile_bloc.dart';
 import 'package:startlink/features/chat/domain/repositories/chat_repository.dart';
 import 'package:startlink/features/chat/presentation/bloc/chat_list_bloc.dart';
+import 'package:startlink/features/auth/domain/repository/auth_repository.dart';
 import 'package:startlink/features/messaging/presentation/bloc/conversation_bloc.dart';
 import 'package:startlink/features/messaging/data/repositories/message_repositoy.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AppShell extends StatelessWidget {
   final String role;
@@ -23,8 +23,6 @@ class AppShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final userId = Supabase.instance.client.auth.currentUser?.id ?? '';
-
     return MultiBlocProvider(
       providers: [
         BlocProvider<ProfileBloc>(
@@ -35,8 +33,8 @@ class AppShell extends StatelessWidget {
         BlocProvider<RoleProfileBloc>(
           create: (context) => RoleProfileBloc(
             repository: context.read<ProfileRepository>(),
+            authRepository: context.read<AuthRepository>(),
           )..add(LoadRoleProfile(
-              profileId: userId,
               role: role.toLowerCase(),
             )),
         ),

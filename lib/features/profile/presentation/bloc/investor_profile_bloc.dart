@@ -1,135 +1,100 @@
-import 'package:bloc/bloc.dart';
-import 'package:equatable/equatable.dart';
-import 'package:flutter/foundation.dart';
-import 'package:startlink/features/profile/data/models/investor_profile_model.dart';
-import 'package:startlink/features/profile/domain/entities/investor_profile.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:startlink/features/profile/domain/repositories/investor_repository.dart';
 import 'package:startlink/features/profile/domain/repositories/profile_repository.dart';
-import 'package:startlink/features/verification/domain/entities/user_badge.dart';
-import 'package:startlink/features/verification/domain/entities/user_verification.dart';
+import 'package:startlink/features/profile/presentation/bloc/investor_profile_event.dart';
+import 'package:startlink/features/profile/presentation/bloc/investor_profile_state.dart';
 
-// Events
-abstract class InvestorProfileEvent extends Equatable {
-  const InvestorProfileEvent();
-  @override
-  List<Object> get props => [];
-}
+class InvestorProfileBloc extends Bloc<InvestorProfileEvent, InvestorProfileState> {
+  final InvestorRepository _repository;
+  final ProfileRepository _profileRepository;
 
-class LoadInvestorProfile extends InvestorProfileEvent {
-  final String profileId;
-  const LoadInvestorProfile(this.profileId);
-  @override
-  List<Object> get props => [profileId];
-}
-
-class SaveInvestorProfile extends InvestorProfileEvent {
-  final InvestorProfile profile;
-  const SaveInvestorProfile(this.profile);
-  @override
-  List<Object> get props => [profile];
-}
-
-
-// States
-abstract class InvestorProfileState extends Equatable {
-  const InvestorProfileState();
-  @override
-  List<Object> get props => [];
-}
-
-class InvestorProfileInitial extends InvestorProfileState {}
-
-class InvestorProfileLoading extends InvestorProfileState {}
-
-class InvestorProfileLoaded extends InvestorProfileState {
-  final InvestorProfile profile;
-  final UserVerification? verification;
-  final List<UserBadge> badges;
-
-  const InvestorProfileLoaded({
-    required this.profile,
-    required this.badges,
-    this.verification,
-  });
-
-  @override
-  List<Object> get props => [profile, badges, verification ?? 'none'];
-}
-
-class InvestorProfileSaving extends InvestorProfileState {}
-
-class InvestorProfileSaved extends InvestorProfileState {}
-
-
-class InvestorProfileError extends InvestorProfileState {
-  final String message;
-  const InvestorProfileError(this.message);
-  @override
-  List<Object> get props => [message];
-}
-
-class InvestorProfileBloc
-    extends Bloc<InvestorProfileEvent, InvestorProfileState> {
-  final ProfileRepository _repository;
-
-  InvestorProfileBloc({required ProfileRepository repository})
-    : _repository = repository,
-      super(InvestorProfileInitial()) {
-    on<LoadInvestorProfile>(_onLoad);
-    on<SaveInvestorProfile>(_onSave);
+  InvestorProfileBloc({
+    required InvestorRepository repository,
+    required ProfileRepository profileRepository,
+  })  : _repository = repository,
+        _profileRepository = profileRepository,
+        super(InvestorProfileInitial()) {
+    on<LoadInvestorProfile>(_onLoadProfile);
+    on<UpdateInvestorProfile>(_onUpdateProfile);
+    on<SubmitInvestorProfile>(_onUpdateProfile); // Reuse update logic
+    on<SubmitVerification>(_onSubmitVerification);
+    on<UpdateConsolidatedProfile>(_onUpdateConsolidatedProfile);
   }
 
-  Future<void> _onLoad(
+  Future<void> _onLoadProfile(
     LoadInvestorProfile event,
     Emitter<InvestorProfileState> emit,
   ) async {
     emit(InvestorProfileLoading());
     try {
-      final profile = await _repository.fetchInvestorProfile(event.profileId);
-      final verification = await _repository.fetchUserVerification(
-        event.profileId,
-        'investor',
-      );
-      final badges = await _repository.fetchUserBadges(event.profileId);
+      final baseProfile = await _profileRepository.fetchProfileById(event.userId);
+      final profile = await _repository.getProfile(event.userId);
+      final verification = await _repository.getVerificationStatus(event.userId);
 
       if (profile != null) {
-        emit(
-          InvestorProfileLoaded(
-            profile: profile,
-            verification: verification,
-            badges: badges,
-          ),
-        );
+        emit(InvestorProfileLoaded(
+          baseProfile: baseProfile,
+          profile: profile,
+          verification: verification,
+        ));
       } else {
-        emit(
-          InvestorProfileLoaded(
-            profile: InvestorProfileModel(profileId: event.profileId),
-            verification: verification,
-            badges: badges,
-          ),
-        );
+        emit(const InvestorProfileError('Investor profile not found. Please complete your setup.'));
       }
     } catch (e) {
       emit(InvestorProfileError(e.toString()));
     }
   }
 
-  Future<void> _onSave(
-    SaveInvestorProfile event,
+  Future<void> _onUpdateProfile(
+    InvestorProfileEvent event,
     Emitter<InvestorProfileState> emit,
   ) async {
-    final currentState = state;
-    if (currentState is InvestorProfileLoaded) {
-      emit(InvestorProfileSaving());
-      try {
-        await _repository.upsertInvestorProfile(event.profile);
-        emit(InvestorProfileSaved());
-        // Reload profile to refresh completion score and data
-        add(LoadInvestorProfile(event.profile.profileId));
-      } catch (e) {
-        emit(InvestorProfileError(e.toString()));
-        emit(currentState); // Revert to loaded state
-      }
+    final profile = (event is UpdateInvestorProfile) 
+        ? event.profile 
+        : (event as SubmitInvestorProfile).profile;
+    
+    emit(InvestorProfileSaving());
+    try {
+      await _repository.updateProfile(profile);
+      emit(InvestorProfileSaved());
+      // Reload profile after save
+      add(LoadInvestorProfile(profile.profileId));
+    } catch (e) {
+      emit(InvestorProfileError(e.toString()));
     }
   }
 
+  Future<void> _onSubmitVerification(
+    SubmitVerification event,
+    Emitter<InvestorProfileState> emit,
+  ) async {
+    emit(InvestorProfileSaving());
+    try {
+      await _repository.submitVerification(event.userId);
+      emit(InvestorProfileSaved());
+      // Reload status
+      add(LoadInvestorProfile(event.userId));
+    } catch (e) {
+      emit(InvestorProfileError(e.toString()));
+    }
+  }
+
+  Future<void> _onUpdateConsolidatedProfile(
+    UpdateConsolidatedProfile event,
+    Emitter<InvestorProfileState> emit,
+  ) async {
+    emit(InvestorProfileSaving());
+    try {
+      // 1. Update base profile
+      await _profileRepository.updateProfile(event.baseProfile);
+      // 2. Update investor profile
+      await _repository.updateProfile(event.investorProfile);
+      
+      emit(InvestorProfileSaved());
+      // Reload profile after save
+      add(LoadInvestorProfile(event.baseProfile.id));
+    } catch (e) {
+      emit(InvestorProfileError(e.toString()));
+    }
+  }
 }

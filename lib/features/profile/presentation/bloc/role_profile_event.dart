@@ -12,25 +12,20 @@ abstract class RoleProfileEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-/// Load the base profile + role-specific profile for [profileId] with [role].
 class LoadRoleProfile extends RoleProfileEvent {
-  final String profileId;
-
-  /// Lower-case role string: 'innovator' | 'investor' | 'mentor' | 'collaborator'
   final String role;
 
-  const LoadRoleProfile({required this.profileId, required this.role});
+  const LoadRoleProfile({required this.role});
 
   @override
-  List<Object?> get props => [profileId, role];
+  List<Object?> get props => [role];
 }
 
-/// Persist changes to both the base profile row and the role-specific table.
-class SaveRoleProfile extends RoleProfileEvent {
+class UpdateRoleProfile extends RoleProfileEvent {
   final ProfileModel baseProfile;
   final RoleProfile roleProfile;
 
-  const SaveRoleProfile({
+  const UpdateRoleProfile({
     required this.baseProfile,
     required this.roleProfile,
   });
@@ -39,7 +34,19 @@ class SaveRoleProfile extends RoleProfileEvent {
   List<Object?> get props => [baseProfile, roleProfile];
 }
 
-/// Fired from edit-form controllers to recalculate the live completion bar.
+class SubmitVerificationRequest extends RoleProfileEvent {
+  final String profileId;
+  final String role;
+
+  const SubmitVerificationRequest({
+    required this.profileId,
+    required this.role,
+  });
+
+  @override
+  List<Object?> get props => [profileId, role];
+}
+
 class UpdateRoleCompletion extends RoleProfileEvent {
   final int score;
   const UpdateRoleCompletion(this.score);

@@ -10,6 +10,7 @@ class UserVerification extends Equatable {
   final DateTime createdAt;
   final String? fullName;
   final String? email;
+  final String? rejectionReason;
 
   const UserVerification({
     required this.id,
@@ -21,11 +22,12 @@ class UserVerification extends Equatable {
     required this.createdAt,
     this.fullName,
     this.email,
+    this.rejectionReason,
   });
 
-  bool get isApproved => status == 'Approved';
-  bool get isPending => status == 'Pending';
-  bool get isRejected => status == 'Rejected';
+  bool get isApproved => status.toLowerCase() == 'approved';
+  bool get isPending => status.toLowerCase() == 'pending';
+  bool get isRejected => status.toLowerCase() == 'rejected';
 
   @override
   List<Object?> get props => [

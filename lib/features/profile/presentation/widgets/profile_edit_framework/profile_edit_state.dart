@@ -3,7 +3,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:startlink/features/profile/data/models/profile_model.dart';
 
-enum VerificationStatus { verified, pending, notVerified }
+enum VerificationStatus { verified, pending, rejected, notVerified }
 
 class ProfileEditState<T> extends Equatable {
   final ProfileModel? baseProfile;

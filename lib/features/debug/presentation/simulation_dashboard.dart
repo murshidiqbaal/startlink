@@ -146,6 +146,16 @@ class _SimulationDashboardState extends State<SimulationDashboard> {
                 () => _service.simulateAIFeedback(),
               ),
             ),
+            const SizedBox(height: 12),
+            _buildActionTile(
+              'Generate Dashboard Data',
+              'Creates collaborators, investor chats, and messages.',
+              Icons.analytics,
+              () => _runAction(
+                'Generate Analytics',
+                () => _service.simulateAnalyticsData(),
+              ),
+            ),
             const SizedBox(height: 24),
             _buildNote(
               'Note: Simulating requests might fail if "auth.users" foreign key constraints are strict.',

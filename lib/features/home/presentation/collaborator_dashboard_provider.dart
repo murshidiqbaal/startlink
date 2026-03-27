@@ -9,22 +9,21 @@ import 'package:startlink/features/profile/presentation/bloc/unified_role_profil
 import 'package:startlink/features/profile/presentation/bloc/role_profile_event.dart';
 import 'package:startlink/features/chat/domain/repositories/chat_repository.dart';
 import 'package:startlink/features/chat/presentation/bloc/chat_list_bloc.dart';
+import 'package:startlink/features/auth/domain/repository/auth_repository.dart';
 import 'package:startlink/features/home/presentation/collaborator_dashboard.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 class CollaboratorDashboardProvider extends StatelessWidget {
   const CollaboratorDashboardProvider({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final userId = Supabase.instance.client.auth.currentUser?.id;
-
     return MultiBlocProvider(
       providers: [
         BlocProvider<RoleProfileBloc>(
           create: (context) => RoleProfileBloc(
             repository: context.read<ProfileRepository>(),
-          )..add(LoadRoleProfile(profileId: userId ?? '', role: 'collaborator')),
+            authRepository: context.read<AuthRepository>(),
+          )..add(const LoadRoleProfile(role: 'collaborator')),
         ),
         BlocProvider<ChatListBloc>(
           create: (context) => ChatListBloc(

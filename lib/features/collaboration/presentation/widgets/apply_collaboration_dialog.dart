@@ -54,7 +54,7 @@ class _ApplyCollaborationDialogState extends State<ApplyCollaborationDialog> {
         message: _messageController.text.trim(),
       ),
     );
-    Navigator.pop(context);
+    // Navigator.pop(context);
   }
 
   @override

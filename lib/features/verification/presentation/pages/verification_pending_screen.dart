@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:startlink/core/theme/app_theme.dart';
 import 'package:startlink/features/auth/bloc/auth_bloc.dart';
+import 'package:startlink/features/auth/domain/repository/auth_repository.dart';
 import 'package:startlink/features/verification/domain/entities/user_verification.dart';
 import 'package:startlink/features/verification/presentation/bloc/verification_bloc.dart';
 
@@ -12,7 +13,7 @@ class VerificationPendingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isRejected = verification?.status == 'Rejected';
+    final isRejected = verification?.isRejected ?? false;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -88,7 +89,7 @@ class VerificationPendingScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Reason not specified', // Actual reason retrieval logic needed if metadata updated
+                        verification?.rejectionReason ?? 'Reason not specified',
                         style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
                       ),
                     ],
@@ -100,8 +101,15 @@ class VerificationPendingScreen extends StatelessWidget {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
-                    final userId = (context.read<AuthBloc>().state as AuthAuthenticated).user.id;
-                    context.read<VerificationBloc>().add(FetchVerificationsAndBadges(userId));
+                    final userId = context.read<AuthRepository>().currentUser?.id;
+                    if (userId != null) {
+                      context.read<VerificationBloc>().add(
+                            CheckVerificationStatus(
+                              userId,
+                              verification?.role ?? 'investor',
+                            ),
+                          );
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.brandPurple,

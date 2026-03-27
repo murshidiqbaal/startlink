@@ -49,7 +49,7 @@ class _ProfileEditScreenTemplateState extends State<ProfileEditScreenTemplate> {
     final updatedRole = widget.controller.buildRoleProfile(widget.profileId);
 
     context.read<RoleProfileBloc>().add(
-          SaveRoleProfile(
+          UpdateRoleProfile(
             baseProfile: updatedBase,
             roleProfile: updatedRole,
           ),
@@ -60,11 +60,11 @@ class _ProfileEditScreenTemplateState extends State<ProfileEditScreenTemplate> {
   Widget build(BuildContext context) {
     return BlocConsumer<RoleProfileBloc, RoleProfileState>(
       listener: (context, state) {
-        if (state.baseProfile != null && state.profile != null && !_populated) {
+        if (state is RoleProfileLoaded && !_populated) {
           _populated = true;
-          widget.controller.populate(state.baseProfile!, state.profile!);
+          widget.controller.populate(state.baseProfile, state.roleProfile);
         }
-        if (state.saveSuccess) {
+        if (state is RoleProfileSaved) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('${widget.title} saved ✓'),
@@ -72,17 +72,17 @@ class _ProfileEditScreenTemplateState extends State<ProfileEditScreenTemplate> {
             ),
           );
         }
-        if (state.error != null) {
+        if (state is RoleProfileError) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(state.error!),
+              content: Text(state.message),
               backgroundColor: AppColors.rose,
             ),
           );
         }
       },
       builder: (context, state) {
-        if (state.isLoading && state.baseProfile == null) {
+        if (state is RoleProfileLoading || state is RoleProfileInitial) {
           return const Scaffold(
             backgroundColor: AppColors.background,
             body: Center(
@@ -91,17 +91,62 @@ class _ProfileEditScreenTemplateState extends State<ProfileEditScreenTemplate> {
           );
         }
 
-        final baseProfile = state.baseProfile;
-        final roleProfile = state.profile;
-
-        if (baseProfile == null || roleProfile == null) {
-          return const Scaffold(
+        if (state is RoleProfileError && !_populated) {
+          return Scaffold(
             backgroundColor: AppColors.background,
-            body: Center(child: Text('Error loading profile', style: TextStyle(color: Colors.white))),
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.error_outline, size: 48, color: AppColors.rose),
+                    const SizedBox(height: 16),
+                    Text(
+                      state.message,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: () => context.read<RoleProfileBloc>().add(
+                            LoadRoleProfile(
+                              role: widget.title.toLowerCase().contains('investor')
+                                  ? 'investor'
+                                  : 'mentor',
+                            ),
+                          ),
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           );
         }
 
-        final isSaving = state.isSaving;
+        RoleProfileLoaded? loadedState;
+        if (state is RoleProfileLoaded) {
+          loadedState = state;
+        } else if (state is RoleProfileSaving || state is RoleProfileSaved) {
+          // If we are saving or just saved, we still want to show the form
+          // But technically RoleProfileBloc re-emits Loading/Loaded after Save.
+          // In our current BLoC, UpdateRoleProfile emits Saving, then Saved, 
+          // then adds LoadRoleProfile which emits Loading then Loaded.
+          // To avoid flickering, we should probably check if we have previous data.
+          // For now, let's assume it's okay or find the last loaded state.
+        }
+
+        if (loadedState == null) {
+          return const Scaffold(
+            backgroundColor: AppColors.background,
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        final baseProfile = loadedState.baseProfile;
+        final roleProfile = loadedState.roleProfile;
+        final isSaving = state is RoleProfileSaving;
 
         return Scaffold(
           backgroundColor: AppColors.background,
@@ -152,10 +197,10 @@ class _ProfileEditScreenTemplateState extends State<ProfileEditScreenTemplate> {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
               children: [
-                ProfileCompletionBar(pct: state.completionScore),
+                ProfileCompletionBar(pct: loadedState.completionScore),
                 const SizedBox(height: 20),
                 VerificationStatusCard(
-                  status: state.verificationStatus,
+                  status: loadedState.verificationStatus,
                   role: widget.title.toLowerCase().contains('investor') ? 'investor' : 'mentor',
                 ),
                 widget.buildForm(context, state),

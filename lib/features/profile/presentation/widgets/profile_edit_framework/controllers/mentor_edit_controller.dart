@@ -7,56 +7,59 @@ import 'package:startlink/features/profile/domain/entities/mentor_profile.dart';
 import 'package:startlink/features/profile/presentation/widgets/profile_edit_framework/profile_edit_controller.dart';
 
 class MentorEditController extends ProfileEditController<MentorProfile> {
-  final focusCtrl = TextEditingController();
+  final bioCtrl = TextEditingController(); // Replaces focusCtrl
   final yoeCtrl = TextEditingController();
   final linkedinCtrl = TextEditingController();
-  final certCtrl = TextEditingController();
+  final availabilityCtrl = TextEditingController(); // New field
   final expertiseInputCtrl = TextEditingController();
 
   List<String> expertise = [];
-  List<String> certifications = [];
 
   @override
   void populate(ProfileModel baseProfile, MentorProfile roleProfile) {
     nameCtrl.text = baseProfile.fullName ?? '';
     aboutCtrl.text = baseProfile.about ?? '';
 
-    focusCtrl.text = roleProfile.mentorshipFocus ?? '';
-    yoeCtrl.text = roleProfile.yearsOfExperience?.toString() ?? '';
+    bioCtrl.text = roleProfile.bio ?? '';
+    yoeCtrl.text = roleProfile.yearsExperience?.toString() ?? '';
     linkedinCtrl.text = roleProfile.linkedinUrl ?? '';
-    expertise = List.from(roleProfile.expertiseDomains);
-    certifications = List.from(roleProfile.certifications);
+    availabilityCtrl.text = roleProfile.availability ?? '';
+    expertise = List.from(roleProfile.expertise);
   }
 
   @override
   MentorProfile buildRoleProfile(String profileId) {
-    final focus = focusCtrl.text.trim();
+    final bio = bioCtrl.text.trim();
     final yoe = int.tryParse(yoeCtrl.text);
     final linkedin = linkedinCtrl.text.trim();
+    final availability = availabilityCtrl.text.trim();
+
+    final completion = MentorProfileModel.calculateCompletion(
+      expertise: expertise,
+      yearsExperience: yoe,
+      bio: bio,
+      linkedinUrl: linkedin,
+      availability: availability,
+    );
 
     return MentorProfileModel(
       profileId: profileId,
-      mentorshipFocus: focus,
-      yearsOfExperience: yoe,
+      bio: bio,
+      yearsExperience: yoe,
       linkedinUrl: linkedin,
-      expertiseDomains: expertise,
-      certifications: certifications,
-      profileCompletion: MentorProfileModel.calculateCompletion(
-        mentorshipFocus: focus,
-        yearsOfExperience: yoe,
-        linkedinUrl: linkedin,
-        expertiseDomains: expertise,
-      ),
+      expertise: expertise,
+      availability: availability,
+      profileCompletion: completion,
     );
   }
 
   @override
   List<TextEditingController> get allControllers => [
         ...super.allControllers,
-        focusCtrl,
+        bioCtrl,
         yoeCtrl,
         linkedinCtrl,
-        certCtrl,
+        availabilityCtrl,
         expertiseInputCtrl,
       ];
 }

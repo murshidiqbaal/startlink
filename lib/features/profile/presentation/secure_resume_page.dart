@@ -100,14 +100,18 @@ class _SecureResumePageState extends State<SecureResumePage> {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    const Text(
-                      "SECURE ID",
-                      style: TextStyle(
-                        fontFamily: 'Courier',
-                        fontSize: 16,
-                        letterSpacing: 2,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white70,
+                    const Expanded(
+                      child: Text(
+                        "SECURE ID",
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                        style: TextStyle(
+                          fontFamily: 'Courier',
+                          fontSize: 16,
+                          letterSpacing: 2,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white70,
+                        ),
                       ),
                     ),
                   ],
@@ -329,11 +333,11 @@ class _SecureResumePageState extends State<SecureResumePage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _buildStat("Exp", "7 Yrs"), // Experience
+              Expanded(child: _buildStat("Exp", "7 Yrs")), // Experience
               _buildVerticalDivider(),
-              _buildStat("Projects", "102"),
+              Expanded(child: _buildStat("Projects", "102")),
               _buildVerticalDivider(),
-              _buildStat("Trust", "98%"),
+              Expanded(child: _buildStat("Trust", "98%")),
             ],
           ),
         ],
@@ -544,7 +548,14 @@ class _SecureResumePageState extends State<SecureResumePage> {
       children: [
         Icon(icon, color: Colors.cyanAccent, size: 20),
         const SizedBox(width: 16),
-        Text(text, style: const TextStyle(color: Colors.white70, fontSize: 16)),
+        Expanded(
+          child: Text(
+            text,
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
+            style: const TextStyle(color: Colors.white70, fontSize: 16),
+          ),
+        ),
       ],
     );
   }

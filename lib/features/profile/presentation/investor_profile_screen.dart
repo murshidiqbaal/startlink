@@ -5,14 +5,15 @@ import 'package:startlink/core/theme/app_theme.dart';
 import 'package:startlink/features/auth/domain/repository/auth_repository.dart';
 import 'package:startlink/features/profile/data/models/profile_model.dart';
 import 'package:startlink/features/profile/domain/entities/investor_profile.dart';
-import 'package:startlink/features/profile/presentation/bloc/role_profile_event.dart';
-import 'package:startlink/features/profile/presentation/bloc/role_profile_state.dart';
-import 'package:startlink/features/profile/presentation/bloc/unified_role_profile_bloc.dart';
+import 'package:startlink/features/profile/presentation/bloc/investor_profile_bloc.dart';
+import 'package:startlink/features/profile/presentation/bloc/investor_profile_event.dart';
+import 'package:startlink/features/profile/presentation/bloc/investor_profile_state.dart';
 import 'package:startlink/features/profile/presentation/edit_investor_profile.dart';
-import 'package:startlink/features/verification/presentation/bloc/verification_bloc.dart';
-import 'package:startlink/features/verification/domain/entities/user_badge.dart';
-import 'package:startlink/features/profile/presentation/widgets/verification_status_card.dart';
 import 'package:startlink/features/profile/presentation/secure_resume_page.dart';
+import 'package:startlink/features/profile/presentation/widgets/verification_status_card.dart';
+import 'package:startlink/features/profile/presentation/widgets/profile_edit_framework/profile_edit_state.dart';
+import 'package:startlink/features/verification/domain/entities/user_badge.dart';
+import 'package:startlink/features/verification/domain/entities/user_verification.dart';
 
 class InvestorProfileScreen extends StatefulWidget {
   final String? userId;
@@ -33,10 +34,7 @@ class _InvestorProfileScreenState extends State<InvestorProfileScreen> {
     final userId =
         widget.userId ?? context.read<AuthRepository>().currentUser?.id;
     if (userId != null) {
-      context.read<RoleProfileBloc>().add(
-            LoadRoleProfile(profileId: userId, role: 'investor'),
-          );
-      context.read<VerificationBloc>().add(FetchVerificationsAndBadges(userId));
+      context.read<InvestorProfileBloc>().add(LoadInvestorProfile(userId));
     }
   }
 
@@ -49,7 +47,9 @@ class _InvestorProfileScreenState extends State<InvestorProfileScreen> {
           IconButton(
             icon: const Icon(Icons.edit),
             onPressed: () {
-              final userId = widget.userId ?? context.read<AuthRepository>().currentUser?.id;
+              final userId =
+                  widget.userId ??
+                  context.read<AuthRepository>().currentUser?.id;
               if (userId == null) return;
               Navigator.push(
                 context,
@@ -61,57 +61,59 @@ class _InvestorProfileScreenState extends State<InvestorProfileScreen> {
           ),
         ],
       ),
-      body: BlocBuilder<VerificationBloc, VerificationState>(
-        builder: (context, vState) {
-          return BlocBuilder<RoleProfileBloc, RoleProfileState>(
-            builder: (context, state) {
-              final isLoaded = state.baseProfile != null && state.profile is InvestorProfile;
+      body: BlocBuilder<InvestorProfileBloc, InvestorProfileState>(
+        builder: (context, state) {
+          if (state is InvestorProfileLoading || state is InvestorProfileInitial) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-              if (state.isLoading && !isLoaded) {
-                return const Center(child: CircularProgressIndicator());
-              }
-
-              if (isLoaded) {
-                if (state.completionScore == 0) {
-                  return _buildEmptyProfileView(context, widget.userId ?? '');
-                }
-                return _buildBody(
-                  context,
-                  state.baseProfile!,
-                  state.profile as InvestorProfile,
-                  state.verificationStatus,
-                  vState,
-                );
-              }
-
-              if (state.error != null) {
-                return Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.error_outline, size: 48, color: AppColors.rose),
-                        const SizedBox(height: 16),
-                        Text(
-                          state.error!,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(color: AppColors.textSecondary),
-                        ),
-                        const SizedBox(height: 24),
-                        ElevatedButton(
-                          onPressed: _loadProfile,
-                          child: const Text('Retry'),
-                        ),
-                      ],
+          if (state is InvestorProfileError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      size: 48,
+                      color: AppColors.rose,
                     ),
-                  ),
-                );
-              }
+                    const SizedBox(height: 16),
+                    Text(
+                      state.message,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: _loadProfile,
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
 
-              return const Center(child: CircularProgressIndicator());
-            },
-          );
+          if (state is InvestorProfileLoaded) {
+            final profile = state.profile;
+            if (profile.profileCompletion == 0 &&
+                (profile.organizationName == null ||
+                    profile.organizationName!.isEmpty)) {
+              return _buildEmptyProfileView(context, widget.userId ?? '');
+            }
+            return _buildBody(
+              context,
+              state.baseProfile,
+              profile,
+              state.verification,
+            );
+          }
+
+          return const Center(child: CircularProgressIndicator());
         },
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -133,11 +135,27 @@ class _InvestorProfileScreenState extends State<InvestorProfileScreen> {
     BuildContext context,
     ProfileModel baseProfile,
     InvestorProfile roleProfile,
-    VerificationStatus verificationStatus,
-    VerificationState vState,
+    UserVerification? verification,
   ) {
     final tickets = NumberFormat.compactCurrency(symbol: '\$');
-    final badges = vState is VerificationLoaded ? vState.badges : <UserBadge>[];
+    
+    // Map status from UserVerification to VerificationStatus enum used by card
+    VerificationStatus cardStatus = VerificationStatus.notVerified;
+    if (verification != null) {
+      switch (verification.status.toLowerCase()) {
+        case 'pending':
+          cardStatus = VerificationStatus.pending;
+          break;
+        case 'approved':
+          cardStatus = VerificationStatus.verified;
+          break;
+        case 'rejected':
+          cardStatus = VerificationStatus.rejected;
+          break;
+      }
+    }
+
+    final badges = <UserBadge>[]; // This could be fetched separately or added to state if needed
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
@@ -201,9 +219,10 @@ class _InvestorProfileScreenState extends State<InvestorProfileScreen> {
                     ],
                     const SizedBox(height: 12),
                     VerificationStatusCard(
-                      status: verificationStatus,
+                      status: cardStatus,
                       role: 'investor',
-                      onActionPressed: verificationStatus == VerificationStatus.notVerified
+                      onActionPressed:
+                          cardStatus == VerificationStatus.notVerified || cardStatus == VerificationStatus.rejected
                           ? () {
                               if (roleProfile.profileCompletion < 80) {
                                 Navigator.push(
@@ -215,13 +234,9 @@ class _InvestorProfileScreenState extends State<InvestorProfileScreen> {
                                   ),
                                 ).then((_) => _loadProfile());
                               } else {
-                                context.read<VerificationBloc>().add(
-                                      RequestVerification(
-                                        roleProfile.profileId,
-                                        'investor',
-                                        'profile_verification',
-                                      ),
-                                    );
+                                context.read<InvestorProfileBloc>().add(
+                                  SubmitVerification(roleProfile.profileId),
+                                );
                               }
                             }
                           : null,
@@ -244,9 +259,9 @@ class _InvestorProfileScreenState extends State<InvestorProfileScreen> {
             const SizedBox(height: 8),
             Text(
               roleProfile.bio!,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                height: 1.5,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyLarge?.copyWith(height: 1.5),
             ),
           ],
 
@@ -348,7 +363,10 @@ class _InvestorProfileScreenState extends State<InvestorProfileScreen> {
               decoration: BoxDecoration(
                 color: AppColors.surfaceGlass,
                 shape: BoxShape.circle,
-                border: Border.all(color: AppColors.brandPurple.withValues(alpha: 0.2), width: 2),
+                border: Border.all(
+                  color: AppColors.brandPurple.withValues(alpha: 0.2),
+                  width: 2,
+                ),
               ),
               child: const Icon(
                 Icons.person_add_outlined,
@@ -384,7 +402,8 @@ class _InvestorProfileScreenState extends State<InvestorProfileScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => EditInvestorProfileScreen(profileId: profileId),
+                      builder: (_) =>
+                          EditInvestorProfileScreen(profileId: profileId),
                     ),
                   ).then((_) => _loadProfile());
                 },
@@ -428,12 +447,16 @@ class _InvestorProfileScreenState extends State<InvestorProfileScreen> {
             children: [
               Icon(icon, size: 18, color: AppColors.textSecondary),
               const SizedBox(width: 8),
-              Text(
-                title.toUpperCase(),
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppColors.textSecondary,
-                  letterSpacing: 1,
+              Expanded(
+                child: Text(
+                  title.toUpperCase(),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                    letterSpacing: 1,
+                  ),
                 ),
               ),
             ],

@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:startlink/core/theme/app_theme.dart';
 import 'package:startlink/features/auth/bloc/auth_bloc.dart';
-import 'package:startlink/features/profile/domain/entities/mentor_profile.dart';
-import 'package:startlink/features/profile/domain/repositories/profile_repository.dart';
+import 'package:startlink/features/profile/data/models/mentor_profile_model.dart';
 import 'package:startlink/features/profile/presentation/bloc/mentor_profile_bloc.dart';
+import 'package:startlink/features/profile/presentation/bloc/mentor_profile_event.dart';
+import 'package:startlink/features/profile/presentation/bloc/mentor_profile_state.dart';
 import 'package:startlink/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:startlink/features/profile/presentation/bloc/profile_state.dart';
 import 'package:startlink/features/profile/presentation/bloc/profile_event.dart';
-import 'package:startlink/features/verification/presentation/bloc/verification_bloc.dart';
 
 class MentorSetupScreen extends StatelessWidget {
   const MentorSetupScreen({super.key});
@@ -19,18 +19,11 @@ class MentorSetupScreen extends StatelessWidget {
         ? (context.read<AuthBloc>().state as AuthAuthenticated).user.id
         : '';
 
-    return MultiBlocProvider(
-      providers: [
-        BlocProvider(
-          create: (context) => MentorProfileBloc(
-            repository: context.read<ProfileRepository>(),
-          )..add(LoadMentorProfile(userId)),
-        ),
-        BlocProvider.value(value: context.read<ProfileBloc>()),
-        BlocProvider.value(value: context.read<VerificationBloc>()),
-      ],
-      child: const _MentorSetupForm(),
-    );
+    // Trigger initial load for both blocs
+    context.read<ProfileBloc>().add(FetchProfileById(userId));
+    context.read<MentorProfileBloc>().add(LoadMentorProfile(userId));
+
+    return const _MentorSetupForm();
   }
 }
 
@@ -46,7 +39,7 @@ class _MentorSetupFormState extends State<_MentorSetupForm> {
   final _nameController = TextEditingController();
   final _expertiseController = TextEditingController();
   final _yoeController = TextEditingController();
-  final _industriesController = TextEditingController();
+  final _availabilityController = TextEditingController();
   final _linkedinController = TextEditingController();
   final _bioController = TextEditingController();
 
@@ -55,7 +48,7 @@ class _MentorSetupFormState extends State<_MentorSetupForm> {
     _nameController.dispose();
     _expertiseController.dispose();
     _yoeController.dispose();
-    _industriesController.dispose();
+    _availabilityController.dispose();
     _linkedinController.dispose();
     _bioController.dispose();
     super.dispose();
@@ -66,16 +59,20 @@ class _MentorSetupFormState extends State<_MentorSetupForm> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Mentor Profile Setup'),
+        backgroundColor: AppColors.background,
+        title: const Text('Mentor Profile Setup', style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
       ),
       body: BlocConsumer<MentorProfileBloc, MentorProfileState>(
         listener: (context, state) {
           if (state is MentorProfileLoaded) {
-            _expertiseController.text = state.profile.expertiseDomains.join(', ');
-            _yoeController.text = state.profile.yearsOfExperience?.toString() ?? '';
+            _expertiseController.text = state.profile.expertise.join(', ');
+            _yoeController.text = state.profile.yearsExperience?.toString() ?? '';
             _linkedinController.text = state.profile.linkedinUrl ?? '';
-            _industriesController.text = state.profile.mentorshipFocus ?? '';
+            _availabilityController.text = state.profile.availability ?? '';
+          }
+          if (state is MentorProfileSaved) {
+            Navigator.pop(context);
           }
         },
         builder: (context, state) {
@@ -83,70 +80,78 @@ class _MentorSetupFormState extends State<_MentorSetupForm> {
             builder: (context, pState) {
               if (pState is ProfileLoaded) {
                 _nameController.text = pState.profile.fullName ?? '';
-                _bioController.text = pState.profile.about ?? '';
+                // Only populate if bio is empty to avoid overwriting user edits
+                if (_bioController.text.isEmpty) {
+                  _bioController.text = pState.profile.about ?? '';
+                }
+              }
+
+              final isLoading = state is MentorProfileLoading || pState is ProfileLoading;
+
+              if (isLoading && _nameController.text.isEmpty) {
+                return const Center(child: CircularProgressIndicator(color: AppColors.brandPurple));
               }
 
               return SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
                 child: Form(
                   key: _formKey,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Share your expertise to get verified as a mentor.',
-                        style: TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 16,
-                        ),
-                      ),
+                      _buildHeader(),
                       const SizedBox(height: 32),
-                      _buildTextField('Full Name', _nameController, Icons.person_outline),
+                      _buildTextField('Full Name *', _nameController, Icons.person_outline),
                       const SizedBox(height: 20),
                       _buildTextField(
-                        'Areas of Expertise',
+                        'Areas of Expertise *',
                         _expertiseController,
                         Icons.psychology_outlined,
                         hint: 'e.g. Marketing, Sales, Tech Architecture',
                       ),
                       const SizedBox(height: 20),
                       _buildTextField(
-                        'Years of Experience',
+                        'Years of Experience *',
                         _yoeController,
                         Icons.history_toggle_off_outlined,
                         keyboardType: TextInputType.number,
                       ),
                       const SizedBox(height: 20),
                       _buildTextField(
-                        'Target Industries',
-                        _industriesController,
-                        Icons.category_outlined,
-                        hint: 'e.g. Fintech, EdTech, E-commerce',
+                        'Availability',
+                        _availabilityController,
+                        Icons.calendar_today_outlined,
+                        hint: 'e.g. 2 hrs/week, Weekend mornings',
                       ),
                       const SizedBox(height: 20),
-                      _buildTextField('LinkedIn URL', _linkedinController, Icons.link),
+                      _buildTextField('LinkedIn URL *', _linkedinController, Icons.link),
                       const SizedBox(height: 20),
                       _buildTextField(
-                        'Bio',
+                        'Bio / Mentorship Philosophy *',
                         _bioController,
                         Icons.description_outlined,
                         maxLines: 4,
+                        hint: 'How can you help growth-stage startups?',
                       ),
-                      const SizedBox(height: 40),
+                      const SizedBox(height: 48),
                       SizedBox(
                         width: double.infinity,
+                        height: 56,
                         child: ElevatedButton(
-                          onPressed: () => _handleSubmit(context, pState),
+                          onPressed: state is MentorProfileSaving 
+                            ? null 
+                            : () => _handleSubmit(context, pState),
                           style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 18),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+                            backgroundColor: AppColors.brandPurple,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            elevation: 0,
                           ),
-                          child: const Text('Submit for Verification'),
+                          child: state is MentorProfileSaving
+                            ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                            : const Text('Complete Onboarding', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
                         ),
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 40),
                     ],
                   ),
                 ),
@@ -155,6 +160,23 @@ class _MentorSetupFormState extends State<_MentorSetupForm> {
           );
         },
       ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Mentorship Credentials',
+          style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'Briefly share your background to unlock mentoring features and get your verified badge.',
+          style: TextStyle(color: AppColors.textSecondary, fontSize: 16, height: 1.5),
+        ),
+      ],
     );
   }
 
@@ -171,11 +193,7 @@ class _MentorSetupFormState extends State<_MentorSetupForm> {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
-          ),
+          style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14),
         ),
         const SizedBox(height: 8),
         TextFormField(
@@ -185,7 +203,15 @@ class _MentorSetupFormState extends State<_MentorSetupForm> {
           style: const TextStyle(color: AppColors.textPrimary),
           decoration: InputDecoration(
             hintText: hint,
+            hintStyle: TextStyle(color: AppColors.textSecondary.withValues(alpha: 0.5)),
             prefixIcon: Icon(icon, color: AppColors.brandPurple, size: 20),
+            filled: true,
+            fillColor: AppColors.surfaceGlass,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.05)),
+            ),
           ),
           validator: (value) => value == null || value.isEmpty ? 'Required' : null,
         ),
@@ -195,42 +221,54 @@ class _MentorSetupFormState extends State<_MentorSetupForm> {
 
   void _handleSubmit(BuildContext context, ProfileState pState) {
     if (_formKey.currentState!.validate()) {
+      if (pState is! ProfileLoaded) return;
+      
       final userId = (context.read<AuthBloc>().state as AuthAuthenticated).user.id;
 
-      if (pState is ProfileLoaded) {
-        context.read<ProfileBloc>().add(UpdateProfile(
-              pState.profile.copyWith(
-                fullName: _nameController.text,
-                about: _bioController.text,
-              ),
-            ));
-      }
+      // Calculate completion for the mentor profile
+      final expertise = _expertiseController.text.split(',').map((e) => e.trim()).toList();
+      final bio = _bioController.text;
+      final yoe = int.tryParse(_yoeController.text);
+      final linkedin = _linkedinController.text;
+      final availability = _availabilityController.text;
 
-      // 2. Update Mentor Profile
-      final mentorProfile = MentorProfile(
-        profileId: userId,
-        expertiseDomains: _expertiseController.text.split(',').map((e) => e.trim()).toList(),
-        yearsOfExperience: int.tryParse(_yoeController.text),
-        linkedinUrl: _linkedinController.text,
-        mentorshipFocus: _industriesController.text,
+      final completion = MentorProfileModel.calculateCompletion(
+        expertise: expertise,
+        yearsExperience: yoe,
+        bio: bio,
+        linkedinUrl: linkedin,
+        availability: availability,
       );
-      context.read<MentorProfileBloc>().add(SaveMentorProfile(mentorProfile));
 
-      // 3. Request Verification
-      context.read<VerificationBloc>().add(
-            RequestVerification(userId, 'mentor', 'profile_verification'),
-          );
+      final mentorProfile = MentorProfileModel(
+        profileId: userId,
+        expertise: expertise,
+        yearsExperience: yoe,
+        bio: bio,
+        linkedinUrl: linkedin,
+        availability: availability,
+        profileCompletion: completion,
+      );
 
-      // 4. Show confirmation and navigate
+      final updatedBase = pState.profile.copyWith(
+        fullName: _nameController.text,
+        about: bio, // Sync mentor bio to base profile about
+      );
+
+      context.read<MentorProfileBloc>().add(
+        UpdateConsolidatedProfile(
+          baseProfile: updatedBase,
+          mentorProfile: mentorProfile,
+        ),
+      );
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Your mentor profile is under review. Admin will verify your account soon.'),
+          content: Text('Profile updated! Verification will trigger if completion ≥ 80%.'),
           backgroundColor: AppColors.emerald,
           behavior: SnackBarBehavior.floating,
         ),
       );
-      
-      Navigator.pop(context);
     }
   }
 }

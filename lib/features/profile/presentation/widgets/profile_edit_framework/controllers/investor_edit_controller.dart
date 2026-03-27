@@ -54,7 +54,6 @@ class InvestorEditController extends ProfileEditController<InvestorProfile> {
         preferredStage: stage,
         organizationName: org,
         linkedinUrl: linkedin,
-        bio: bio,
       ),
     );
   }

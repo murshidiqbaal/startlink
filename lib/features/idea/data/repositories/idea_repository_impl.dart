@@ -36,15 +36,30 @@ class IdeaRepositoryImpl implements IdeaRepository {
     try {
       final response = await _supabase
           .from('ideas')
-          .select()
+          .select('*, profiles(full_name, avatar_url)')
           .eq('status', 'Published')
           .eq('is_active', true)
-          .order('boost_score', ascending: false)
           .order('created_at', ascending: false);
 
       return (response as List).map((e) => IdeaModel.fromJson(e)).toList();
     } catch (e) {
       throw Exception('Failed to fetch published ideas: $e');
+    }
+  }
+
+  @override
+  Future<Idea?> fetchIdeaById(String id) async {
+    try {
+      final response = await _supabase
+          .from('ideas')
+          .select('*, profiles(full_name, avatar_url)')
+          .eq('id', id)
+          .maybeSingle();
+
+      if (response == null) return null;
+      return IdeaModel.fromJson(response);
+    } catch (e) {
+      throw Exception('Failed to fetch idea by id: $e');
     }
   }
 

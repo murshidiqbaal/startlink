@@ -1,220 +1,96 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:startlink/features/ai_feedback/presentation/widgets/ai_info_tooltip.dart';
-import 'package:startlink/features/ai_insights/presentation/widgets/ai_insight_card.dart';
+import 'package:startlink/core/theme/app_theme.dart';
 import 'package:startlink/features/auth/domain/repository/auth_repository.dart';
-import 'package:startlink/features/idea/data/repositories/idea_activity_repository_impl.dart';
 import 'package:startlink/features/idea/domain/entities/idea.dart';
-import 'package:startlink/features/idea/presentation/widgets/idea_evolution_timeline.dart';
-import 'package:startlink/features/investor/presentation/bloc/investor_interest_bloc.dart';
-import 'package:startlink/features/matching/presentation/widgets/recommended_matches_widget.dart';
-import 'package:startlink/features/profile/presentation/profile_screen.dart';
+import 'package:startlink/features/idea/domain/repositories/idea_repository.dart';
+import 'package:startlink/features/investor/presentation/bloc/investor_chat_bloc.dart';
+import 'package:startlink/features/investor/presentation/bloc/investor_verification_bloc.dart';
+import 'package:startlink/features/investor/presentation/pages/investor_chat_screen.dart';
 
-class InvestorIdeaDetailScreen extends StatelessWidget {
-  final Idea idea;
+class InvestorIdeaDetailScreen extends StatefulWidget {
+  final String ideaId;
 
-  const InvestorIdeaDetailScreen({super.key, required this.idea});
+  const InvestorIdeaDetailScreen({super.key, required this.ideaId});
+
+  @override
+  State<InvestorIdeaDetailScreen> createState() => _InvestorIdeaDetailScreenState();
+}
+
+class _InvestorIdeaDetailScreenState extends State<InvestorIdeaDetailScreen> {
+  Idea? _idea;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadIdea();
+  }
+
+  Future<void> _loadIdea() async {
+    try {
+      final repository = context.read<IdeaRepository>();
+      final idea = await repository.fetchIdeaById(widget.ideaId);
+      if (mounted) {
+        setState(() {
+          _idea = idea;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final currentUserId = context.read<AuthRepository>().currentUser?.id ?? '';
+    if (_isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator(color: AppColors.brandPurple)));
+    }
 
-    // Check initial status for UI consistency
-    // Note: Ideally pass initial state or fetch in initState, but Bloc handles updates reactive
+    if (_idea == null) {
+      return const Scaffold(body: Center(child: Text('Idea not found')));
+    }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Investment Opportunity'),
-        actions: [
-          const AIInfoTooltip(),
-          BlocBuilder<InvestorInterestBloc, InvestorInterestState>(
-            builder: (context, state) {
-              bool isBookmarked = false;
-              if (state is InvestorInterestLoaded) {
-                isBookmarked = state.isBookmarked(idea.id);
-              }
-              return IconButton(
-                icon: Icon(
-                  isBookmarked ? Icons.bookmark : Icons.bookmark_outline,
-                ),
-                onPressed: () {
-                  context.read<InvestorInterestBloc>().add(
-                    BookmarkIdea(ideaId: idea.id, investorId: currentUserId),
-                  );
-                },
-              );
-            },
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Title & Badges
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    idea.title,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                if (idea.isVerified) ...[
-                  const SizedBox(width: 8),
-                  const Icon(Icons.verified, color: Colors.blue),
-                ],
-              ],
+    return BlocListener<InvestorChatBloc, InvestorChatState>(
+      listener: (context, state) {
+        if (state is ChatConnectionSuccess) {
+          // Navigator.push already preserves global context from App level MultiBlocProvider
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => InvestorChatScreen(chat: state.chat),
             ),
-
-            if (idea.id == 'boosted' ||
-                (idea.isPublic && idea.viewCount > 100)) ...[
-              // Simplified boost check if boost logic not fully in entity yet (repo sort uses score)
-              // Assuming is_boosted field comes through Idea entity eventually.
-              // For now, if passed via list, we trust list order.
-              // Visual placeholder for now if entity doesn't have isBoosted explicit field in Dart yet (repo sql has it)
-            ],
-
-            const SizedBox(height: 16),
-
-            // AI Summary
-            if (idea.aiSummary != null)
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.primaryContainer.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.primary.withValues(alpha: 0.2),
-                  ),
-                ),
+          );
+        }
+        if (state is ChatError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(state.message), backgroundColor: AppColors.rose),
+          );
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        body: CustomScrollView(
+          slivers: [
+            _buildAppBar(context),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(20.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.auto_awesome,
-                          color: Theme.of(context).colorScheme.primary,
-                          size: 16,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'AI Summary',
-                          style: Theme.of(context).textTheme.labelLarge
-                              ?.copyWith(
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      idea.aiSummary!,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
+                    _buildMainInfo(),
+                    const SizedBox(height: 32),
+                    _buildSectionHeader('Value Proposition'),
+                    Text(_idea!.description, style: const TextStyle(color: AppColors.textPrimary, fontSize: 16, height: 1.6)),
+                    const SizedBox(height: 32),
+                    _buildSectionHeader('Key Features'),
+                    _buildChipList(_idea!.tags),
+                    const SizedBox(height: 32),
+                    _buildEngagementCard(context),
                   ],
                 ),
-              ),
-
-            const SizedBox(height: 24),
-
-            // AI Investment Insights Section
-            AIInsightCard(ideaId: idea.id),
-
-            const SizedBox(height: 24),
-            _buildSection(context, 'Problem Statement', idea.problemStatement),
-            const SizedBox(height: 16),
-            _buildSection(context, 'Description', idea.description),
-            const SizedBox(height: 24),
-
-            const Divider(),
-            const SizedBox(height: 16),
-            Text(
-              'Details',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            _buildDetailRow(context, 'Stage', idea.currentStage),
-            _buildDetailRow(context, 'Target Market', idea.targetMarket),
-            _buildDetailRow(
-              context,
-              'Skills Required',
-              idea.tags.join(', '),
-            ), // skills mapped to tags currently
-
-            const SizedBox(height: 32),
-            Text(
-              'Innovator',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: CircleAvatar(
-                child: Text('U'),
-              ), // Placeholder/Initials from ownerId fetch if feasible
-              title: const Text('Innovator Profile'), // Ideally fetch real name
-              subtitle: const Text('View full credentials & trust score'),
-              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ProfileScreen(userId: idea.ownerId),
-                  ),
-                );
-              },
-            ),
-
-            const SizedBox(height: 32),
-            RecommendedMatchesWidget(idea: idea),
-            IdeaEvolutionTimeline(
-              ideaId: idea.id,
-              repository: IdeaActivityRepositoryImpl(),
-            ),
-            const SizedBox(height: 16),
-
-            const SizedBox(height: 40),
-            SizedBox(
-              width: double.infinity,
-              child: BlocBuilder<InvestorInterestBloc, InvestorInterestState>(
-                builder: (context, state) {
-                  bool isInterested = false;
-                  if (state is InvestorInterestLoaded) {
-                    isInterested = state.isInterested(idea.id);
-                  }
-
-                  return FilledButton.icon(
-                    onPressed: () {
-                      context.read<InvestorInterestBloc>().add(
-                        ExpressInterest(
-                          ideaId: idea.id,
-                          investorId: currentUserId,
-                        ),
-                      );
-                    },
-                    icon: Icon(isInterested ? Icons.check : Icons.thumb_up),
-                    label: Text(
-                      isInterested ? 'Interest Expressed' : 'Express Interest',
-                    ),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: isInterested ? Colors.green : null,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                    ),
-                  );
-                },
               ),
             ),
           ],
@@ -223,42 +99,178 @@ class InvestorIdeaDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSection(BuildContext context, String title, String content) {
-    if (content.isEmpty) return const SizedBox.shrink();
+  Widget _buildAppBar(BuildContext context) {
+    return SliverAppBar(
+      expandedHeight: 300,
+      pinned: true,
+      backgroundColor: AppColors.background,
+      flexibleSpace: FlexibleSpaceBar(
+        background: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (_idea!.coverImageUrl != null)
+              Image.network(_idea!.coverImageUrl!, fit: BoxFit.cover)
+            else
+              Container(color: AppColors.brandPurple.withValues(alpha: 0.2)),
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.transparent, AppColors.background.withValues(alpha: 0.8)],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMainInfo() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: Colors.grey,
-          ),
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.brandPurple.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(_idea!.currentStage.toUpperCase(), 
+                style: const TextStyle(color: AppColors.brandPurple, fontSize: 12, fontWeight: FontWeight.bold)),
+            ),
+            const Spacer(),
+            if (_idea!.isVerified)
+              const Row(
+                children: [
+                   Icon(Icons.verified, color: AppColors.emerald, size: 16),
+                   SizedBox(width: 4),
+                   Text('VERIFIED IDEA', style: TextStyle(color: AppColors.emerald, fontSize: 10, fontWeight: FontWeight.bold)),
+                ],
+              ),
+          ],
         ),
+        const SizedBox(height: 16),
+        Text(_idea!.title, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white)),
         const SizedBox(height: 8),
-        Text(content, style: Theme.of(context).textTheme.bodyLarge),
+        Text('Founded by ${_idea!.ownerName ?? "Unknown"}', style: const TextStyle(color: AppColors.textSecondary, fontSize: 16)),
       ],
     );
   }
 
-  Widget _buildDetailRow(BuildContext context, String label, String value) {
+  Widget _buildSectionHeader(String title) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 120,
-            child: Text(label, style: const TextStyle(color: Colors.grey)),
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: Text(title.toUpperCase(), 
+        style: const TextStyle(color: AppColors.brandPurple, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+    );
+  }
+
+  Widget _buildChipList(List<String> items) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: items.map((tag) => Chip(
+        label: Text(tag, style: const TextStyle(fontSize: 12)),
+        backgroundColor: AppColors.surfaceGlass,
+        side: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+      )).toList(),
+    );
+  }
+
+  Widget _buildEngagementCard(BuildContext context) {
+    return BlocBuilder<InvestorVerificationBloc, InvestorVerificationState>(
+      builder: (context, vState) {
+        // Safe access to global verification state
+        final isVerified = vState is VerificationStatusLoaded && vState.isApproved;
+        
+        return Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceGlass,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
           ),
+          child: Column(
+            children: [
+              if (!isVerified)
+                _buildVerificationWarning(),
+              const SizedBox(height: 16),
+              _buildActionButton(
+                label: 'Connect with Founder',
+                icon: Icons.handshake_outlined,
+                onPressed: !isVerified ? null : () => _handleConnect(context),
+                primary: true,
+              ),
+              const SizedBox(height: 12),
+              _buildActionButton(
+                label: 'Request Pitch Deck',
+                icon: Icons.picture_as_pdf_outlined,
+                onPressed: !isVerified ? null : () => _handleRequestPitch(context),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildVerificationWarning() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.amber.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.warning_amber_rounded, color: AppColors.amber, size: 18),
+          SizedBox(width: 12),
           Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(fontWeight: FontWeight.w500),
-            ),
+            child: Text('Only verified investors can initiate direct contact.', 
+              style: TextStyle(color: AppColors.amber, fontSize: 12, fontWeight: FontWeight.w500)),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildActionButton({required String label, required IconData icon, VoidCallback? onPressed, bool primary = false}) {
+    return SizedBox(
+      width: double.infinity,
+      height: 56,
+      child: ElevatedButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon, size: 20),
+        label: Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: primary ? AppColors.brandPurple : Colors.transparent,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          side: primary ? BorderSide.none : BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+          elevation: 0,
+        ),
+      ),
+    );
+  }
+
+  void _handleConnect(BuildContext context) {
+    final userId = context.read<AuthRepository>().currentUser?.id;
+    if (userId == null || _idea == null) return;
+
+    context.read<InvestorChatBloc>().add(ConnectWithInnovator(
+      ideaId: _idea!.id,
+      investorId: userId,
+      innovatorId: _idea!.ownerId,
+    ));
+  }
+
+  void _handleRequestPitch(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Pitch deck request sent to innovator.')),
     );
   }
 }

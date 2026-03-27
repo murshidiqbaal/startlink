@@ -196,8 +196,76 @@ class SimulationService {
       'market_score': 85,
       'feedback_text':
           'Strong technical foundation. Market entry strategy needs refinement.',
-      'suggestions': ['Focus on MVP', 'Validate with 10 users'],
+      'suggestions': const ['Focus on MVP', 'Validate with 10 users'],
       'created_at': DateTime.now().toIso8601String(),
     });
+  }
+
+  // --- 6. Analytics Simulation ---
+  Future<void> simulateAnalyticsData() async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception('No user logged in');
+
+    final ideas = await _supabase
+        .from('ideas')
+        .select('id')
+        .eq('owner_id', userId);
+    if (ideas.isEmpty) throw Exception('Post some ideas first!');
+
+    for (var idea in ideas) {
+      final ideaId = idea['id'];
+      final fakeUserId = _randomId();
+
+      // 1. Create a collaborator
+      try {
+        await _supabase.from('profiles').upsert({
+          'id': fakeUserId,
+          'full_name': 'Team Member ${_random.nextInt(100)}',
+          'role': 'Collaborator',
+        });
+        
+        await _supabase.from('idea_collaborators').upsert({
+          'idea_id': ideaId,
+          'user_id': fakeUserId,
+          'role': 'Developer',
+        });
+      } catch (_) {}
+
+      // 2. Create an investor chat
+      final fakeInvestorId = _randomId();
+      try {
+        await _supabase.from('profiles').upsert({
+          'id': fakeInvestorId,
+          'full_name': 'Investor ${_random.nextInt(100)}',
+          'role': 'Investor',
+        });
+
+        await _supabase.from('investor_chats').upsert({
+          'idea_id': ideaId,
+          'investor_id': fakeInvestorId,
+          'innovator_id': userId,
+        });
+      } catch (_) {}
+
+      // 3. Create a team and some messages
+      try {
+        final teamId = _randomId();
+        await _supabase.from('teams').upsert({
+          'id': teamId,
+          'idea_id': ideaId,
+          'name': 'Team Alpha',
+        });
+
+        for (int i = 0; i < 5; i++) {
+          await _supabase.from('team_messages').insert({
+            'id': _randomId(),
+            'team_id': teamId,
+            'sender_id': _random.nextBool() ? userId : fakeUserId,
+            'content': 'Simulated message ${i + 1}',
+            'created_at': DateTime.now().subtract(Duration(minutes: 10 * i)).toIso8601String(),
+          });
+        }
+      } catch (_) {}
+    }
   }
 }

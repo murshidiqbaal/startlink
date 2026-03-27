@@ -8,5 +8,6 @@ abstract class IdeaRepository {
   Future<void> deleteIdea(String id);
   Future<void> incrementViewCount(String ideaId);
   Future<List<Idea>> fetchPublishedIdeas();
+  Future<Idea?> fetchIdeaById(String id);
   Future<String?> uploadCoverImage(dynamic imageFile, String userId);
 }

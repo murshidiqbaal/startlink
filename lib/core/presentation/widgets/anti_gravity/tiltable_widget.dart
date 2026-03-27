@@ -80,20 +80,20 @@ class _TiltableWidgetState extends State<TiltableWidget>
     return MouseRegion(
       onHover: _onHover,
       onExit: _onExit,
-      child: TweenAnimationBuilder<List<double>>(
+      child: TweenAnimationBuilder<Offset>(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeOutCubic,
-        tween: Tween<List<double>>(
-          begin: [0.0, 0.0],
-          end: [_rotationX, _rotationY],
+        tween: Tween<Offset>(
+          begin: Offset.zero,
+          end: Offset(_rotationX, _rotationY),
         ),
         builder: (context, values, child) {
           return Transform(
             alignment: Alignment.center,
             transform: Matrix4.identity()
               ..setEntry(3, 2, 0.001) // Perspective
-              ..rotateX(values[0])
-              ..rotateY(values[1]),
+              ..rotateX(values.dx)
+              ..rotateY(values.dy),
             child: widget.child,
           );
         },

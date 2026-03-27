@@ -33,12 +33,16 @@ class ProfileCompletionService {
   }
 
   static int calculateMentor(MentorProfile p) {
-    int score = 0;
-    if (p.expertiseDomains.isNotEmpty) score += 30;
-    if (p.yearsOfExperience != null) score += 20;
-    if (_has(p.mentorshipFocus)) score += 30;
-    if (_has(p.linkedinUrl)) score += 20;
-    return score;
+    int total = 5;
+    int filled = 0;
+
+    if (p.expertise.isNotEmpty) filled++;
+    if (p.yearsExperience != null) filled++;
+    if (_has(p.bio)) filled++;
+    if (_has(p.linkedinUrl)) filled++;
+    if (_has(p.availability)) filled++;
+
+    return (filled / total * 100).toInt();
   }
 
   static int calculateCollaborator(CollaboratorProfile p) {

@@ -9,6 +9,7 @@ import 'package:startlink/features/achievements/presentation/widgets/achievement
 import 'package:startlink/features/aura/presentation/bloc/aura_bloc.dart';
 import 'package:startlink/features/aura/presentation/widgets/aura_badge.dart';
 import 'package:startlink/features/auth/bloc/auth_bloc.dart';
+import 'package:startlink/features/auth/domain/repository/auth_repository.dart';
 import 'package:startlink/features/profile/data/models/profile_model.dart';
 import 'package:startlink/features/profile/domain/entities/innovator_profile.dart';
 import 'package:startlink/features/profile/domain/repositories/profile_repository.dart';
@@ -50,10 +51,21 @@ class InnovatorProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (isCurrentUser) {
+      context.read<RoleProfileBloc>().add(
+            const LoadRoleProfile(role: 'innovator'),
+          );
+      return _InnovatorProfileBody(
+        profile: profile,
+        isCurrentUser: isCurrentUser,
+      );
+    }
+
     return BlocProvider(
-      create: (ctx) =>
-          RoleProfileBloc(repository: ctx.read<ProfileRepository>())
-            ..add(LoadRoleProfile(profileId: profile.id, role: 'innovator')),
+      create: (ctx) => RoleProfileBloc(
+        authRepository: ctx.read<AuthRepository>(),
+        repository: ctx.read<ProfileRepository>(),
+      )..add(const LoadRoleProfile(role: 'innovator')),
       child: _InnovatorProfileBody(
         profile: profile,
         isCurrentUser: isCurrentUser,
@@ -104,7 +116,7 @@ class _InnovatorProfileBodyState extends State<_InnovatorProfileBody>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       context.read<VerificationBloc>().add(
-        FetchVerificationsAndBadges(widget.profile.id),
+        CheckVerificationStatus(widget.profile.id, 'innovator'),
       );
       context.read<AuraBloc>().add(FetchAura(widget.profile.id));
       context.read<AchievementBloc>().add(FetchAchievements(widget.profile.id));
@@ -118,10 +130,10 @@ class _InnovatorProfileBodyState extends State<_InnovatorProfileBody>
 
   Future<void> _refresh() async {
     context.read<RoleProfileBloc>().add(
-      LoadRoleProfile(profileId: widget.profile.id, role: 'innovator'),
+      const LoadRoleProfile(role: 'innovator'),
     );
     context.read<VerificationBloc>().add(
-      FetchVerificationsAndBadges(widget.profile.id),
+      CheckVerificationStatus(widget.profile.id, 'innovator'),
     );
     context.read<AuraBloc>().add(FetchAura(widget.profile.id));
     context.read<AchievementBloc>().add(FetchAchievements(widget.profile.id));
@@ -151,93 +163,94 @@ class _InnovatorProfileBodyState extends State<_InnovatorProfileBody>
   Widget build(BuildContext context) {
     return BlocBuilder<RoleProfileBloc, RoleProfileState>(
       builder: (ctx, state) {
-        final isLoaded =
-            state.baseProfile != null && state.profile is InnovatorProfile;
-
-        if (state.isLoading && !isLoaded) {
+        if (state is RoleProfileLoading || state is RoleProfileInitial) {
           return const Scaffold(
             backgroundColor: _C.bg,
             body: Center(child: CircularProgressIndicator(color: _C.cyan)),
           );
         }
-        if (state.error != null) {
+
+        if (state is RoleProfileError) {
           return Scaffold(
             backgroundColor: _C.bg,
             body: Center(
               child: Text(
-                'Error: ${state.error}',
+                'Error: ${state.message}',
                 style: const TextStyle(color: _C.rose),
               ),
             ),
           );
         }
-        if (!isLoaded) return const SizedBox.shrink();
 
-        final innov = state.profile as InnovatorProfile;
+        if (state is InnovatorProfileLoaded) {
+          final innov = state.innovatorProfile;
 
-        return Scaffold(
-          backgroundColor: _C.bg,
-          body: Stack(
-            children: [
-              // ── ambient blobs ───────────────────────────────────────────
-              Positioned(
-                top: -80,
-                right: -60,
-                child: _GlowBlob(
-                  color: _C.purple.withValues(alpha: 0.12),
-                  size: 300,
-                ),
-              ),
-              Positioned(
-                top: 220,
-                left: -80,
-                child: _GlowBlob(
-                  color: _C.cyan.withValues(alpha: 0.08),
-                  size: 240,
-                ),
-              ),
-              // ── scrollable ─────────────────────────────────────────────
-              RefreshIndicator(
-                onRefresh: _refresh,
-                color: _C.cyan,
-                backgroundColor: _C.surfaceGlass,
-                child: CustomScrollView(
-                  controller: _scrollController,
-                  physics: const BouncingScrollPhysics(
-                    parent: AlwaysScrollableScrollPhysics(),
+          return Scaffold(
+            backgroundColor: _C.bg,
+            body: Stack(
+              children: [
+                // ── ambient blobs ───────────────────────────────────────────
+                Positioned(
+                  top: -80,
+                  right: -60,
+                  child: _GlowBlob(
+                    color: _C.purple.withValues(alpha: 0.12),
+                    size: 300,
                   ),
-                  slivers: [
-                    _buildHeroSliver(innov),
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
-                      sliver: SliverList(
-                        delegate: SliverChildListDelegate([
-                          _buildTrustAuraRow(),
-                          const SizedBox(height: 20),
-                          _buildVerificationRow(),
-                          _buildAboutSection(innov),
-                          _buildCollabOpenness(innov),
-                          _buildStartupCard(innov),
-                          _buildSnapshotBento(innov),
-                          _buildSkillsSection(innov),
-                          _buildAchievementsSection(),
-                          _buildLinksSection(innov),
-                          if (widget.isCurrentUser) ...[
-                            const SizedBox(height: 24),
-                            _buildEditCta(),
-                          ],
-                          const SizedBox(height: 20),
-                        ]),
-                      ),
-                    ),
-                  ],
                 ),
-              ),
-              // ── frosted app bar ─────────────────────────────────────────
-              _buildFrostedBar(),
-            ],
-          ),
-        );
+                Positioned(
+                  top: 220,
+                  left: -80,
+                  child: _GlowBlob(
+                    color: _C.cyan.withValues(alpha: 0.08),
+                    size: 240,
+                  ),
+                ),
+                // ── scrollable ─────────────────────────────────────────────
+                RefreshIndicator(
+                  onRefresh: _refresh,
+                  color: _C.cyan,
+                  backgroundColor: _C.surfaceGlass,
+                  child: CustomScrollView(
+                    controller: _scrollController,
+                    physics: const BouncingScrollPhysics(
+                      parent: AlwaysScrollableScrollPhysics(),
+                    ),
+                    slivers: [
+                      _buildHeroSliver(innov),
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
+                        sliver: SliverList(
+                          delegate: SliverChildListDelegate([
+                            _buildTrustAuraRow(),
+                            const SizedBox(height: 20),
+                            _buildVerificationRow(),
+                            _buildAboutSection(innov),
+                            _buildCollabOpenness(innov),
+                            _buildStartupCard(innov),
+                            _buildSnapshotBento(innov),
+                            _buildSkillsSection(innov),
+                            _buildAchievementsSection(),
+                            _buildLinksSection(innov),
+                            if (widget.isCurrentUser) ...[
+                              const SizedBox(height: 24),
+                              _buildEditCta(),
+                            ],
+                            const SizedBox(height: 20),
+                          ]),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // ── frosted app bar ─────────────────────────────────────────
+                _buildFrostedBar(),
+              ],
+            ),
+          );
+        }
+
+        return const SizedBox.shrink();
       },
     );
   }
@@ -557,7 +570,7 @@ class _InnovatorProfileBodyState extends State<_InnovatorProfileBody>
   Widget _buildVerificationRow() {
     return BlocBuilder<VerificationBloc, VerificationState>(
       builder: (_, vs) {
-        if (vs is VerificationLoaded && vs.badges.isNotEmpty) {
+        if (vs is VerificationApproved && vs.badges.isNotEmpty) {
           return _FadeSlide(
             controller: _contentAnim,
             delay: 0.05,

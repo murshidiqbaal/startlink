@@ -71,19 +71,21 @@ class ProfileCompletionCalculator {
     MentorProfile? roleProfile,
   ) {
     if (roleProfile == null) return 0;
-    int score = 0;
-    if (roleProfile.expertiseDomains.isNotEmpty) score += 30;
-    if (roleProfile.yearsOfExperience != null &&
-        roleProfile.yearsOfExperience! > 0)
-      score += 20;
-    if (roleProfile.linkedinUrl != null &&
-        roleProfile.linkedinUrl!.isNotEmpty) {
-      score += 20;
+    int total = 5;
+    int filled = 0;
+
+    if (roleProfile.expertise.isNotEmpty) filled++;
+    if (roleProfile.yearsExperience != null) filled++;
+    if (roleProfile.bio != null && roleProfile.bio!.isNotEmpty) filled++;
+    if (roleProfile.linkedinUrl != null && roleProfile.linkedinUrl!.isNotEmpty) {
+      filled++;
     }
-    if (roleProfile.mentorshipFocus != null &&
-        roleProfile.mentorshipFocus!.isNotEmpty)
-      score += 30;
-    return score.clamp(0, 100);
+    if (roleProfile.availability != null &&
+        roleProfile.availability!.isNotEmpty) {
+      filled++;
+    }
+
+    return (filled / total * 100).toInt();
   }
 
   // ── Investor completion ─────────────────────────────────────────────────

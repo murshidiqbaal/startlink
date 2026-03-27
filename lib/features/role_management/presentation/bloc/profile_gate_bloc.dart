@@ -69,16 +69,21 @@ class ProfileGateBloc extends Bloc<ProfileGateEvent, ProfileGateState> {
           if (roleProfile == null) {
             missing.add("Create Mentor Profile");
           } else {
-            if (roleProfile.expertiseDomains.isEmpty) {
-              missing.add("Expertise Domains");
+            if (roleProfile.expertise.isEmpty) {
+              missing.add("Expertise");
             }
-            if (roleProfile.yearsOfExperience == null) {
+            if (roleProfile.yearsExperience == null) {
               missing.add("Years of Experience");
             }
-            if (roleProfile.mentorshipFocus == null) {
-              missing.add("Mentorship Focus");
+            if (roleProfile.bio == null || roleProfile.bio!.isEmpty) {
+              missing.add("Mentorship Bio");
             }
-            if (roleProfile.linkedinUrl == null) missing.add("LinkedIn");
+            if (roleProfile.linkedinUrl == null || roleProfile.linkedinUrl!.isEmpty) {
+              missing.add("LinkedIn");
+            }
+            if (roleProfile.availability == null || roleProfile.availability!.isEmpty) {
+              missing.add("Availability");
+            }
           }
 
           isAllowed = completion >= 80;

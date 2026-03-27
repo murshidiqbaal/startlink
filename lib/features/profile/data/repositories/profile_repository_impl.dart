@@ -205,6 +205,8 @@ class ProfileRepositoryImpl implements ProfileRepository {
         .select()
         .eq('profile_id', userId)
         .eq('role', role)
+        .order('created_at', ascending: false)
+        .limit(1)
         .maybeSingle();
 
     if (response == null) return null;
@@ -240,6 +242,8 @@ class ProfileRepositoryImpl implements ProfileRepository {
           .select()
           .eq('profile_id', userId)
           .eq('role', role)
+          .order('created_at', ascending: false)
+          .limit(1)
           .maybeSingle();
 
       if (existing != null) {

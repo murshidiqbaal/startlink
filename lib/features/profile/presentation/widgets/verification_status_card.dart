@@ -8,12 +8,14 @@ import 'package:startlink/features/profile/presentation/widgets/profile_edit_fra
 class VerificationStatusCard extends StatelessWidget {
   final VerificationStatus status;
   final String role;
+  final String? customSubtitle;
   final VoidCallback? onActionPressed;
 
   const VerificationStatusCard({
     super.key,
     required this.status,
     required this.role,
+    this.customSubtitle,
     this.onActionPressed,
   });
 
@@ -26,7 +28,7 @@ class VerificationStatusCard extends StatelessWidget {
           icon: Icons.verified_user_rounded,
           iconColor: AppColors.emerald,
           title: 'Verified ${role[0].toUpperCase()}${role.substring(1)}',
-          subtitle: 'Your identity has been confirmed.',
+          subtitle: customSubtitle ?? 'Your identity has been confirmed.',
           borderColor: AppColors.emerald.withValues(alpha: 0.3),
           backgroundColor: AppColors.emerald.withValues(alpha: 0.1),
         );
@@ -36,9 +38,19 @@ class VerificationStatusCard extends StatelessWidget {
           icon: Icons.pending_actions_rounded,
           iconColor: AppColors.amber,
           title: 'Verification Pending',
-          subtitle: 'Your profile is under review.',
+          subtitle: customSubtitle ?? 'Your profile is under review.',
           borderColor: AppColors.amber.withValues(alpha: 0.3),
           backgroundColor: AppColors.amber.withValues(alpha: 0.1),
+        );
+      case VerificationStatus.rejected:
+        return _buildCard(
+          context,
+          icon: Icons.error_outline_rounded,
+          iconColor: AppColors.rose,
+          title: 'Verification Rejected',
+          subtitle: customSubtitle ?? 'Please review and re-submit your profile.',
+          borderColor: AppColors.rose.withValues(alpha: 0.3),
+          backgroundColor: AppColors.rose.withValues(alpha: 0.1),
         );
       case VerificationStatus.notVerified:
         return _buildCard(
@@ -46,7 +58,7 @@ class VerificationStatusCard extends StatelessWidget {
           icon: Icons.info_outline_rounded,
           iconColor: AppColors.textSecondary,
           title: 'Not Verified',
-          subtitle: 'Complete profile to request verification.',
+          subtitle: customSubtitle ?? 'Complete profile to request verification.',
           borderColor: Colors.white.withValues(alpha: 0.1),
           backgroundColor: Colors.white.withValues(alpha: 0.05),
         );
@@ -102,7 +114,7 @@ class VerificationStatusCard extends StatelessWidget {
                     fontSize: 13,
                   ),
                 ),
-                if (status == VerificationStatus.notVerified && onActionPressed != null) ...[
+                if ((status == VerificationStatus.notVerified || status == VerificationStatus.rejected) && onActionPressed != null) ...[
                   const SizedBox(height: 12),
                   SizedBox(
                     width: double.infinity,

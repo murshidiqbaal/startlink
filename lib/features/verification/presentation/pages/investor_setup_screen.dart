@@ -3,8 +3,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:startlink/core/theme/app_theme.dart';
 import 'package:startlink/features/auth/bloc/auth_bloc.dart';
 import 'package:startlink/features/profile/domain/entities/investor_profile.dart';
+import 'package:startlink/features/profile/domain/repositories/investor_repository.dart';
 import 'package:startlink/features/profile/domain/repositories/profile_repository.dart';
 import 'package:startlink/features/profile/presentation/bloc/investor_profile_bloc.dart';
+import 'package:startlink/features/profile/presentation/bloc/investor_profile_event.dart';
+import 'package:startlink/features/profile/presentation/bloc/investor_profile_state.dart';
 import 'package:startlink/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:startlink/features/profile/presentation/bloc/profile_state.dart';
 import 'package:startlink/features/profile/presentation/bloc/profile_event.dart';
@@ -15,16 +18,19 @@ class InvestorSetupScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final userId = context.read<AuthBloc>().state is AuthAuthenticated
-        ? (context.read<AuthBloc>().state as AuthAuthenticated).user.id
-        : '';
+    final userId =
+        context.read<AuthBloc>().state is AuthAuthenticated
+            ? (context.read<AuthBloc>().state as AuthAuthenticated).user.id
+            : '';
 
     return MultiBlocProvider(
       providers: [
-        BlocProvider(
-          create: (context) => InvestorProfileBloc(
-            repository: context.read<ProfileRepository>(),
-          )..add(LoadInvestorProfile(userId)),
+        BlocProvider<InvestorProfileBloc>(
+          create:
+              (context) => InvestorProfileBloc(
+                repository: context.read<InvestorRepository>(),
+                profileRepository: context.read<ProfileRepository>(),
+              )..add(LoadInvestorProfile(userId)),
         ),
         BlocProvider.value(value: context.read<ProfileBloc>()),
         BlocProvider.value(value: context.read<VerificationBloc>()),
@@ -75,8 +81,10 @@ class _InvestorSetupFormState extends State<_InvestorSetupForm> {
         listener: (context, state) {
           if (state is InvestorProfileLoaded) {
             _interestsController.text = state.profile.investmentFocus ?? '';
-            _minTicketController.text = state.profile.ticketSizeMin?.toString() ?? '';
-            _maxTicketController.text = state.profile.ticketSizeMax?.toString() ?? '';
+            _minTicketController.text =
+                state.profile.ticketSizeMin?.toString() ?? '';
+            _maxTicketController.text =
+                state.profile.ticketSizeMax?.toString() ?? '';
             _companyController.text = state.profile.organizationName ?? '';
             _linkedinController.text = state.profile.linkedinUrl ?? '';
           }
@@ -104,9 +112,17 @@ class _InvestorSetupFormState extends State<_InvestorSetupForm> {
                         ),
                       ),
                       const SizedBox(height: 32),
-                      _buildTextField('Full Name', _nameController, Icons.person_outline),
+                      _buildTextField(
+                        'Full Name',
+                        _nameController,
+                        Icons.person_outline,
+                      ),
                       const SizedBox(height: 20),
-                      _buildTextField('Company / Organization', _companyController, Icons.business_outlined),
+                      _buildTextField(
+                        'Company / Organization',
+                        _companyController,
+                        Icons.business_outlined,
+                      ),
                       const SizedBox(height: 20),
                       Row(
                         children: [
@@ -137,7 +153,11 @@ class _InvestorSetupFormState extends State<_InvestorSetupForm> {
                         hint: 'e.g. SaaS, AI, HealthTech',
                       ),
                       const SizedBox(height: 20),
-                      _buildTextField('LinkedIn URL', _linkedinController, Icons.link),
+                      _buildTextField(
+                        'LinkedIn URL',
+                        _linkedinController,
+                        Icons.link,
+                      ),
                       const SizedBox(height: 20),
                       _buildTextField(
                         'Bio',
@@ -200,7 +220,8 @@ class _InvestorSetupFormState extends State<_InvestorSetupForm> {
             hintText: hint,
             prefixIcon: Icon(icon, color: AppColors.brandPurple, size: 20),
           ),
-          validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+          validator:
+              (value) => value == null || value.isEmpty ? 'Required' : null,
         ),
       ],
     );
@@ -208,18 +229,21 @@ class _InvestorSetupFormState extends State<_InvestorSetupForm> {
 
   void _handleSubmit(BuildContext context, ProfileState pState) {
     if (_formKey.currentState!.validate()) {
-      final userId = (context.read<AuthBloc>().state as AuthAuthenticated).user.id;
+      final userId =
+          (context.read<AuthBloc>().state as AuthAuthenticated).user.id;
 
       if (pState is ProfileLoaded) {
-        context.read<ProfileBloc>().add(UpdateProfile(
-              pState.profile.copyWith(
-                fullName: _nameController.text,
-                about: _bioController.text,
-              ),
-            ));
+        context.read<ProfileBloc>().add(
+          UpdateProfile(
+            pState.profile.copyWith(
+              fullName: _nameController.text,
+              about: _bioController.text,
+            ),
+          ),
+        );
       }
 
-      // 2. Update Investor Profile
+      // 1. Update Investor Profile
       final investorProfile = InvestorProfile(
         profileId: userId,
         investmentFocus: _interestsController.text,
@@ -228,22 +252,24 @@ class _InvestorSetupFormState extends State<_InvestorSetupForm> {
         organizationName: _companyController.text,
         linkedinUrl: _linkedinController.text,
       );
-      context.read<InvestorProfileBloc>().add(SaveInvestorProfile(investorProfile));
+      context.read<InvestorProfileBloc>().add(
+        UpdateInvestorProfile(investorProfile),
+      );
 
-      // 3. Request Verification
-      context.read<VerificationBloc>().add(
-            RequestVerification(userId, 'investor', 'profile_verification'),
-          );
+      // 2. Request Verification
+      context.read<InvestorProfileBloc>().add(SubmitVerification(userId));
 
-      // 4. Show confirmation and navigate
+      // 3. Show confirmation and navigate
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Your investor profile is under review. Admin will verify your account soon.'),
+          content: Text(
+            'Your investor profile is under review. Admin will verify your account soon.',
+          ),
           backgroundColor: AppColors.emerald,
           behavior: SnackBarBehavior.floating,
         ),
       );
-      
+
       Navigator.pop(context);
     }
   }

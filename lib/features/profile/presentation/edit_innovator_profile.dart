@@ -5,7 +5,6 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:startlink/features/profile/domain/repositories/profile_repository.dart';
 import 'package:startlink/features/profile/presentation/bloc/role_profile_event.dart';
 import 'package:startlink/features/profile/presentation/bloc/unified_role_profile_bloc.dart';
 import 'package:startlink/features/profile/presentation/widgets/profile_edit_framework/controllers/innovator_edit_controller.dart';
@@ -34,12 +33,10 @@ class EditInnovatorProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) =>
-          RoleProfileBloc(repository: context.read<ProfileRepository>())
-            ..add(LoadRoleProfile(profileId: profileId, role: 'innovator')),
-      child: _EditInnovatorForm(profileId: profileId),
-    );
+    // Rely on global RoleProfileBloc provided in app.dart
+    context.read<RoleProfileBloc>().add(const LoadRoleProfile(role: 'innovator'));
+
+    return _EditInnovatorForm(profileId: profileId);
   }
 }
 

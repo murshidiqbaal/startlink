@@ -1,13 +1,5 @@
-abstract class AnalyticsRepository {
-  Future<void> logAction({
-    required String investorId,
-    required String action,
-    String? ideaId,
-    String? domain,
-    String? stage,
-    int? trustScore,
-  });
+import '../models/analytics_data.dart';
 
-  Future<Map<String, dynamic>> getInvestorInsights(String investorId);
-  Future<List<Map<String, dynamic>>> getConfidenceHistory(String ideaId);
+abstract class AnalyticsRepository {
+  Future<AnalyticsData> fetchInnovatorAnalytics(String innovatorId);
 }

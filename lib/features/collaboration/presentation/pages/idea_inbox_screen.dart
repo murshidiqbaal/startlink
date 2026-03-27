@@ -8,6 +8,7 @@ import 'package:startlink/core/presentation/widgets/anti_gravity/floating_widget
 import 'package:startlink/core/theme/app_theme.dart';
 import 'package:startlink/features/chat/presentation/screens/idea_docket_screen.dart';
 
+import 'package:startlink/features/profile/presentation/bloc/role_profile_state.dart';
 import 'package:startlink/features/profile/presentation/bloc/unified_role_profile_bloc.dart';
 
 class IdeaInboxScreen extends StatefulWidget {
@@ -29,12 +30,14 @@ class _IdeaInboxScreenState extends State<IdeaInboxScreen> {
   void _loadChats() {
     final profileBloc = context.read<RoleProfileBloc>();
     final profileState = profileBloc.state;
-    final role = profileState.baseProfile?.role?.toLowerCase();
     
-    if (role == 'innovator') {
-      context.read<ChatListBloc>().add(LoadInnovatorTeams());
-    } else {
-      context.read<ChatListBloc>().add(LoadCollaboratorTeams());
+    if (profileState is RoleProfileLoaded) {
+      final role = profileState.baseProfile.role?.toLowerCase();
+      if (role == 'innovator') {
+        context.read<ChatListBloc>().add(LoadInnovatorTeams());
+      } else {
+        context.read<ChatListBloc>().add(LoadCollaboratorTeams());
+      }
     }
   }
 

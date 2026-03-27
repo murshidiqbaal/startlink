@@ -3,7 +3,6 @@ import 'package:equatable/equatable.dart';
 import 'package:startlink/features/verification/domain/entities/user_badge.dart';
 import 'package:startlink/features/verification/domain/entities/user_verification.dart';
 import 'package:startlink/features/verification/domain/repositories/verification_repository.dart';
-import 'package:startlink/features/verification/domain/utils/verification_rule_engine.dart';
 
 // Events
 abstract class VerificationEvent extends Equatable {
@@ -12,38 +11,25 @@ abstract class VerificationEvent extends Equatable {
   List<Object> get props => [];
 }
 
-class FetchVerificationsAndBadges extends VerificationEvent {
+class CheckVerificationStatus extends VerificationEvent {
   final String profileId;
-  const FetchVerificationsAndBadges(this.profileId);
+  final String role;
+  const CheckVerificationStatus(this.profileId, this.role);
   @override
-  List<Object> get props => [profileId];
+  List<Object> get props => [profileId, role];
 }
 
-class RequestVerification extends VerificationEvent {
+class SubmitVerificationRequest extends VerificationEvent {
   final String profileId;
   final String role;
   final String type;
-  const RequestVerification(this.profileId, this.role, this.type);
-  @override
-  List<Object> get props => [profileId, role, type];
-}
-
-class CheckBadgeRules extends VerificationEvent {
-  // Trigger this when profile is updated
-  final String profileId;
-  final String role;
-  final int completionScore;
-  final bool isRoleVerified;
-
-  const CheckBadgeRules({
+  const SubmitVerificationRequest({
     required this.profileId,
     required this.role,
-    required this.completionScore,
-    required this.isRoleVerified,
+    this.type = 'profile_review',
   });
-
   @override
-  List<Object> get props => [profileId, role, completionScore, isRoleVerified];
+  List<Object> get props => [profileId, role, type];
 }
 
 // States
@@ -57,38 +43,28 @@ class VerificationInitial extends VerificationState {}
 
 class VerificationLoading extends VerificationState {}
 
-class VerificationLoaded extends VerificationState {
-  final List<UserVerification> verifications;
-  final List<UserBadge> badges;
-  final String profileId;
-
-  const VerificationLoaded({
-    this.verifications = const [],
-    this.badges = const [],
-    required this.profileId,
-  });
-
-  bool get isProfileVerified =>
-      badges.any((b) => b.badgeKey == 'profile_verified');
-
-  bool isRoleVerified(String role) {
-    final badgeKey = 'verified_${role.toLowerCase()}';
-    return badges.any((b) => b.badgeKey == badgeKey);
-  }
-
-  UserVerification? getRequestForRole(String role) {
-    try {
-      return verifications.firstWhere(
-        (v) => v.role.toLowerCase() == role.toLowerCase(),
-      );
-    } catch (_) {
-      return null;
-    }
-  }
-
+class VerificationPending extends VerificationState {
+  final UserVerification verification;
+  const VerificationPending(this.verification);
   @override
-  List<Object> get props => [verifications, badges, profileId];
+  List<Object> get props => [verification];
 }
+
+class VerificationApproved extends VerificationState {
+  final List<UserBadge> badges;
+  const VerificationApproved(this.badges);
+  @override
+  List<Object> get props => [badges];
+}
+
+class VerificationRejected extends VerificationState {
+  final UserVerification verification;
+  const VerificationRejected(this.verification);
+  @override
+  List<Object> get props => [verification];
+}
+
+class VerificationNotSubmitted extends VerificationState {}
 
 class VerificationError extends VerificationState {
   final String message;
@@ -99,64 +75,74 @@ class VerificationError extends VerificationState {
 
 class VerificationBloc extends Bloc<VerificationEvent, VerificationState> {
   final VerificationRepository _repository;
-  final VerificationRuleEngine _ruleEngine;
 
   VerificationBloc({required VerificationRepository repository})
     : _repository = repository,
-      _ruleEngine = VerificationRuleEngine(repository),
       super(VerificationInitial()) {
-    on<FetchVerificationsAndBadges>(_onFetch);
-    on<RequestVerification>(_onSubmitRequest);
-    on<CheckBadgeRules>(_onCheckRules);
+    on<CheckVerificationStatus>(_onCheckStatus);
+    on<SubmitVerificationRequest>(_onSubmitRequest);
   }
 
-  Future<void> _onFetch(
-    FetchVerificationsAndBadges event,
+  Future<void> _onCheckStatus(
+    CheckVerificationStatus event,
     Emitter<VerificationState> emit,
   ) async {
     emit(VerificationLoading());
     try {
       final verifications = await _repository.getVerifications(event.profileId);
       final badges = await _repository.getBadges(event.profileId);
-      emit(
-        VerificationLoaded(
-          verifications: verifications,
-          badges: badges,
-          profileId: event.profileId,
-        ),
-      );
+
+      // Check for role-specific badge first (Approved state)
+      final badgeKey = 'verified_${event.role.toLowerCase()}';
+      if (badges.any((b) => b.badgeKey == badgeKey)) {
+        emit(VerificationApproved(badges));
+        return;
+      }
+
+      // Check for pending/rejected requests for this role
+      if (verifications.isNotEmpty) {
+        // Get the latest for this role
+        final roleVerifications = verifications
+            .where((v) => v.role.toLowerCase() == event.role.toLowerCase())
+            .toList()
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+        if (roleVerifications.isNotEmpty) {
+          final latest = roleVerifications.first;
+          if (latest.status.toLowerCase() == 'pending') {
+            emit(VerificationPending(latest));
+            return;
+          } else if (latest.status.toLowerCase() == 'rejected') {
+            emit(VerificationRejected(latest));
+            return;
+          } else if (latest.status.toLowerCase() == 'approved') {
+            // Should have caught badge already, but fallback
+            emit(VerificationApproved(badges));
+            return;
+          }
+        }
+      }
+
+      emit(VerificationNotSubmitted());
     } catch (e) {
       emit(VerificationError(e.toString()));
     }
   }
 
   Future<void> _onSubmitRequest(
-    RequestVerification event,
+    SubmitVerificationRequest event,
     Emitter<VerificationState> emit,
   ) async {
+    emit(VerificationLoading());
     try {
       await _repository.requestVerification(
         event.profileId,
         event.role,
         event.type,
       );
-      // Reload logic
-      add(FetchVerificationsAndBadges(event.profileId));
+      add(CheckVerificationStatus(event.profileId, event.role));
     } catch (e) {
       emit(VerificationError(e.toString()));
     }
-  }
-
-  Future<void> _onCheckRules(
-    CheckBadgeRules event,
-    Emitter<VerificationState> emit,
-  ) async {
-    await _ruleEngine.evaluateProfileBadges(
-      event.profileId,
-      event.role,
-      event.completionScore,
-      event.isRoleVerified,
-    );
-    add(FetchVerificationsAndBadges(event.profileId));
   }
 }

@@ -39,6 +39,10 @@ import 'package:startlink/features/investor/data/repositories/interest_repositor
 import 'package:startlink/features/investor/domain/repositories/interest_repository.dart';
 import 'package:startlink/features/profile/data/repositories/profile_repository_impl.dart';
 import 'package:startlink/features/profile/domain/repositories/profile_repository.dart';
+import 'package:startlink/features/profile/domain/repositories/investor_repository.dart' as profile_repo;
+import 'package:startlink/features/profile/data/repositories/investor_repository_impl.dart' as profile_repo_impl;
+import 'package:startlink/features/investor/domain/repositories/investor_communication_repository.dart';
+import 'package:startlink/features/investor/data/repositories/investor_communication_repository_impl.dart';
 import 'package:startlink/features/role_management/presentation/bloc/profile_gate_bloc.dart';
 import 'package:startlink/features/role_management/presentation/bloc/profile_gate_event.dart';
 import 'package:startlink/features/role_management/presentation/widgets/role_gate_wrapper.dart';
@@ -53,6 +57,19 @@ import 'package:startlink/features/admin/domain/repositories/admin_repository.da
 import 'package:startlink/features/admin/data/repositories/admin_repository_impl.dart';
 import 'package:startlink/features/chat/domain/repositories/chat_repository.dart';
 import 'package:startlink/features/chat/data/repositories/chat_repository_impl.dart';
+import 'package:startlink/features/profile/presentation/bloc/unified_role_profile_bloc.dart';
+import 'package:startlink/features/profile/presentation/bloc/investor_profile_bloc.dart';
+import 'package:startlink/features/profile/data/repositories/mentor_repository_impl.dart';
+import 'package:startlink/features/profile/domain/repositories/mentor_repository.dart';
+import 'package:startlink/features/profile/presentation/bloc/mentor_profile_bloc.dart';
+import 'package:startlink/features/investor/presentation/bloc/investor_chat_bloc.dart';
+import 'package:startlink/features/investor/presentation/bloc/investor_dashboard_bloc.dart';
+import 'package:startlink/features/investor/presentation/bloc/investor_verification_bloc.dart';
+import 'package:startlink/features/chat/presentation/bloc/innovator_chat_bloc.dart';
+import 'package:startlink/features/collaboration/presentation/bloc/collaboration_bloc.dart';
+import 'package:startlink/features/analytics/domain/repositories/analytics_repository.dart';
+import 'package:startlink/features/analytics/data/repositories/analytics_repository_impl.dart';
+import 'package:startlink/features/analytics/presentation/bloc/analytics_bloc.dart';
 import 'package:startlink/features/home/presentation/app_shell.dart';
 
 class App extends StatelessWidget {
@@ -75,6 +92,15 @@ class App extends StatelessWidget {
         ),
         RepositoryProvider<ProfileRepository>(
           create: (context) => ProfileRepositoryImpl(),
+        ),
+        RepositoryProvider<profile_repo.InvestorRepository>(
+          create: (context) => profile_repo_impl.InvestorRepositoryImpl(),
+        ),
+        RepositoryProvider<InvestorCommunicationRepository>(
+          create: (context) => InvestorCommunicationRepositoryImpl(SupabaseService.client),
+        ),
+        RepositoryProvider<MentorRepository>(
+          create: (context) => MentorRepositoryImpl(),
         ),
         RepositoryProvider<CollaborationRepository>(
           create: (context) => CollaborationRepositoryImpl(),
@@ -115,6 +141,9 @@ class App extends StatelessWidget {
         ),
         RepositoryProvider<ChatRepository>(
           create: (context) => ChatRepositoryImpl(supabase: SupabaseService.client),
+        ),
+        RepositoryProvider<AnalyticsRepository>(
+          create: (context) => AnalyticsRepositoryImpl(SupabaseService.client),
         ),
       ],
       child: MultiBlocProvider(
@@ -166,6 +195,54 @@ class App extends StatelessWidget {
               repository: context.read<AdminVerificationRepository>(),
             ),
           ),
+          BlocProvider<RoleProfileBloc>(
+            create: (context) => RoleProfileBloc(
+              repository: context.read<ProfileRepository>(),
+              authRepository: context.read<AuthRepository>(),
+            ),
+          ),
+          BlocProvider<InvestorProfileBloc>(
+            create: (context) => InvestorProfileBloc(
+              repository: context.read<profile_repo.InvestorRepository>(),
+              profileRepository: context.read<ProfileRepository>(),
+            ),
+          ),
+          BlocProvider<MentorProfileBloc>(
+            create: (context) => MentorProfileBloc(
+              repository: context.read<MentorRepository>(),
+              profileRepository: context.read<ProfileRepository>(),
+            ),
+          ),
+          BlocProvider<InvestorDashboardBloc>(
+            create: (context) => InvestorDashboardBloc(
+              repository: context.read<InvestorCommunicationRepository>(),
+            ),
+          ),
+          BlocProvider<InvestorChatBloc>(
+            create: (context) => InvestorChatBloc(
+              repository: context.read<InvestorCommunicationRepository>(),
+            ),
+          ),
+          BlocProvider<InnovatorChatBloc>(
+            create: (context) => InnovatorChatBloc(
+              repository: context.read<InvestorCommunicationRepository>(),
+            ),
+          ),
+          BlocProvider<CollaborationBloc>(
+            create: (context) => CollaborationBloc(
+              repository: context.read<CollaborationRepository>(),
+            ),
+          ),
+          BlocProvider<InvestorVerificationBloc>(
+            create: (context) => InvestorVerificationBloc(
+              supabase: SupabaseService.client,
+            ),
+          ),
+          BlocProvider<AnalyticsBloc>(
+            create: (context) => AnalyticsBloc(
+              repository: context.read<AnalyticsRepository>(),
+            ),
+          ),
         ],
         child: const AppView(),
       ),
@@ -196,9 +273,6 @@ class AuthGate extends StatelessWidget {
       listener: (context, state) {
         if (state is AuthAuthenticated) {
           context.read<AuraBloc>().add(SyncAura(state.user.id));
-          context.read<VerificationBloc>().add(
-            FetchVerificationsAndBadges(state.user.id),
-          );
           context.read<AchievementBloc>().add(FetchAchievements(state.user.id));
         }
       },

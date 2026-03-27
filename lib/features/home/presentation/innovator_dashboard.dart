@@ -24,6 +24,7 @@ import 'package:startlink/features/profile/presentation/bloc/profile_state.dart'
 import 'package:startlink/features/profile/presentation/edit_profile_screen.dart';
 import 'package:startlink/features/profile/presentation/profile_screen.dart';
 import 'package:startlink/features/collaboration/presentation/pages/idea_inbox_screen.dart';
+import 'package:startlink/features/analytics/presentation/screens/analytics_screen.dart';
 
 class InnovatorDashboard extends StatefulWidget {
   const InnovatorDashboard({super.key});
@@ -39,6 +40,7 @@ class _InnovatorDashboardState extends State<InnovatorDashboard> {
     const InnovatorHome(),
     const ReceivedApplicationsScreen(),
     const IdeaInboxScreen(),
+    const AnalyticsScreen(),
     const ProfileScreen(),
   ];
 
@@ -69,6 +71,11 @@ class _InnovatorDashboardState extends State<InnovatorDashboard> {
             icon: Icon(Icons.message_outlined),
             selectedIcon: Icon(Icons.message),
             label: 'Messages',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.analytics_outlined),
+            selectedIcon: Icon(Icons.analytics),
+            label: 'Analytics',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline),
@@ -309,6 +316,9 @@ class InnovatorHome extends StatelessWidget {
     switch (feature.id) {
       case 'simulation':
         screen = const SimulationDashboard();
+        break;
+      case 'analytics':
+        screen = const AnalyticsScreen();
         break;
       case 'collaboration':
         screen = const ReceivedApplicationsScreen();

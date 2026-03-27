@@ -1,83 +1,134 @@
-import 'package:startlink/core/services/supabase_client.dart';
+import 'package:startlink/features/analytics/domain/models/analytics_data.dart';
+import 'package:startlink/features/analytics/domain/models/idea_performance.dart';
 import 'package:startlink/features/analytics/domain/repositories/analytics_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AnalyticsRepositoryImpl implements AnalyticsRepository {
   final SupabaseClient _supabase;
 
-  AnalyticsRepositoryImpl({SupabaseClient? supabase})
-    : _supabase = supabase ?? SupabaseService.client;
+  AnalyticsRepositoryImpl(this._supabase);
 
   @override
-  Future<void> logAction({
-    required String investorId,
-    required String action,
-    String? ideaId,
-    String? domain,
-    String? stage,
-    int? trustScore,
-  }) async {
-    await _supabase.from('investor_analytics').insert({
-      'investor_id': investorId,
-      'action': action,
-      'idea_id': ideaId,
-      'domain_viewed': domain,
-      'stage_viewed': stage,
-      'trust_score_viewed': trustScore,
-    });
+  Future<AnalyticsData> fetchInnovatorAnalytics(String innovatorId) async {
+    final results = await Future.wait([
+      _getTotalIdeas(innovatorId),
+      _getTotalRequests(innovatorId),
+      _getAcceptedCollaborators(innovatorId),
+      _getInvestorInterest(innovatorId),
+      _getTotalMessages(innovatorId),
+      _getActiveIdeas(innovatorId),
+      _getTopIdeas(innovatorId),
+    ]);
+
+    return AnalyticsData(
+      totalIdeas: results[0] as int,
+      totalRequests: results[1] as int,
+      totalCollaborators: results[2] as int,
+      investorInterest: results[3] as int,
+      totalMessages: results[4] as int,
+      activeIdeas: results[5] as int,
+      topIdeas: results[6] as List<IdeaPerformance>,
+    );
   }
 
-  @override
-  Future<Map<String, dynamic>> getInvestorInsights(String investorId) async {
-    // 1. Top Domains
-    final domainStats = await _supabase
-        .from('investor_analytics')
-        .select('domain_viewed')
-        .eq('investor_id', investorId)
-        .eq('action', 'view')
-        .not('domain_viewed', 'is', null);
-
-    // Simple aggregation client-side for MVP (PostgREST grouping is tricky without RPC)
-    final Map<String, int> domains = {};
-    for (var r in domainStats) {
-      final d = r['domain_viewed'] as String;
-      domains[d] = (domains[d] ?? 0) + 1;
-    }
-    final topDomains = domains.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-
-    // 2. Stage Preference (similar logic)
-    final stageStats = await _supabase
-        .from('investor_analytics')
-        .select('stage_viewed')
-        .eq('investor_id', investorId)
-        .eq('action', 'view')
-        .not('stage_viewed', 'is', null);
-
-    final Map<String, int> stages = {};
-    for (var r in stageStats) {
-      final s = r['stage_viewed'] as String;
-      stages[s] = (stages[s] ?? 0) + 1;
-    }
-
-    return {
-      'top_domains': topDomains
-          .take(3)
-          .map((e) => {'domain': e.key, 'count': e.value})
-          .toList(),
-      'stage_preference': stages,
-    };
-  }
-
-  @override
-  Future<List<Map<String, dynamic>>> getConfidenceHistory(String ideaId) async {
-    // Return last 4 weeks of confidence
+  Future<int> _getTotalIdeas(String innovatorId) async {
     final response = await _supabase
-        .from('idea_confidence_history')
-        .select('confidence_score, calculated_at')
-        .eq('idea_id', ideaId)
-        .order('calculated_at', ascending: true);
+        .from('ideas')
+        .select('id')
+        .eq('owner_id', innovatorId)
+        .count(CountOption.exact);
+    return response.count;
+  }
 
-    return List<Map<String, dynamic>>.from(response);
+  Future<int> _getTotalRequests(String innovatorId) async {
+    final response = await _supabase
+        .from('collaboration_requests')
+        .select('request_id')
+        .eq('innovator_id', innovatorId)
+        .count(CountOption.exact);
+    return response.count;
+  }
+
+  Future<int> _getAcceptedCollaborators(String innovatorId) async {
+    final response = await _supabase
+        .from('idea_collaborators')
+        .select('id, ideas!inner(owner_id)')
+        .eq('ideas.owner_id', innovatorId)
+        .count(CountOption.exact);
+    return response.count;
+  }
+
+  Future<int> _getInvestorInterest(String innovatorId) async {
+    final response = await _supabase
+        .from('investor_chats')
+        .select('id')
+        .eq('innovator_id', innovatorId)
+        .count(CountOption.exact);
+    return response.count;
+  }
+
+  Future<int> _getTotalMessages(String innovatorId) async {
+    final response = await _supabase
+        .from('team_messages')
+        .select('id, teams!inner(idea_id, ideas!inner(owner_id))')
+        .eq('teams.ideas.owner_id', innovatorId)
+        .count(CountOption.exact);
+    return response.count;
+  }
+
+  Future<int> _getActiveIdeas(String innovatorId) async {
+    final response = await _supabase
+        .from('ideas')
+        .select('id')
+        .eq('owner_id', innovatorId)
+        .eq('status', 'active')
+        .count(CountOption.exact);
+    return response.count;
+  }
+
+  Future<List<IdeaPerformance>> _getTopIdeas(String innovatorId) async {
+    final ideasResponse = await _supabase
+        .from('ideas')
+        .select('id, title')
+        .eq('owner_id', innovatorId);
+
+    final List<Map<String, dynamic>> ideas = List<Map<String, dynamic>>.from(
+      ideasResponse as List,
+    );
+    List<IdeaPerformance> performances = [];
+
+    for (var idea in ideas) {
+      final ideaId = idea['id'];
+
+      final collabCountRes = await _supabase
+          .from('idea_collaborators')
+          .select('id')
+          .eq('idea_id', ideaId)
+          .count(CountOption.exact);
+      final requestCountRes = await _supabase
+          .from('collaboration_requests')
+          .select('id')
+          .eq('idea_id', ideaId)
+          .count(CountOption.exact);
+      // Count messages via teams for this idea
+      final msgCountRes = await _supabase
+          .from('team_messages')
+          .select('id, teams!inner(idea_id)')
+          .eq('teams.idea_id', ideaId)
+          .count(CountOption.exact);
+
+      performances.add(
+        IdeaPerformance(
+          id: ideaId,
+          title: idea['title'],
+          collaboratorsCount: collabCountRes.count,
+          requestsCount: requestCountRes.count,
+          messagesCount: msgCountRes.count,
+        ),
+      );
+    }
+
+    performances.sort((a, b) => b.messagesCount.compareTo(a.messagesCount));
+    return performances.take(5).toList();
   }
 }

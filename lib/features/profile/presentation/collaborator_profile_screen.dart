@@ -2,9 +2,13 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:startlink/features/auth/domain/repository/auth_repository.dart';
 import 'package:startlink/features/profile/data/models/profile_model.dart';
 import 'package:startlink/features/profile/domain/entities/collaborator_profile.dart';
-import 'package:startlink/features/profile/presentation/bloc/profile_bloc.dart';
+import 'package:startlink/features/profile/domain/repositories/profile_repository.dart';
+import 'package:startlink/features/profile/presentation/bloc/role_profile_event.dart';
+import 'package:startlink/features/profile/presentation/bloc/role_profile_state.dart';
+import 'package:startlink/features/profile/presentation/bloc/unified_role_profile_bloc.dart';
 import 'package:startlink/features/profile/presentation/edit_collaborator_profile.dart';
 
 // ─── NEW SUPPORTING MODELS ───────────────────────────────────────────────────
@@ -186,39 +190,69 @@ class _CollaboratorProfileScreenState extends State<CollaboratorProfileScreen>
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ProfileBloc, ProfileState>(
-      builder: (context, state) {
-        if (state is ProfileLoading) {
-          return const Scaffold(
-            backgroundColor: _C.bg,
-            body: Center(child: CircularProgressIndicator(color: _C.cyan)),
+    if (widget.isCurrentUser) {
+      context.read<RoleProfileBloc>().add(
+            const LoadRoleProfile(role: 'collaborator'),
           );
-        }
-        if (state is ProfileError) {
-          return Scaffold(
-            backgroundColor: _C.bg,
-            body: Center(
-              child: Text(
-                'Error: ${state.message}',
-                style: const TextStyle(color: _C.rose),
-              ),
-            ),
-          );
-        }
-        if (state is ProfileLoaded) {
-          if (state.collaboratorProfile == null) {
-            context.read<ProfileBloc>().add(
-              LoadCollaboratorProfile(widget.baseProfile.id),
-            );
+      return BlocBuilder<RoleProfileBloc, RoleProfileState>(
+        builder: (context, state) {
+          if (state is RoleProfileLoading || state is RoleProfileInitial) {
             return const Scaffold(
               backgroundColor: _C.bg,
               body: Center(child: CircularProgressIndicator(color: _C.cyan)),
             );
           }
-          return _buildPortfolio(context, state.collaboratorProfile!);
-        }
-        return const SizedBox.shrink();
-      },
+          if (state is RoleProfileError) {
+            return Scaffold(
+              backgroundColor: _C.bg,
+              body: Center(
+                child: Text(
+                  'Error: ${state.message}',
+                  style: const TextStyle(color: _C.rose),
+                ),
+              ),
+            );
+          }
+          if (state is CollaboratorProfileLoaded) {
+            final colab = state.collaboratorProfile;
+            return _buildPortfolio(context, colab);
+          }
+          return const SizedBox.shrink();
+        },
+      );
+    }
+
+    return BlocProvider(
+      create: (ctx) => RoleProfileBloc(
+        authRepository: ctx.read<AuthRepository>(),
+        repository: ctx.read<ProfileRepository>(),
+      )..add(const LoadRoleProfile(role: 'collaborator')),
+      child: BlocBuilder<RoleProfileBloc, RoleProfileState>(
+        builder: (context, state) {
+          if (state is RoleProfileLoading || state is RoleProfileInitial) {
+            return const Scaffold(
+              backgroundColor: _C.bg,
+              body: Center(child: CircularProgressIndicator(color: _C.cyan)),
+            );
+          }
+          if (state is RoleProfileError) {
+            return Scaffold(
+              backgroundColor: _C.bg,
+              body: Center(
+                child: Text(
+                  'Error: ${state.message}',
+                  style: const TextStyle(color: _C.rose),
+                ),
+              ),
+            );
+          }
+          if (state is CollaboratorProfileLoaded) {
+            final colab = state.collaboratorProfile;
+            return _buildPortfolio(context, colab);
+          }
+          return const SizedBox.shrink();
+        },
+      ),
     );
   }
 
@@ -342,8 +376,9 @@ class _CollaboratorProfileScreenState extends State<CollaboratorProfileScreen>
                         ),
                         onPressed: () => _navigateToEdit(
                           context,
-                          (context.read<ProfileBloc>().state as ProfileLoaded)
-                              .collaboratorProfile!,
+                          (context.read<RoleProfileBloc>().state
+                                  as CollaboratorProfileLoaded)
+                              .collaboratorProfile,
                         ),
                       ),
                     const SizedBox(width: 8),
@@ -896,13 +931,7 @@ class _CollaboratorProfileScreenState extends State<CollaboratorProfileScreen>
         builder: (_) =>
             EditCollaboratorProfileScreen(profileId: widget.baseProfile.id),
       ),
-    ).then((_) {
-      if (context.mounted) {
-        context.read<ProfileBloc>().add(
-          LoadCollaboratorProfile(widget.baseProfile.id),
-        );
-      }
-    });
+    );
   }
 }
 

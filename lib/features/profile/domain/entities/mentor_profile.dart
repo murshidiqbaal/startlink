@@ -2,11 +2,11 @@ import 'package:startlink/features/profile/domain/entities/role_profile.dart';
 
 /// Domain entity for the `mentor_profiles` Supabase table.
 class MentorProfile extends RoleProfile {
-  final List<String> expertiseDomains;
-  final int? yearsOfExperience;
-  final String? mentorshipFocus;
+  final List<String> expertise;
+  final int? yearsExperience;
+  final String? bio;
   final String? linkedinUrl;
-  final List<String> certifications;
+  final String? availability;
   final bool isVerified;
 
   const MentorProfile({
@@ -14,22 +14,22 @@ class MentorProfile extends RoleProfile {
     super.profileCompletion = 0,
     super.createdAt,
     super.updatedAt,
-    this.expertiseDomains = const [],
-    this.yearsOfExperience,
-    this.mentorshipFocus,
+    this.expertise = const [],
+    this.yearsExperience,
+    this.bio,
     this.linkedinUrl,
-    this.certifications = const [],
+    this.availability,
     this.isVerified = false,
   }) : super(role: 'mentor');
 
   @override
   List<Object?> get props => [
-    ...super.props,
-    expertiseDomains,
-    yearsOfExperience,
-    mentorshipFocus,
-    linkedinUrl,
-    certifications,
-    isVerified,
-  ];
+        ...super.props,
+        expertise,
+        yearsExperience,
+        bio,
+        linkedinUrl,
+        availability,
+        isVerified,
+      ];
 }

@@ -68,16 +68,18 @@ class InvestorProfileModel extends InvestorProfile {
     String? preferredStage,
     String? organizationName,
     String? linkedinUrl,
-    String? bio,
   }) {
-    int score = 0;
-    if (investmentFocus != null && investmentFocus.isNotEmpty) score += 20;
-    if (ticketSizeMin != null && ticketSizeMax != null) score += 20;
-    if (preferredStage != null && preferredStage.isNotEmpty) score += 20;
-    if (organizationName != null && organizationName.isNotEmpty) score += 15;
-    if (linkedinUrl != null && linkedinUrl.isNotEmpty) score += 15;
-    if (bio != null && bio.isNotEmpty) score += 10;
-    return score;
+    const int totalFields = 6;
+    int filledFields = 0;
+
+    if (organizationName != null && organizationName.isNotEmpty) filledFields++;
+    if (investmentFocus != null && investmentFocus.isNotEmpty) filledFields++;
+    if (ticketSizeMin != null) filledFields++;
+    if (ticketSizeMax != null) filledFields++;
+    if (preferredStage != null && preferredStage.isNotEmpty) filledFields++;
+    if (linkedinUrl != null && linkedinUrl.isNotEmpty) filledFields++;
+
+    return ((filledFields / totalFields) * 100).toInt();
   }
 
   InvestorProfileModel copyWith({

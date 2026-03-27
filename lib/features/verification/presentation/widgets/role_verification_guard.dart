@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:startlink/features/auth/domain/repository/auth_repository.dart';
 import 'package:startlink/features/verification/presentation/bloc/verification_bloc.dart';
-import 'package:startlink/features/profile/presentation/edit_investor_profile.dart';
-import 'package:startlink/features/profile/presentation/edit_mentor_profile.dart';
+import 'package:startlink/features/profile/presentation/bloc/mentor_profile_bloc.dart';
+import 'package:startlink/features/profile/presentation/bloc/investor_profile_bloc.dart';
+import 'package:startlink/features/profile/presentation/investor_profile_screen.dart';
+import 'package:startlink/features/profile/presentation/mentor_profile_screen.dart';
 import 'package:startlink/features/verification/presentation/pages/verification_pending_screen.dart';
+import 'package:startlink/features/verification/presentation/pages/verification_rejected_screen.dart';
 
 class RoleVerificationGuard extends StatelessWidget {
   final String role;
@@ -17,6 +21,16 @@ class RoleVerificationGuard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final userId = context.read<AuthRepository>().currentUser?.id;
+
+    if (userId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        context.read<VerificationBloc>().add(
+              CheckVerificationStatus(userId, role),
+            );
+      });
+    }
+
     return BlocBuilder<VerificationBloc, VerificationState>(
       builder: (context, state) {
         if (state is VerificationLoading || state is VerificationInitial) {
@@ -25,35 +39,39 @@ class RoleVerificationGuard extends StatelessWidget {
           );
         }
 
-        if (state is VerificationLoaded) {
-          // 1. Is already verified for this role?
-          if (state.isRoleVerified(role)) {
-            return child;
-          }
+        if (state is VerificationApproved) {
+          return child;
+        }
 
-          // 2. Is there a pending/rejected request?
-          final request = state.getRequestForRole(role);
-          if (request != null) {
-            return VerificationPendingScreen(verification: request);
-          }
+        if (state is VerificationPending) {
+          return VerificationPendingScreen(verification: state.verification);
+        }
 
-          // 3. No request yet, show setup (Edit) screen
+        if (state is VerificationRejected) {
+          return VerificationRejectedScreen(verification: state.verification);
+        }
+
+        if (state is VerificationNotSubmitted) {
           if (role.toLowerCase() == 'investor') {
-            return EditInvestorProfileScreen(profileId: state.profileId);
-          } else if (role.toLowerCase() == 'mentor') {
-            return EditMentorProfileScreen(profileId: state.profileId);
+            return BlocProvider.value(
+              value: context.read<InvestorProfileBloc>(),
+              child: const InvestorProfileScreen(),
+            );
+          }
+
+          if (role.toLowerCase() == 'mentor') {
+            return BlocProvider.value(
+              value: context.read<MentorProfileBloc>(),
+              child: const MentorProfileScreen(),
+            );
           }
         }
 
         if (state is VerificationError) {
-          return Scaffold(
-            body: Center(child: Text('Error: ${state.message}')),
-          );
+          return Scaffold(body: Center(child: Text('Error: ${state.message}')));
         }
 
-        return const Scaffold(
-          body: Center(child: Text('Access Denied')),
-        );
+        return const Scaffold(body: Center(child: Text('Access Denied')));
       },
     );
   }

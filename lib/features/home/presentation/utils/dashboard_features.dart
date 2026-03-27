@@ -83,7 +83,7 @@ class DashboardConfig {
         title: 'Analytics',
         description: 'Performance metrics',
         icon: Icons.bar_chart_rounded,
-        allowedRoles: [UserRole.admin, UserRole.investor],
+        allowedRoles: [UserRole.admin, UserRole.investor, UserRole.innovator],
       ),
       const DashboardFeature(
         id: 'pitch_health',
