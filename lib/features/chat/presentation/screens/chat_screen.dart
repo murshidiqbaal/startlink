@@ -123,7 +123,7 @@ class _ChatRoomViewState extends State<_ChatRoomView> {
                     },
                   );
                 }
-                return const SizedBox.shrink();
+                return const SizedBox.square(dimension: 1);
               },
             ),
           ),

@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:startlink/core/constants/user_role.dart';
-import 'package:startlink/features/admin/presentation/pages/admin_verification_dashboard.dart';
-import 'package:startlink/features/auth/bloc/role_bloc.dart';
+import 'package:startlink/core/widgets/role_switch_dialog.dart';
 
 class RoleAwareNavigationBar extends StatelessWidget {
   final int selectedIndex;
@@ -26,11 +23,11 @@ class RoleAwareNavigationBar extends StatelessWidget {
           // Wrap Profile icon with LongPress gesture for Role Switching
           return NavigationDestination(
             icon: GestureDetector(
-              onLongPress: () => _showRoleSwitchDialog(context),
+              onLongPress: () => showRoleSwitchDialog(context),
               child: dest.icon,
             ),
             selectedIcon: GestureDetector(
-              onLongPress: () => _showRoleSwitchDialog(context),
+              onLongPress: () => showRoleSwitchDialog(context),
               child: dest.selectedIcon ?? dest.icon,
             ),
             label: dest.label,
@@ -38,50 +35,6 @@ class RoleAwareNavigationBar extends StatelessWidget {
         }
         return dest;
       }).toList(),
-    );
-  }
-
-  void _showRoleSwitchDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Switch Role'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ...['Innovator', 'Investor', 'Collaborator', 'Mentor'].map(
-                (role) => ListTile(
-                  title: Text(role),
-                  onTap: () {
-                    context.read<RoleBloc>().add(
-                      RoleChanged(UserRole.fromString(role)),
-                    );
-                    Navigator.pop(context);
-                  },
-                ),
-              ),
-              const Divider(),
-              ListTile(
-                leading: const Icon(
-                  Icons.admin_panel_settings,
-                  color: Colors.red,
-                ),
-                title: const Text('Admin Panel'),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const AdminVerificationDashboard(),
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 }

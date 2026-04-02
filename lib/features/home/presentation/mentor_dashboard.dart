@@ -4,6 +4,12 @@ import 'package:startlink/features/home/presentation/bloc/mentor_home_bloc.dart'
 import 'package:startlink/features/home/presentation/widgets/idea_card.dart';
 import 'package:startlink/features/home/presentation/widgets/role_aware_navigation_bar.dart';
 import 'package:startlink/features/idea/domain/repositories/idea_repository.dart';
+import 'package:startlink/features/auth/domain/repository/auth_repository.dart';
+import 'package:startlink/features/mentor/domain/repositories/mentor_chat_repository.dart';
+import 'package:startlink/features/mentor/presentation/pages/mentor_chat_list_screen.dart';
+import 'package:startlink/features/mentor/presentation/pages/mentor_chat_room_screen.dart';
+import 'package:startlink/features/mentor/presentation/pages/mentor_management_screen.dart';
+import 'package:startlink/features/mentor/presentation/pages/mentor_reels_screen.dart';
 import 'package:startlink/features/profile/presentation/mentor_profile_screen.dart';
 import 'package:startlink/features/verification/presentation/widgets/role_verification_guard.dart';
 
@@ -17,7 +23,13 @@ class MentorDashboard extends StatefulWidget {
 class _MentorDashboardState extends State<MentorDashboard> {
   int _selectedIndex = 0;
 
-  final List<Widget> _pages = [const MentorHome(), const MentorProfileScreen()];
+  final List<Widget> _pages = [
+    const MentorHome(),
+    const MentorChatListScreen(),
+    const MentorReelsScreen(),
+    const MentorManagementScreen(),
+    const MentorProfileScreen(),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -38,6 +50,21 @@ class _MentorDashboardState extends State<MentorDashboard> {
             icon: Icon(Icons.school_outlined),
             selectedIcon: Icon(Icons.school),
             label: 'Mentorship',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.chat_bubble_outline),
+            selectedIcon: Icon(Icons.chat_bubble),
+            label: 'Chat',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.play_circle_outline),
+            selectedIcon: Icon(Icons.play_circle),
+            label: 'Reels',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.table_chart_outlined),
+            selectedIcon: Icon(Icons.table_chart),
+            label: 'Manage',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline),
@@ -103,13 +130,33 @@ class MentorHome extends StatelessWidget {
                       onTap: () {
                         // Navigate to detail
                       },
-                      onApply: () {
-                        // "Offer Mentorship" logic
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Mentorship request sent!'),
-                          ),
-                        );
+                      onApply: () async {
+                        final mentorId = context.read<AuthRepository>().currentUser?.id;
+                        if (mentorId == null) return;
+                        
+                        final chatRepo = context.read<IMentorChatRepository>();
+                        try {
+                          final chat = await chatRepo.createOrFetchChat(
+                            mentorId,
+                            idea.ownerId,
+                            idea.id,
+                          );
+                          
+                          if (context.mounted) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => MentorChatRoomScreen(chat: chat),
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                           if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Error starting chat: $e')),
+                            );
+                          }
+                        }
                       },
                     );
                   },

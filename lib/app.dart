@@ -71,6 +71,15 @@ import 'package:startlink/features/analytics/domain/repositories/analytics_repos
 import 'package:startlink/features/analytics/data/repositories/analytics_repository_impl.dart';
 import 'package:startlink/features/analytics/presentation/bloc/analytics_bloc.dart';
 import 'package:startlink/features/home/presentation/app_shell.dart';
+import 'package:startlink/features/mentor/domain/repositories/mentor_chat_repository.dart';
+import 'package:startlink/features/mentor/data/repositories/mentor_chat_repository_impl.dart';
+import 'package:startlink/features/mentor/domain/repositories/mentor_reels_repository.dart';
+import 'package:startlink/features/mentor/data/repositories/mentor_reels_repository_impl.dart';
+import 'package:startlink/features/mentor/presentation/bloc/chat/mentor_chat_bloc.dart';
+import 'package:startlink/features/mentor/presentation/bloc/reels/mentor_reels_bloc.dart';
+import 'package:startlink/features/investor/domain/repositories/pitch_repository.dart';
+import 'package:startlink/features/investor/data/repositories/pitch_repository_impl.dart';
+import 'package:startlink/features/investor/presentation/bloc/pitch/pitch_bloc.dart';
 
 class App extends StatelessWidget {
   const App({super.key});
@@ -142,8 +151,17 @@ class App extends StatelessWidget {
         RepositoryProvider<ChatRepository>(
           create: (context) => ChatRepositoryImpl(supabase: SupabaseService.client),
         ),
+        RepositoryProvider<IMentorChatRepository>(
+          create: (context) => MentorChatRepositoryImpl(supabase: SupabaseService.client),
+        ),
+        RepositoryProvider<IMentorReelsRepository>(
+          create: (context) => MentorReelsRepositoryImpl(supabase: SupabaseService.client),
+        ),
         RepositoryProvider<AnalyticsRepository>(
           create: (context) => AnalyticsRepositoryImpl(SupabaseService.client),
+        ),
+        RepositoryProvider<PitchRepository>(
+          create: (context) => PitchRepositoryImpl(SupabaseService.client),
         ),
       ],
       child: MultiBlocProvider(
@@ -241,6 +259,21 @@ class App extends StatelessWidget {
           BlocProvider<AnalyticsBloc>(
             create: (context) => AnalyticsBloc(
               repository: context.read<AnalyticsRepository>(),
+            ),
+          ),
+          BlocProvider<MentorChatBloc>(
+            create: (context) => MentorChatBloc(
+              context.read<IMentorChatRepository>(),
+            ),
+          ),
+          BlocProvider<MentorReelsBloc>(
+            create: (context) => MentorReelsBloc(
+              context.read<IMentorReelsRepository>(),
+            ),
+          ),
+          BlocProvider<PitchBloc>(
+            create: (context) => PitchBloc(
+              repository: context.read<PitchRepository>(),
             ),
           ),
         ],

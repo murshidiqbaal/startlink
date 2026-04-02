@@ -56,27 +56,28 @@ class InvestorIdeaCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SingleChildScrollView(
-                    child: Row(
-                      children: [
-                        _buildMiniTag(
-                          stage.toUpperCase(),
-                          AppColors.brandPurple,
-                        ),
-                        const SizedBox(width: 8),
-                        _buildMiniTag(
+                  Row(
+                    children: [
+                      _buildMiniTag(
+                        stage.toUpperCase(),
+                        AppColors.brandPurple,
+                      ),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: _buildMiniTag(
                           targetMarket.toUpperCase(),
                           AppColors.textSecondary,
                         ),
-                        const Spacer(),
-                        if (isVerified)
-                          const Icon(
-                            Icons.verified,
-                            color: AppColors.emerald,
-                            size: 18,
-                          ),
+                      ),
+                      if (isVerified) ...[
+                        const SizedBox(width: 8),
+                        const Icon(
+                          Icons.verified,
+                          color: AppColors.emerald,
+                          size: 18,
+                        ),
                       ],
-                    ),
+                    ],
                   ),
                   const SizedBox(height: 16),
                   Text(
@@ -145,6 +146,8 @@ class InvestorIdeaCard extends StatelessWidget {
           fontWeight: FontWeight.bold,
           letterSpacing: 0.5,
         ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }

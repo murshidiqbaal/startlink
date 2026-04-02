@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:startlink/features/auth/domain/repository/auth_repository.dart';
 import 'package:startlink/features/chat/domain/repositories/chat_repository.dart';
 import 'package:startlink/features/chat/presentation/bloc/chat_list_bloc.dart';
 import 'package:startlink/features/collaboration/domain/repositories/collaboration_repository.dart';
 import 'package:startlink/features/collaboration/presentation/bloc/collaboration_bloc.dart';
-import 'package:startlink/features/auth/domain/repository/auth_repository.dart';
 import 'package:startlink/features/home/presentation/innovator_dashboard.dart';
 import 'package:startlink/features/idea/domain/repositories/idea_repository.dart';
 import 'package:startlink/features/idea/presentation/bloc/idea_bloc.dart';

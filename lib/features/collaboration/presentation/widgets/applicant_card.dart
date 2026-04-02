@@ -98,19 +98,23 @@ class ApplicantCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.brandCyan.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.brandCyan.withValues(alpha: 0.3)),
-                  ),
-                  child: Text(
-                    request.roleApplied,
-                    style: const TextStyle(
-                      color: AppColors.brandCyan,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
+                Flexible(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.brandCyan.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.brandCyan.withValues(alpha: 0.3)),
+                    ),
+                    child: Text(
+                      request.roleApplied,
+                      style: const TextStyle(
+                        color: AppColors.brandCyan,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ),
@@ -131,8 +135,8 @@ class ApplicantCard extends StatelessWidget {
                   'Applied ${timeago.format(request.createdAt)}',
                   style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
                 ),
-                if (!isPending)
-                  Container(
+                Flexible(
+                  child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: (request.status.toLowerCase() == 'accepted' 
@@ -149,8 +153,11 @@ class ApplicantCard extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                         fontSize: 10,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                ),
               ],
             ),
             if (isPending) ...[

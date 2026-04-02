@@ -16,6 +16,7 @@ import 'package:startlink/features/home/presentation/widgets/role_aware_navigati
 import 'package:startlink/features/idea/presentation/bloc/idea_bloc.dart';
 import 'package:startlink/features/idea/presentation/pages/idea_detail_screen.dart';
 import 'package:startlink/features/collaboration/presentation/pages/idea_inbox_screen.dart';
+import 'package:startlink/features/mentor/presentation/pages/mentor_reels_screen.dart';
 import 'package:startlink/features/profile/presentation/profile_screen.dart';
 
 class CollaboratorDashboard extends StatelessWidget {
@@ -43,6 +44,7 @@ class _CollaboratorScaffoldState extends State<_CollaboratorScaffold> {
     const CollaboratorHome(),
     const MyCollaborationsScreen(),
     const IdeaInboxScreen(),
+    const MentorReelsScreen(),
     const ProfileScreen(),
   ];
 
@@ -63,6 +65,10 @@ class _CollaboratorScaffoldState extends State<_CollaboratorScaffold> {
           NavigationDestination(
             icon: Icon(Icons.message),
             label: 'Messages',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.play_circle_outline),
+            label: 'Reels',
           ),
           NavigationDestination(icon: Icon(Icons.person), label: 'Profile'),
         ],

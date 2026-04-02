@@ -1,4 +1,5 @@
 import 'package:startlink/features/profile/data/models/profile_model.dart';
+import 'package:startlink/features/profile/domain/entities/collaborator_profile.dart';
 import 'package:startlink/features/profile/domain/entities/innovator_profile.dart';
 import 'package:startlink/features/profile/domain/entities/investor_profile.dart';
 import 'package:startlink/features/profile/domain/entities/mentor_profile.dart';
@@ -123,8 +124,37 @@ class ProfileCompletionCalculator {
     return calculateMentorCompletion(base, role) >= 80;
   }
 
+  // ── Collaborator completion ─────────────────────────────────────────────
+  static int calculateCollaboratorCompletion(
+    dynamic baseProfile,
+    CollaboratorProfile? roleProfile,
+  ) {
+    if (roleProfile == null) return 0;
+    int score = 0;
+
+    // Base profile (40%)
+    if (baseProfile.fullName != null && baseProfile.fullName!.isNotEmpty) score += 10;
+    if (baseProfile.avatarUrl != null && baseProfile.avatarUrl!.isNotEmpty) score += 10;
+    if (baseProfile.headline != null && baseProfile.headline!.isNotEmpty) score += 10;
+    if (baseProfile.skills.isNotEmpty) score += 10;
+
+    // Role profile (60%)
+    if (roleProfile.specialties.isNotEmpty) score += 10;
+    if (roleProfile.experienceYears != null) score += 10;
+    if (roleProfile.hourlyRate != null) score += 10;
+    if (roleProfile.availability != null && roleProfile.availability!.isNotEmpty) score += 10;
+    if (roleProfile.portfolioUrl != null && roleProfile.portfolioUrl!.isNotEmpty) score += 10;
+    if (roleProfile.githubUrl != null || roleProfile.linkedinUrl != null) score += 10;
+
+    return score.clamp(0, 100);
+  }
+
   static bool isInvestorComplete(dynamic base, InvestorProfile? role) {
     return calculateInvestorCompletion(base, role) >= 85;
+  }
+
+  static bool isCollaboratorComplete(dynamic base, CollaboratorProfile? role) {
+    return calculateCollaboratorCompletion(base, role) >= 60;
   }
 
   // Legacy method (for ProfileBloc.UpdateProfile which only has ProfileModel)

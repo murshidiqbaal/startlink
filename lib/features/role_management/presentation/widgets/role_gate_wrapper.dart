@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:startlink/core/constants/user_role.dart';
+import 'package:startlink/features/profile/presentation/edit_collaborator_profile.dart';
 import 'package:startlink/features/profile/presentation/edit_innovator_profile.dart';
 import 'package:startlink/features/profile/presentation/edit_investor_profile.dart';
 import 'package:startlink/features/profile/presentation/edit_mentor_profile.dart';
@@ -30,7 +31,7 @@ class RoleGateWrapper extends StatelessWidget {
       barrierDismissible: false,
       builder: (context) {
         return AlertDialog(
-          title: Text('Complete your ${state.role.toStringValue} profile'),
+          title: Text('Welcome! Let\'s set up your profile.'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -74,9 +75,7 @@ class RoleGateWrapper extends StatelessWidget {
         screen = EditInvestorProfileScreen(profileId: state.baseProfile.id);
         break;
       case UserRole.collaborator:
-        screen = const Scaffold(
-          body: Center(child: Text('No profile to edit')),
-        );
+        screen = EditCollaboratorProfileScreen(profileId: state.baseProfile.id);
         break;
     }
 

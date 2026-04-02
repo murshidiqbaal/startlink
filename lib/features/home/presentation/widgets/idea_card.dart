@@ -206,10 +206,12 @@ class IdeaCard extends StatelessWidget {
               children: [
                 _buildStat(context, Icons.remove_red_eye_outlined, '$views'),
                 const SizedBox(width: 20),
-                _buildStat(
-                  context,
-                  Icons.people_outline,
-                  '$applications Applied',
+                Flexible(
+                  child: _buildStat(
+                    context,
+                    Icons.people_outline,
+                    '$applications Applied',
+                  ),
                 ),
                 if (aiQualityScore != null) ...[
                   const Spacer(),
@@ -256,11 +258,15 @@ class IdeaCard extends StatelessWidget {
       children: [
         Icon(icon, size: 14, color: AppColors.textSecondary),
         const SizedBox(width: 6),
-        Text(
-          text,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: AppColors.textSecondary,
-            fontWeight: FontWeight.w500,
+        Flexible(
+          child: Text(
+            text,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppColors.textSecondary,
+              fontWeight: FontWeight.w500,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],

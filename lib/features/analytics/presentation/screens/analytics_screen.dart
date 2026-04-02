@@ -57,7 +57,7 @@ class AnalyticsScreen extends StatelessWidget {
               return _AnalyticsView(data: state.data);
             }
 
-            return const SizedBox.shrink();
+            return const Center(child: CircularProgressIndicator(color: AppColors.brandPurple));
           },
         ),
       ),

@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:startlink/core/widgets/role_switch_dialog.dart';
 import 'package:startlink/features/admin/presentation/pages/admin_dashboard_layout.dart';
 import 'package:startlink/features/ai_co_founder/presentation/pages/co_founder_chat_screen.dart';
 import 'package:startlink/features/analytics/presentation/screens/analytics_screen.dart';
@@ -19,6 +20,7 @@ import 'package:startlink/features/idea/presentation/bloc/idea_bloc.dart';
 import 'package:startlink/features/idea/presentation/idea_post_screen.dart';
 import 'package:startlink/features/idea/presentation/pages/idea_detail_screen.dart';
 import 'package:startlink/features/matching/presentation/pages/matching_page.dart';
+import 'package:startlink/features/mentor/presentation/pages/mentor_reels_screen.dart';
 import 'package:startlink/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:startlink/features/profile/presentation/edit_profile_screen.dart';
 import 'package:startlink/features/profile/presentation/profile_screen.dart';
@@ -143,9 +145,11 @@ class _AnimatedBackgroundState extends State<_AnimatedBackground>
       animation: _ctrl,
       builder: (_, child) => Stack(
         children: [
-          CustomPaint(
-            painter: _OrbPainter(_ctrl.value * math.pi * 2),
-            child: const SizedBox.expand(),
+          RepaintBoundary(
+            child: CustomPaint(
+              painter: _OrbPainter(_ctrl.value * math.pi * 2),
+              child: const SizedBox.expand(),
+            ),
           ),
           child!,
         ],
@@ -166,40 +170,24 @@ class InnovatorDashboard extends StatefulWidget {
 class _InnovatorDashboardState extends State<InnovatorDashboard>
     with SingleTickerProviderStateMixin {
   int _selectedIndex = 0;
-  late AnimationController _navAnimCtrl;
-  late Animation<double> _navFade;
 
   final List<Widget> _pages = [
     const InnovatorHome(),
     const ReceivedApplicationsScreen(),
     const IdeaInboxScreen(),
     const AnalyticsScreen(),
+    const MentorReelsScreen(),
     const ProfileScreen(),
   ];
 
   @override
   void initState() {
     super.initState();
-    _navAnimCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 300),
-    );
-    _navFade = CurvedAnimation(parent: _navAnimCtrl, curve: Curves.easeOut);
-    _navAnimCtrl.forward();
-  }
-
-  @override
-  void dispose() {
-    _navAnimCtrl.dispose();
-    super.dispose();
   }
 
   void _onTabSelect(int index) {
     if (index == _selectedIndex) return;
-    _navAnimCtrl.reverse().then((_) {
-      setState(() => _selectedIndex = index);
-      _navAnimCtrl.forward();
-    });
+    setState(() => _selectedIndex = index);
   }
 
   @override
@@ -213,8 +201,7 @@ class _InnovatorDashboardState extends State<InnovatorDashboard>
             _AnimatedBackground(child: const SizedBox.expand()),
 
           // Page content
-          FadeTransition(
-            opacity: _navFade,
+          RepaintBoundary(
             child: IndexedStack(index: _selectedIndex, children: _pages),
           ),
         ],
@@ -239,42 +226,50 @@ class _PremiumNavBar extends StatelessWidget {
     (Icons.work_history_rounded, Icons.work_history_outlined, 'Requests'),
     (Icons.chat_bubble_rounded, Icons.chat_bubble_outline, 'Messages'),
     (Icons.bar_chart_rounded, Icons.bar_chart_outlined, 'Analytics'),
+    (Icons.play_circle_fill_rounded, Icons.play_circle_outline, 'Reels'),
     (Icons.person_rounded, Icons.person_outline, 'Profile'),
   ];
 
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: Container(
-          height: 80 + MediaQuery.of(context).padding.bottom,
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).padding.bottom,
-          ),
-          decoration: BoxDecoration(
-            color: _PremiumColors.surfaceCard.withOpacity(0.85),
-            border: const Border(
-              top: BorderSide(color: _PremiumColors.border, width: 0.5),
+      child: RepaintBoundary(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          child: Container(
+            height: 80 + MediaQuery.of(context).padding.bottom,
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).padding.bottom,
             ),
-          ),
-          child: Row(
-            children: List.generate(_items.length, (i) {
-              final item = _items[i];
-              final selected = i == selectedIndex;
-              return Expanded(
-                child: GestureDetector(
-                  onTap: () => onTap(i),
-                  behavior: HitTestBehavior.opaque,
-                  child: _NavItem(
-                    selectedIcon: item.$1,
-                    icon: item.$2,
-                    label: item.$3,
-                    selected: selected,
+            decoration: BoxDecoration(
+              color: _PremiumColors.surfaceCard.withOpacity(0.85),
+              border: const Border(
+                top: BorderSide(color: _PremiumColors.border, width: 0.5),
+              ),
+            ),
+            child: Row(
+              children: List.generate(_items.length, (i) {
+                final item = _items[i];
+                final selected = i == selectedIndex;
+                return Expanded(
+                  child: GestureDetector(
+                    onTap: () => onTap(i),
+                    onLongPress: () {
+                      if (item.$3 == 'Profile') {
+                        showRoleSwitchDialog(context);
+                      }
+                    },
+                    behavior: HitTestBehavior.opaque,
+                    child: _NavItem(
+                      selectedIcon: item.$1,
+                      icon: item.$2,
+                      label: item.$3,
+                      selected: selected,
+                    ),
                   ),
-                ),
-              );
-            }),
+                );
+              }),
+            ),
           ),
         ),
       ),
@@ -353,8 +348,7 @@ class _NavItemState extends State<_NavItem>
               children: [
                 // Glow halo
                 if (widget.selected)
-                  Opacity(
-                    opacity: _glow.value * 0.5,
+                  RepaintBoundary(
                     child: Container(
                       width: 42,
                       height: 42,
@@ -362,7 +356,9 @@ class _NavItemState extends State<_NavItem>
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: _PremiumColors.accent,
+                            color: _PremiumColors.accent.withValues(
+                              alpha: _glow.value * 0.35,
+                            ),
                             blurRadius: 18,
                             spreadRadius: 2,
                           ),
@@ -424,6 +420,7 @@ class InnovatorHome extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<IdeaBloc, IdeaState>(
       builder: (context, state) {
+        debugPrint('[InnovatorHome] State: $state');
         return RefreshIndicator(
           color: _PremiumColors.accent,
           backgroundColor: _PremiumColors.surfaceCard,
@@ -453,23 +450,25 @@ class InnovatorHome extends StatelessWidget {
       automaticallyImplyLeading: false,
       backgroundColor: Colors.transparent,
       flexibleSpace: ClipRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: FlexibleSpaceBar(
-            titlePadding: const EdgeInsets.symmetric(
-              horizontal: 20,
-              vertical: 16,
-            ),
-            title: _AppBarContent(),
-            background: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    _PremiumColors.accentViolet.withOpacity(0.10),
-                    _PremiumColors.surface.withOpacity(0.90),
-                  ],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
+        child: RepaintBoundary(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: FlexibleSpaceBar(
+              titlePadding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 16,
+              ),
+              title: _AppBarContent(),
+              background: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      _PremiumColors.accentViolet.withOpacity(0.10),
+                      _PremiumColors.surface.withOpacity(0.90),
+                    ],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
                 ),
               ),
             ),
@@ -542,7 +541,7 @@ class InnovatorHome extends StatelessWidget {
             // Section header
             _AnimatedSection(
               delay: const Duration(milliseconds: 140),
-              child: _SectionHeader(title: 'Explore Features'),
+              child: const _SectionHeader(title: 'Explore Features'),
             ),
             const SizedBox(height: 16),
 
@@ -568,7 +567,7 @@ class InnovatorHome extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _SectionHeader(title: 'Your Ideas'),
+                  const _SectionHeader(title: 'Your Ideas'),
                   _GlowTextButton(label: 'View All', onTap: () {}),
                 ],
               ),
@@ -664,7 +663,10 @@ class InnovatorHome extends StatelessWidget {
 
   // ── Idea Section ─────────────────────────────────────────────────────────────
   Widget _buildIdeaSection(BuildContext context, IdeaState state) {
-    if (state is IdeaLoading) {
+    if (state is IdeaLoading || state is IdeaInitial) {
+      if (state is IdeaInitial && context.mounted) {
+        context.read<IdeaBloc>().add(FetchIdeas());
+      }
       return SliverList(
         delegate: SliverChildBuilderDelegate(
           (_, __) => Shimmer.fromColors(
@@ -744,6 +746,32 @@ class InnovatorHome extends StatelessWidget {
       );
     }
 
+    if (state is IdeaError) {
+      return SliverToBoxAdapter(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(40),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.error_outline,
+                  color: Colors.orangeAccent,
+                  size: 48,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Error loading ideas: ${state.message}',
+                  style: const TextStyle(color: Colors.redAccent),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return const SliverToBoxAdapter(child: SizedBox.shrink());
   }
 }
@@ -773,32 +801,40 @@ class _AppBarContent extends StatelessWidget {
           },
         ),
         const SizedBox(width: 14),
-        Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Welcome back',
-              style: TextStyle(
-                fontSize: 11,
-                color: _PremiumColors.textSec,
-                letterSpacing: 0.4,
-              ),
-            ),
-            ShaderMask(
-              shaderCallback: (bounds) =>
-                  _PremiumColors.cyanGold.createShader(bounds),
-              child: const Text(
-                'Innovator',
+        Expanded(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Welcome back',
                 style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white,
-                  letterSpacing: -0.3,
+                  fontSize: 11,
+                  color: _PremiumColors.textSec,
+                  letterSpacing: 0.4,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              RepaintBoundary(
+                child: ShaderMask(
+                  shaderCallback: (bounds) =>
+                      _PremiumColors.cyanGold.createShader(bounds),
+                  child: const Text(
+                    'Innovator',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                      letterSpacing: -0.3,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         const Spacer(),
         // Notification bell
@@ -950,15 +986,19 @@ class _PremiumStatCardState extends State<_PremiumStatCard>
                 child: Icon(widget.icon, size: 22, color: Colors.white),
               ),
               const SizedBox(height: 10),
-              ShaderMask(
-                shaderCallback: (b) => widget.gradient.createShader(b),
-                child: Text(
-                  widget.value,
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
-                    letterSpacing: -0.5,
+              RepaintBoundary(
+                child: ShaderMask(
+                  shaderCallback: (b) => widget.gradient.createShader(b),
+                  child: Text(
+                    widget.value,
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      letterSpacing: -0.5,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ),
@@ -971,6 +1011,8 @@ class _PremiumStatCardState extends State<_PremiumStatCard>
                   fontWeight: FontWeight.w500,
                   letterSpacing: 0.3,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
@@ -1110,13 +1152,15 @@ class _FeatureIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: ShaderMask(
-        shaderCallback: (b) => LinearGradient(
-          colors: [color, color.withOpacity(0.7)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ).createShader(b),
-        child: Icon(icon, size: 30, color: Colors.white),
+      child: RepaintBoundary(
+        child: ShaderMask(
+          shaderCallback: (b) => LinearGradient(
+            colors: [color, color.withOpacity(0.7)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ).createShader(b),
+          child: Icon(icon, size: 30, color: Colors.white),
+        ),
       ),
     );
   }
@@ -1212,26 +1256,30 @@ class _PostIdeaButtonState extends State<_PostIdeaButton>
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                ShaderMask(
-                  shaderCallback: (b) =>
-                      _PremiumColors.cyanGold.createShader(b),
-                  child: const Icon(
-                    Icons.add_circle_rounded,
-                    color: Colors.white,
-                    size: 22,
+                RepaintBoundary(
+                  child: ShaderMask(
+                    shaderCallback: (b) =>
+                        _PremiumColors.cyanGold.createShader(b),
+                    child: const Icon(
+                      Icons.add_circle_rounded,
+                      color: Colors.white,
+                      size: 22,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 10),
-                ShaderMask(
-                  shaderCallback: (b) =>
-                      _PremiumColors.cyanGold.createShader(b),
-                  child: const Text(
-                    'Post New Idea',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 15,
-                      letterSpacing: 0.3,
+                RepaintBoundary(
+                  child: ShaderMask(
+                    shaderCallback: (b) =>
+                        _PremiumColors.cyanGold.createShader(b),
+                    child: const Text(
+                      'Post New Idea',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                        letterSpacing: 0.3,
+                      ),
                     ),
                   ),
                 ),

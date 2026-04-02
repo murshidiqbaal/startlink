@@ -52,9 +52,6 @@ class InnovatorProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (isCurrentUser) {
-      context.read<RoleProfileBloc>().add(
-            const LoadRoleProfile(role: 'innovator'),
-          );
       return _InnovatorProfileBody(
         profile: profile,
         isCurrentUser: isCurrentUser,
@@ -250,7 +247,7 @@ class _InnovatorProfileBodyState extends State<_InnovatorProfileBody>
           );
         }
 
-        return const SizedBox.shrink();
+        return const Center(child: CircularProgressIndicator(color: _C.cyan));
       },
     );
   }
@@ -585,7 +582,7 @@ class _InnovatorProfileBodyState extends State<_InnovatorProfileBody>
             ),
           );
         }
-        return const SizedBox.shrink();
+        return const SizedBox.square(dimension: 1);
       },
     );
   }
@@ -593,7 +590,7 @@ class _InnovatorProfileBodyState extends State<_InnovatorProfileBody>
   // ── ABOUT ─────────────────────────────────────────────────────────────────
   Widget _buildAboutSection(InnovatorProfile innov) {
     final bio = innov.bio ?? widget.profile.about ?? '';
-    if (bio.isEmpty) return const SizedBox.shrink();
+    if (bio.isEmpty) return const SizedBox.square(dimension: 1);
     return _FadeSlide(
       controller: _contentAnim,
       delay: 0.1,
@@ -782,7 +779,7 @@ class _InnovatorProfileBodyState extends State<_InnovatorProfileBody>
           'color': _C.amber,
         },
     ];
-    if (items.isEmpty) return const SizedBox.shrink();
+    if (items.isEmpty) return const SizedBox.square(dimension: 1);
 
     return _FadeSlide(
       controller: _contentAnim,
@@ -814,7 +811,7 @@ class _InnovatorProfileBodyState extends State<_InnovatorProfileBody>
     final skills = innov.skills.isNotEmpty
         ? innov.skills
         : widget.profile.skills;
-    if (skills.isEmpty) return const SizedBox.shrink();
+    if (skills.isEmpty) return const SizedBox.square(dimension: 1);
 
     return _FadeSlide(
       controller: _contentAnim,
@@ -864,7 +861,7 @@ class _InnovatorProfileBodyState extends State<_InnovatorProfileBody>
             ),
           );
         }
-        return const SizedBox.shrink();
+        return const SizedBox.square(dimension: 1);
       },
     );
   }
@@ -898,7 +895,7 @@ class _InnovatorProfileBodyState extends State<_InnovatorProfileBody>
           'url': innov.twitterUrl,
         },
     ];
-    if (links.isEmpty) return const SizedBox.shrink();
+    if (links.isEmpty) return const SizedBox.square(dimension: 1);
 
     return _FadeSlide(
       controller: _contentAnim,

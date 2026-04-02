@@ -70,7 +70,7 @@ class _ProfileDispatcher extends StatelessWidget {
                 );
             }
           }
-          return const SizedBox.shrink();
+          return const Center(child: CircularProgressIndicator(color: AppColors.brandPurple));
         },
       ),
     );

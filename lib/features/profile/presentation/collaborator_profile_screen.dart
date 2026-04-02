@@ -1,7 +1,7 @@
 import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:startlink/core/theme/app_theme.dart';
 import 'package:startlink/features/auth/domain/repository/auth_repository.dart';
 import 'package:startlink/features/profile/data/models/profile_model.dart';
 import 'package:startlink/features/profile/domain/entities/collaborator_profile.dart';
@@ -173,6 +173,22 @@ class _CollaboratorProfileScreenState extends State<CollaboratorProfileScreen>
     Future.delayed(const Duration(milliseconds: 400), () {
       if (mounted) _contentController.forward();
     });
+
+    if (widget.isCurrentUser) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          context.read<RoleProfileBloc>().add(
+                const LoadRoleProfile(role: 'collaborator'),
+              );
+        }
+      });
+    }
+  }
+
+  Future<void> _refresh() async {
+    context.read<RoleProfileBloc>().add(
+          const LoadRoleProfile(role: 'collaborator'),
+        );
   }
 
   void _onScroll() {
@@ -191,9 +207,6 @@ class _CollaboratorProfileScreenState extends State<CollaboratorProfileScreen>
   @override
   Widget build(BuildContext context) {
     if (widget.isCurrentUser) {
-      context.read<RoleProfileBloc>().add(
-            const LoadRoleProfile(role: 'collaborator'),
-          );
       return BlocBuilder<RoleProfileBloc, RoleProfileState>(
         builder: (context, state) {
           if (state is RoleProfileLoading || state is RoleProfileInitial) {
@@ -217,7 +230,7 @@ class _CollaboratorProfileScreenState extends State<CollaboratorProfileScreen>
             final colab = state.collaboratorProfile;
             return _buildPortfolio(context, colab);
           }
-          return const SizedBox.shrink();
+          return const SizedBox.square(dimension: 1);
         },
       );
     }
@@ -250,7 +263,7 @@ class _CollaboratorProfileScreenState extends State<CollaboratorProfileScreen>
             final colab = state.collaboratorProfile;
             return _buildPortfolio(context, colab);
           }
-          return const SizedBox.shrink();
+          return const Center(child: CircularProgressIndicator(color: AppColors.brandPurple));
         },
       ),
     );
@@ -276,10 +289,17 @@ class _CollaboratorProfileScreenState extends State<CollaboratorProfileScreen>
             ),
           ),
           // ── Scrollable content ───────────────────────────────────────────
-          CustomScrollView(
-            controller: _scrollController,
-            physics: const BouncingScrollPhysics(),
-            slivers: [
+          Positioned.fill(
+            child: RefreshIndicator(
+              onRefresh: _refresh,
+              color: _C.cyan,
+              backgroundColor: _C.surfaceGlass,
+              child: CustomScrollView(
+                controller: _scrollController,
+                physics: const BouncingScrollPhysics(
+                  parent: AlwaysScrollableScrollPhysics(),
+                ),
+                slivers: [
               _buildSliverHero(context, profile),
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
@@ -311,17 +331,19 @@ class _CollaboratorProfileScreenState extends State<CollaboratorProfileScreen>
                     const SizedBox(height: 32),
                     if (widget.isCurrentUser)
                       _buildEditButton(context, profile),
-                  ]),
+                    ]),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-          // ── Frosted top bar ─────────────────────────────────────────────
-          _buildFrostedAppBar(context, profile),
-        ],
-      ),
-    );
-  }
+        ),
+        // ── Frosted top bar ─────────────────────────────────────────────
+        _buildFrostedAppBar(context, profile),
+      ],
+    ),
+  );
+}
 
   // ── FROSTED APP BAR ────────────────────────────────────────────────────────
   Widget _buildFrostedAppBar(
@@ -600,7 +622,7 @@ class _CollaboratorProfileScreenState extends State<CollaboratorProfileScreen>
                 ],
               ),
             )
-          : const SizedBox.shrink(),
+          : const SizedBox.square(dimension: 1),
     );
   }
 
@@ -844,7 +866,7 @@ class _CollaboratorProfileScreenState extends State<CollaboratorProfileScreen>
         },
     ];
 
-    if (links.isEmpty) return const SizedBox.shrink();
+    if (links.isEmpty) return const SizedBox.square(dimension: 1);
 
     return _AnimatedSection(
       controller: _contentController,
@@ -1004,7 +1026,7 @@ class _LocationRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (location == null || location!.isEmpty) return const SizedBox.shrink();
+    if (location == null || location!.isEmpty) return const SizedBox.square(dimension: 1);
     return Row(
       children: [
         const Icon(

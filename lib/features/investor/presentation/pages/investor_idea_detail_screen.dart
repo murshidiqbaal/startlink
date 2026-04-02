@@ -7,6 +7,11 @@ import 'package:startlink/features/idea/domain/repositories/idea_repository.dart
 import 'package:startlink/features/investor/presentation/bloc/investor_chat_bloc.dart';
 import 'package:startlink/features/investor/presentation/bloc/investor_verification_bloc.dart';
 import 'package:startlink/features/investor/presentation/pages/investor_chat_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../bloc/pitch/pitch_bloc.dart';
+import '../bloc/pitch/pitch_event.dart';
+import '../bloc/pitch/pitch_state.dart';
+import '../../domain/entities/pitch_request.dart';
 
 class InvestorIdeaDetailScreen extends StatefulWidget {
   final String ideaId;
@@ -31,7 +36,16 @@ class _InvestorIdeaDetailScreenState extends State<InvestorIdeaDetailScreen> {
     try {
       final repository = context.read<IdeaRepository>();
       final idea = await repository.fetchIdeaById(widget.ideaId);
+      
       if (mounted) {
+        final userId = context.read<AuthRepository>().currentUser?.id;
+        if (userId != null) {
+          context.read<PitchBloc>().add(FetchPitchRequestStatus(
+            ideaId: widget.ideaId,
+            investorId: userId,
+          ));
+        }
+        
         setState(() {
           _idea = idea;
           _isLoading = false;
@@ -133,23 +147,47 @@ class _InvestorIdeaDetailScreenState extends State<InvestorIdeaDetailScreen> {
       children: [
         Row(
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppColors.brandPurple.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
+            Flexible(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.brandPurple.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  _idea!.currentStage.toUpperCase(),
+                  style: const TextStyle(
+                    color: AppColors.brandPurple,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              child: Text(_idea!.currentStage.toUpperCase(), 
-                style: const TextStyle(color: AppColors.brandPurple, fontSize: 12, fontWeight: FontWeight.bold)),
             ),
             const Spacer(),
             if (_idea!.isVerified)
-              const Row(
-                children: [
-                   Icon(Icons.verified, color: AppColors.emerald, size: 16),
-                   SizedBox(width: 4),
-                   Text('VERIFIED IDEA', style: TextStyle(color: AppColors.emerald, fontSize: 10, fontWeight: FontWeight.bold)),
-                ],
+              const Flexible(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.verified, color: AppColors.emerald, size: 16),
+                    SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        'VERIFIED IDEA',
+                        style: TextStyle(
+                          color: AppColors.emerald,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
               ),
           ],
         ),
@@ -206,10 +244,64 @@ class _InvestorIdeaDetailScreenState extends State<InvestorIdeaDetailScreen> {
                 primary: true,
               ),
               const SizedBox(height: 12),
-              _buildActionButton(
-                label: 'Request Pitch Deck',
-                icon: Icons.picture_as_pdf_outlined,
-                onPressed: !isVerified ? null : () => _handleRequestPitch(context),
+              BlocConsumer<PitchBloc, PitchState>(
+                listener: (context, state) {
+                  if (state is PitchRequestSuccess) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Pitch request sent successfully!')),
+                    );
+                  }
+                  if (state is PitchError) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(state.message), backgroundColor: AppColors.rose),
+                    );
+                  }
+                },
+                builder: (context, state) {
+                  String label = 'Request Pitch Deck';
+                  IconData icon = Icons.picture_as_pdf_outlined;
+                  VoidCallback? onPressed = !isVerified ? null : () => _handleRequestPitch(context);
+                  Color? buttonColor;
+
+                  if (state is PitchLoading) {
+                    label = 'Processing...';
+                    onPressed = null;
+                  } else if (state is PitchRequestStatusLoaded || state is PitchRequestSuccess) {
+                    final request = state is PitchRequestStatusLoaded 
+                        ? state.request 
+                        : (state as PitchRequestSuccess).request;
+                    
+                    if (request != null) {
+                      switch (request.status) {
+                        case PitchStatus.pending:
+                          label = 'Request Pending';
+                          icon = Icons.hourglass_empty_rounded;
+                          onPressed = null;
+                          buttonColor = AppColors.amber;
+                          break;
+                        case PitchStatus.approved:
+                          label = 'Download Pitch Deck';
+                          icon = Icons.download_rounded;
+                          onPressed = () => _handleDownloadPitch(request.pitchDeckUrl ?? _idea?.pitchDeckUrl);
+                          buttonColor = AppColors.emerald;
+                          break;
+                        case PitchStatus.rejected:
+                          label = 'Request Rejected';
+                          icon = Icons.block_flipped;
+                          onPressed = null;
+                          buttonColor = AppColors.rose;
+                          break;
+                      }
+                    }
+                  }
+
+                  return _buildActionButton(
+                    label: label,
+                    icon: icon,
+                    onPressed: onPressed,
+                    color: buttonColor,
+                  );
+                },
               ),
             ],
           ),
@@ -238,7 +330,13 @@ class _InvestorIdeaDetailScreenState extends State<InvestorIdeaDetailScreen> {
     );
   }
 
-  Widget _buildActionButton({required String label, required IconData icon, VoidCallback? onPressed, bool primary = false}) {
+  Widget _buildActionButton({
+    required String label,
+    required IconData icon,
+    VoidCallback? onPressed,
+    bool primary = false,
+    Color? color,
+  }) {
     return SizedBox(
       width: double.infinity,
       height: 56,
@@ -247,10 +345,12 @@ class _InvestorIdeaDetailScreenState extends State<InvestorIdeaDetailScreen> {
         icon: Icon(icon, size: 20),
         label: Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
         style: ElevatedButton.styleFrom(
-          backgroundColor: primary ? AppColors.brandPurple : Colors.transparent,
+          backgroundColor: color ?? (primary ? AppColors.brandPurple : Colors.transparent),
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          side: primary ? BorderSide.none : BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+          side: (primary || color != null)
+              ? BorderSide.none
+              : BorderSide(color: Colors.white.withValues(alpha: 0.1)),
           elevation: 0,
         ),
       ),
@@ -269,8 +369,33 @@ class _InvestorIdeaDetailScreenState extends State<InvestorIdeaDetailScreen> {
   }
 
   void _handleRequestPitch(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Pitch deck request sent to innovator.')),
-    );
+    final userId = context.read<AuthRepository>().currentUser?.id;
+    if (userId == null || _idea == null) return;
+
+    context.read<PitchBloc>().add(RequestPitch(
+      ideaId: _idea!.id,
+      investorId: userId,
+      innovatorId: _idea!.ownerId,
+    ));
+  }
+
+  void _handleDownloadPitch(String? url) async {
+    if (url == null || url.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Pitch deck URL not provided.')),
+      );
+      return;
+    }
+
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open the pitch deck link.')),
+        );
+      }
+    }
   }
 }

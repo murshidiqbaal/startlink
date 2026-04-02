@@ -40,7 +40,7 @@ class InvestorChatListScreen extends StatelessWidget {
           );
         }
 
-        return const SizedBox.shrink();
+        return const SizedBox.square(dimension: 1);
       },
     );
   }

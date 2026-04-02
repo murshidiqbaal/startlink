@@ -121,7 +121,7 @@ class _IdeaInboxScreenState extends State<IdeaInboxScreen> {
             );
           }
 
-          return const SizedBox.shrink();
+          return const Center(child: CircularProgressIndicator());
         },
       ),
     );

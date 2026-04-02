@@ -229,7 +229,7 @@ class _ChatScreenState extends State<ChatScreen> {
       );
     }
 
-    return const SizedBox.shrink();
+    return const SizedBox.square(dimension: 1);
   }
 
   bool _sameDay(DateTime a, DateTime b) =>

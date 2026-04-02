@@ -2,6 +2,7 @@ import 'package:bloc/bloc.dart';
 import 'package:startlink/core/constants/user_role.dart';
 import 'package:startlink/features/profile/domain/repositories/profile_repository.dart';
 import 'package:startlink/features/profile/domain/utils/profile_completion_calculator.dart';
+import 'package:startlink/features/profile/data/models/profile_model.dart';
 import 'package:startlink/features/role_management/presentation/bloc/profile_gate_event.dart';
 import 'package:startlink/features/role_management/presentation/bloc/profile_gate_state.dart';
 
@@ -21,9 +22,14 @@ class ProfileGateBloc extends Bloc<ProfileGateEvent, ProfileGateState> {
     emit(ProfileGateLoading());
     try {
       // fetchProfileById throws exception if not found because of .maybeSingle()
-      final baseProfile = await _profileRepository.fetchProfileById(
-        event.userId,
-      );
+      ProfileModel baseProfile;
+      try {
+        baseProfile = await _profileRepository.fetchProfileById(event.userId);
+      } catch (e) {
+        // If profile row doesn't exist yet (e.g. brand new user without trigger finishing),
+        // we fallback to an empty profile to force the onboarding completion dialog.
+        baseProfile = ProfileModel(id: event.userId, userId: event.userId);
+      }
 
       int completion = 0;
       List<String> missing = []; // Simplified missing fields logic
@@ -117,7 +123,24 @@ class ProfileGateBloc extends Bloc<ProfileGateEvent, ProfileGateState> {
           break;
 
         case UserRole.collaborator:
-          isAllowed = true; // No profile requirements for now
+          final roleProfile = await _profileRepository.fetchCollaboratorProfile(
+            event.userId,
+          );
+          completion = ProfileCompletionCalculator.calculateCollaboratorCompletion(
+            baseProfile,
+            roleProfile, // May be null initially or empty
+          );
+          if (roleProfile == null) {
+            missing.add("Create Collaborator Profile");
+          } else {
+            if (baseProfile.avatarUrl == null || baseProfile.avatarUrl!.isEmpty) missing.add("Profile Photo");
+            if (baseProfile.headline == null || baseProfile.headline!.isEmpty) missing.add("Headline");
+            if (baseProfile.skills.isEmpty && roleProfile.specialties.isEmpty) missing.add("Skills / Specialties");
+            if (roleProfile.experienceYears == null) missing.add("Years of Experience");
+            if (roleProfile.hourlyRate == null) missing.add("Hourly Rate");
+          }
+
+          isAllowed = completion >= 60;
           break;
       }
 
