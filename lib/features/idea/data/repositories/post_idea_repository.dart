@@ -15,14 +15,12 @@ class PostIdeaRepository {
       final fileExt = imageFile.path.split('.').last.toLowerCase();
       final fileName =
           '${DateTime.now().millisecondsSinceEpoch}_$userId.$fileExt';
-      const bucket = 'idea-covers';
+      const bucket = 'idea-assets'; // Unified to idea-assets
 
-      await _supabase.storage
-          .from(bucket)
-          .upload(
+      await _supabase.storage.from(bucket).upload(
             fileName,
             imageFile,
-            fileOptions: const FileOptions(cacheControl: '3600', upsert: false),
+            fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
           );
 
       return _supabase.storage.from(bucket).getPublicUrl(fileName);

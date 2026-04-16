@@ -312,11 +312,17 @@ class _IdeaPostBodyState extends State<_IdeaPostBody>
         if (state.status == IdeaFormStatus.failure) {
           _showError(state.errorMessage ?? 'An error occurred');
         } else if (state.status == IdeaFormStatus.success) {
-          final msg = state.isDeleted
-              ? 'Idea Deleted'
-              : state.isDraft
-              ? 'Saved to Lab ✦'
-              : 'Idea Updated';
+          String msg;
+          if (state.isDeleted) {
+            msg = 'Idea Deleted';
+          } else if (state.isDraft) {
+            msg = 'Draft Saved! 💾';
+          } else if (state.isEditing) {
+            msg = 'Idea Updated';
+          } else {
+            msg = 'Idea Launched! 🚀';
+          }
+
           AuraOverlay.show(ctx, msg, isError: state.isDeleted);
           Navigator.pop(ctx, true);
         }
@@ -358,19 +364,7 @@ class _IdeaPostBodyState extends State<_IdeaPostBody>
                 ),
             ],
           ),
-          body: BlocListener<IdeaFormBloc, IdeaFormState>(
-            listener: (context, state) {
-              if (state.status == IdeaFormStatus.success) {
-                final msg = state.isDraft
-                    ? 'Draft Saved! 💾'
-                    : 'Idea Launched! 🚀';
-                AuraOverlay.show(context, msg);
-                Navigator.pop(context, true);
-              } else if (state.status == IdeaFormStatus.failure) {
-                _showError(state.errorMessage ?? 'Submission failed');
-              }
-            },
-            child: Stack(
+          body: Stack(
               children: [
                 Column(
                   children: [
@@ -474,6 +468,7 @@ class _IdeaPostBodyState extends State<_IdeaPostBody>
                             formKey: _fk[3],
                             child: _Step4Media(
                               coverImage: _coverImage,
+                              coverImageUrl: blocState.coverImageUrl,
                               onPickImage: _pickImage,
                               pitchDeckCtrl: _pitchDeckCtrl,
                               demoVideoCtrl: _demoVideoCtrl,
@@ -492,6 +487,7 @@ class _IdeaPostBodyState extends State<_IdeaPostBody>
                                 );
                               },
                               coverImage: _coverImage,
+                              coverImageUrl: blocState.coverImageUrl,
                               title: _titleCtrl.text,
                               description: _descCtrl.text,
                               currentStage: _currentStage,
@@ -540,12 +536,11 @@ class _IdeaPostBodyState extends State<_IdeaPostBody>
                   ),
               ],
             ),
-          ),
-        );
-      },
-    );
+          );
+        },
+      );
+    }
   }
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // STEP INDICATOR
@@ -1210,11 +1205,13 @@ class _SwitchRow extends StatelessWidget {
 
 class _Step4Media extends StatelessWidget {
   final File? coverImage;
+  final String? coverImageUrl;
   final VoidCallback onPickImage;
   final TextEditingController pitchDeckCtrl, demoVideoCtrl, websiteCtrl;
 
   const _Step4Media({
     required this.coverImage,
+    this.coverImageUrl,
     required this.onPickImage,
     required this.pitchDeckCtrl,
     required this.demoVideoCtrl,
@@ -1246,9 +1243,14 @@ class _Step4Media extends StatelessWidget {
                       image: FileImage(coverImage!),
                       fit: BoxFit.cover,
                     )
-                  : null,
+                  : (coverImageUrl != null
+                      ? DecorationImage(
+                          image: NetworkImage(coverImageUrl!),
+                          fit: BoxFit.cover,
+                        )
+                      : null),
             ),
-            child: coverImage == null
+            child: coverImage == null && coverImageUrl == null
                 ? Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -1293,8 +1295,8 @@ class _Step4Media extends StatelessWidget {
                       child: CircleAvatar(
                         radius: 18,
                         backgroundColor: Colors.black.withValues(alpha: 0.55),
-                        child: const Icon(
-                          Icons.edit,
+                        child: Icon(
+                          coverImage != null ? Icons.edit : Icons.add_a_photo,
                           size: 16,
                           color: Colors.white,
                         ),
@@ -1346,12 +1348,14 @@ class _Step5Publish extends StatelessWidget {
   final String visibility, title, description, currentStage, funding, equity;
   final List<String> tags;
   final File? coverImage;
+  final String? coverImageUrl;
   final ValueChanged<String> onVisibilityChanged;
 
   const _Step5Publish({
     required this.visibility,
     required this.onVisibilityChanged,
     required this.coverImage,
+    this.coverImageUrl,
     required this.title,
     required this.description,
     required this.currentStage,
@@ -1370,17 +1374,25 @@ class _Step5Publish extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (coverImage != null)
+              if (coverImage != null || coverImageUrl != null)
                 ClipRRect(
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(14),
+                    bottom: Radius.zero,
                   ),
-                  child: Image.file(
-                    coverImage!,
-                    height: 130,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                  ),
+                  child: coverImage != null
+                      ? Image.file(
+                          coverImage!,
+                          height: 130,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                        )
+                      : Image.network(
+                          coverImageUrl!,
+                          height: 130,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                        ),
                 ),
               Padding(
                 padding: const EdgeInsets.all(16),

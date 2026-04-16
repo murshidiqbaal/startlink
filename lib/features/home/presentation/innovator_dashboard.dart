@@ -8,6 +8,7 @@ import 'package:startlink/core/widgets/role_switch_dialog.dart';
 import 'package:startlink/features/admin/presentation/pages/admin_dashboard_layout.dart';
 import 'package:startlink/features/ai_co_founder/presentation/pages/co_founder_chat_screen.dart';
 import 'package:startlink/features/analytics/presentation/screens/analytics_screen.dart';
+import 'package:startlink/features/collaboration/presentation/bloc/collaboration_bloc.dart';
 import 'package:startlink/features/collaboration/presentation/pages/idea_inbox_screen.dart';
 import 'package:startlink/features/collaboration/presentation/screens/received_applications_screen.dart';
 import 'package:startlink/features/compass/presentation/pages/compass_page.dart';
@@ -183,6 +184,8 @@ class _InnovatorDashboardState extends State<InnovatorDashboard>
   @override
   void initState() {
     super.initState();
+    // Pre-fetch collaborators for accurate dashboard count
+    context.read<CollaborationBloc>().add(FetchReceivedCollaborations());
   }
 
   void _onTabSelect(int index) {
@@ -420,22 +423,31 @@ class InnovatorHome extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<IdeaBloc, IdeaState>(
       builder: (context, state) {
-        debugPrint('[InnovatorHome] State: $state');
-        return RefreshIndicator(
-          color: _PremiumColors.accent,
-          backgroundColor: _PremiumColors.surfaceCard,
-          onRefresh: () async {
-            context.read<IdeaBloc>().add(RefreshIdeas());
+        return BlocBuilder<CollaborationBloc, CollaborationState>(
+          builder: (context, collState) {
+            debugPrint(
+              '[InnovatorHome] IdeaState: $state, CollState: $collState',
+            );
+            return RefreshIndicator(
+              color: _PremiumColors.accent,
+              backgroundColor: _PremiumColors.surfaceCard,
+              onRefresh: () async {
+                context.read<IdeaBloc>().add(RefreshIdeas());
+                context.read<CollaborationBloc>().add(
+                  FetchReceivedCollaborations(),
+                );
+              },
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  _buildAppBar(context),
+                  _buildTopSection(context, state, collState),
+                  _buildIdeaSection(context, state, collState),
+                  const SliverToBoxAdapter(child: SizedBox(height: 100)),
+                ],
+              ),
+            );
           },
-          child: CustomScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            slivers: [
-              _buildAppBar(context),
-              _buildTopSection(context, state),
-              _buildIdeaSection(context, state),
-              const SliverToBoxAdapter(child: SizedBox(height: 100)),
-            ],
-          ),
         );
       },
     );
@@ -479,10 +491,22 @@ class InnovatorHome extends StatelessWidget {
   }
 
   // ── Top Section ─────────────────────────────────────────────────────────────
-  SliverToBoxAdapter _buildTopSection(BuildContext context, IdeaState state) {
+  SliverToBoxAdapter _buildTopSection(
+    BuildContext context,
+    IdeaState state,
+    CollaborationState collState,
+  ) {
     final totalIdeas = state is IdeaLoaded
         ? state.ideas.length.toString()
         : '-';
+
+    String collaboratorCount = '-';
+    if (collState is CollaborationLoaded) {
+      collaboratorCount = collState.applications
+          .where((a) => a.status.toLowerCase() == 'accepted')
+          .length
+          .toString();
+    }
 
     return SliverToBoxAdapter(
       child: Padding(
@@ -511,12 +535,12 @@ class InnovatorHome extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Expanded(
+                  Expanded(
                     child: _PremiumStatCard(
                       label: 'Collaborators',
-                      value: '17',
+                      value: collaboratorCount,
                       icon: Icons.groups_rounded,
-                      gradient: LinearGradient(
+                      gradient: const LinearGradient(
                         colors: [Color(0xFFFFD060), Color(0xFFFF8C42)],
                       ),
                     ),
@@ -664,7 +688,11 @@ class InnovatorHome extends StatelessWidget {
   }
 
   // ── Idea Section ─────────────────────────────────────────────────────────────
-  Widget _buildIdeaSection(BuildContext context, IdeaState state) {
+  Widget _buildIdeaSection(
+    BuildContext context,
+    IdeaState state,
+    CollaborationState collState,
+  ) {
     if (state is IdeaLoading || state is IdeaInitial) {
       if (state is IdeaInitial) {
         context.read<IdeaBloc>().add(FetchIdeas());
@@ -708,6 +736,19 @@ class InnovatorHome extends StatelessWidget {
       return SliverList(
         delegate: SliverChildBuilderDelegate((_, index) {
           final idea = state.ideas[index];
+
+          // Calculate collaborators count (accepted applications) for this idea
+          int collaboratorCount = 0;
+          if (collState is CollaborationLoaded) {
+            collaboratorCount = collState.applications
+                .where(
+                  (a) =>
+                      a.ideaId == idea.id &&
+                      a.status.toLowerCase() == 'accepted',
+                )
+                .length;
+          }
+
           return _AnimatedSection(
             delay: Duration(milliseconds: index * 60),
             child: Padding(
@@ -719,8 +760,8 @@ class InnovatorHome extends StatelessWidget {
                   status: idea.status,
                   skills: idea.tags ?? [],
                   imageUrl: idea.coverImageUrl,
-                  views: 0,
-                  applications: 0,
+                  views: idea.viewCount,
+                  applications: collaboratorCount,
                   onTap: () {
                     Navigator.push(
                       context,

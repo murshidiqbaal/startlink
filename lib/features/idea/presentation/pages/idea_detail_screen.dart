@@ -51,7 +51,43 @@ class _IdeaDetailView extends StatelessWidget {
             backgroundColor: AppColors.background,
             flexibleSpace: FlexibleSpaceBar(
               background: idea.coverImageUrl != null
-                  ? Image.network(idea.coverImageUrl!, fit: BoxFit.cover)
+                  ? Image.network(
+                      idea.coverImageUrl!,
+                      fit: BoxFit.cover,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Container(
+                          color: AppColors.surfaceGlass,
+                          child: const Center(
+                            child: CircularProgressIndicator(
+                              color: AppColors.brandCyan,
+                              strokeWidth: 2,
+                            ),
+                          ),
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                AppColors.brandPurple.withValues(alpha: 0.3),
+                                AppColors.background,
+                              ],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                            ),
+                          ),
+                          child: const Center(
+                            child: Icon(
+                              Icons.broken_image_outlined,
+                              color: AppColors.textSecondary,
+                              size: 40,
+                            ),
+                          ),
+                        );
+                      },
+                    )
                   : Container(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
@@ -115,6 +151,9 @@ class _IdeaDetailView extends StatelessWidget {
                       height: 1.6,
                     ),
                   ),
+
+                  const SizedBox(height: 24),
+                  _buildSubmitterInfo(context),
 
                   if (idea.problemStatement.isNotEmpty) ...[
                     const SizedBox(height: 24),
@@ -289,6 +328,53 @@ class _IdeaDetailView extends StatelessWidget {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSubmitterInfo(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceGlass,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 20,
+            backgroundColor: AppColors.brandPurple.withValues(alpha: 0.2),
+            backgroundImage: idea.ownerAvatarUrl != null
+                ? NetworkImage(idea.ownerAvatarUrl!)
+                : null,
+            child: idea.ownerAvatarUrl == null
+                ? const Icon(Icons.person, color: AppColors.brandPurple)
+                : null,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Submitted by',
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                ),
+                Text(
+                  idea.ownerName ?? 'StartLink User',
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (idea.isVerified)
+            const Icon(Icons.verified, color: AppColors.brandCyan, size: 18),
         ],
       ),
     );

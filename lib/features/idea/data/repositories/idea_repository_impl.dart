@@ -219,22 +219,33 @@ class IdeaRepositoryImpl implements IdeaRepository {
           '${DateTime.now().millisecondsSinceEpoch}_$userId.$fileExt';
       final bytes = await file.readAsBytes(); // Read file as bytes
 
-      final response = await _supabase.storage
-          .from('idea-assets') // Changed from 'idea-covers'
-          .uploadBinary(
+      debugPrint('[IdeaRepositoryImpl] Uploading image: $fileName to bucket: idea-assets');
+      
+      final String path = await _supabase.storage
+          .from('idea-assets')
+          .upload(
             fileName,
-            bytes,
-            fileOptions: const FileOptions(upsert: true),
+            file,
+            fileOptions: const FileOptions(
+              cacheControl: '3600',
+              upsert: true,
+            ),
           );
 
-      if (response.isEmpty) return null;
+      if (path.isEmpty) {
+        debugPrint('[IdeaRepositoryImpl] Upload failed: Response path is empty');
+        return null;
+      }
 
-      final url = _supabase.storage
-          .from('idea-assets')
-          .getPublicUrl(fileName); // Changed from 'idea-covers'
+      final url = _supabase.storage.from('idea-assets').getPublicUrl(fileName);
+      debugPrint('[IdeaRepositoryImpl] Upload success. Public URL: $url');
       return url;
+    } on StorageException catch (e) {
+      debugPrint('[IdeaRepositoryImpl] Supabase Storage Error: ${e.message}');
+      debugPrint('[IdeaRepositoryImpl] Status Code: ${e.statusCode}');
+      return null;
     } catch (e) {
-      debugPrint('[IdeaRepositoryImpl] uploadCoverImage error: $e');
+      debugPrint('[IdeaRepositoryImpl] Unexpected upload error: $e');
       return null;
     }
   }
