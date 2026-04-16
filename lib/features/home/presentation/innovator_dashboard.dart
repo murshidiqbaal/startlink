@@ -648,23 +648,25 @@ class InnovatorHome extends StatelessWidget {
         );
         return;
     }
-    Navigator.push(
-      context,
-      PageRouteBuilder(
-        pageBuilder: (_, a, __) => screen!,
-        transitionsBuilder: (_, a, __, child) => FadeTransition(
-          opacity: CurvedAnimation(parent: a, curve: Curves.easeOut),
-          child: child,
+    if (context.mounted) {
+      Navigator.push(
+        context,
+        PageRouteBuilder(
+          pageBuilder: (_, a, __) => screen!,
+          transitionsBuilder: (_, a, __, child) => FadeTransition(
+            opacity: CurvedAnimation(parent: a, curve: Curves.easeOut),
+            child: child,
+          ),
+          transitionDuration: const Duration(milliseconds: 350),
         ),
-        transitionDuration: const Duration(milliseconds: 350),
-      ),
-    );
+      );
+    }
   }
 
   // ── Idea Section ─────────────────────────────────────────────────────────────
   Widget _buildIdeaSection(BuildContext context, IdeaState state) {
     if (state is IdeaLoading || state is IdeaInitial) {
-      if (state is IdeaInitial && context.mounted) {
+      if (state is IdeaInitial) {
         context.read<IdeaBloc>().add(FetchIdeas());
       }
       return SliverList(
@@ -772,7 +774,7 @@ class InnovatorHome extends StatelessWidget {
       );
     }
 
-    return const SliverToBoxAdapter(child: SizedBox.shrink());
+    return const SliverToBoxAdapter(child: SizedBox.square(dimension: 1));
   }
 }
 

@@ -19,7 +19,12 @@ class StartLinkGlassCard extends StatelessWidget {
     this.borderRadius,
     this.animate = true,
     this.borderGradient,
+    this.height,
+    this.width,
   });
+
+  final double? height;
+  final double? width;
 
   @override
   Widget build(BuildContext context) {
@@ -68,22 +73,28 @@ class StartLinkGlassCard extends StatelessWidget {
     }
 
     if (onTap != null) {
-      return Material(
-        color: Colors.transparent,
-        borderRadius: radius,
-        child: InkWell(
-          onTap: onTap,
+      return SizedBox(
+        height: height,
+        width: width ?? double.infinity,
+        child: Material(
+          color: Colors.transparent,
           borderRadius: radius,
-          overlayColor: WidgetStateProperty.all(
-            Colors.white.withValues(alpha: 0.05),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: radius,
+            overlayColor: WidgetStateProperty.all(
+              Colors.white.withValues(alpha: 0.05),
+            ),
+            child: content,
           ),
-          child: content,
         ),
       );
     }
 
-    // TODO: Add flutter_animate entry effect here if `animate` is true
-    // when we integrate the package fully.
-    return content;
+    return SizedBox(
+      height: height,
+      width: width ?? double.infinity,
+      child: content,
+    );
   }
 }

@@ -451,7 +451,14 @@ class IdeaChatButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final currentUserId = SupabaseService.client.auth.currentUser?.id;
-    if (currentUserId == null) return const SizedBox.shrink();
+    if (currentUserId == null) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(20),
+          child: CircularProgressIndicator(color: AppColors.brandCyan),
+        ),
+      );
+    }
 
     return Column(
       children: [

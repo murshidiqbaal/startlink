@@ -80,6 +80,9 @@ import 'package:startlink/features/mentor/presentation/bloc/reels/mentor_reels_b
 import 'package:startlink/features/investor/domain/repositories/pitch_repository.dart';
 import 'package:startlink/features/investor/data/repositories/pitch_repository_impl.dart';
 import 'package:startlink/features/investor/presentation/bloc/pitch/pitch_bloc.dart';
+import 'package:startlink/features/idea/presentation/bloc/idea_bloc.dart';
+import 'package:startlink/features/chat/presentation/bloc/chat_bloc.dart';
+// import 'package:startlink/features/chat/presentation/bloc/chat_event.dart'; // Ignored if unused
 
 class App extends StatelessWidget {
   const App({super.key});
@@ -270,6 +273,14 @@ class App extends StatelessWidget {
             create: (context) => MentorReelsBloc(
               context.read<IMentorReelsRepository>(),
             ),
+          ),
+          BlocProvider<IdeaBloc>(
+            create: (context) =>
+                IdeaBloc(ideaRepository: context.read<IdeaRepository>())
+                  ..add(FetchIdeas()),
+          ),
+          BlocProvider<ChatBloc>(
+            create: (context) => ChatBloc(chatRepository: context.read<ChatRepository>()),
           ),
           BlocProvider<PitchBloc>(
             create: (context) => PitchBloc(
